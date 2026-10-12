@@ -1,232 +1,295 @@
 /* ============================================================
-   SERVICE WORKER — Quran Recitation Coach
+   Quran Recitation Coach — Service Worker
    ============================================================
-   What this SW does
-   -----------------
-   • Precaches the app shell (index.html) so the page opens offline.
-   • Caches Google Fonts (immutable, cache-first).
-   • Caches Quran API GET responses with stale-while-revalidate
-     (instant on revisit, refreshed in the background).
-   • Caches ayah audio files (cache-first, size-limited).
-   • Uses network-first for page navigations so a new deploy
-     is picked up on the next reload.
+   Bump VERSION whenever this file changes to force a fresh cache.
+   The old caches are automatically cleaned up on activation.
 
-   What this SW deliberately does NOT do
-   -------------------------------------
-   • It NEVER touches non-GET requests. This is what lets the
-     `POST /api/feedback` call reach Vercel untouched. The Cache
-     API throws on non-GET requests, so without this guard every
-     POST in the app would fail with "Could not send right now".
-   • It NEVER touches anything under `/api/*`.
-   • It NEVER touches Vercel's own `/_vercel/*` routes.
-
-   IMPORTANT
-   ---------
-   Bump CACHE_VERSION on every deploy that changes index.html,
-   otherwise users keep seeing the previously cached page. The
-   activate handler deletes caches whose names are no longer in
-   use, so old versions are cleaned up automatically.
+   Strategy summary
+   ----------------
+   • App shell (HTML / icons)            → network-first, cache fallback
+   • Quran API  (api.alquran.cloud)      → stale-while-revalidate
+   • Ayah audio (everyayah.com)          → cache-first (bounded LRU)
+   • Google Fonts (googleapis/gstatic)   → cache-first
+   • Same-origin static assets           → network-first, cache fallback
+   • Everything else                     → pass through
    ============================================================ */
 
-const CACHE_VERSION = 'v2';          // ← bump on every deploy
+const VERSION = 'v3';
 
-const SHELL_CACHE = 'qc-shell-' + CACHE_VERSION;
-const FONT_CACHE  = 'qc-fonts-' + CACHE_VERSION;
-const API_CACHE   = 'qc-api-'   + CACHE_VERSION;
-const AUDIO_CACHE = 'qc-audio-' + CACHE_VERSION;
+const SHELL_CACHE = 'qc-shell-'  + VERSION;
+const API_CACHE   = 'qc-api-'    + VERSION;
+const AUDIO_CACHE = 'qc-audio-'  + VERSION;
+const FONT_CACHE  = 'qc-fonts-'  + VERSION;
 
-const SHELL_FILES = [
+/* Soft caps — the LRU trimmer runs after every successful write. */
+const MAX_API_ENTRIES   = 300;   /* ≈ 15 MB of JSON at most  */
+const MAX_AUDIO_ENTRIES = 200;   /* ≈ 25 MB of mp3  at most  */
+const MAX_FONT_ENTRIES  =  40;
+
+/* Files to precache on install. `./` and `./index.html` both map to
+   the single-page app on every major host (Vercel, Netlify, static). */
+const SHELL_ASSETS = [
   './',
   './index.html'
 ];
 
-const FONT_HOSTS  = ['fonts.googleapis.com', 'fonts.gstatic.com'];
-const API_HOSTS   = ['api.alquran.cloud'];
-const AUDIO_HOSTS = ['everyayah.com', 'www.everyayah.com'];
+/* External hosts we look after. */
+const QURAN_API_HOSTS = ['api.alquran.cloud'];
+const AUDIO_HOSTS     = ['everyayah.com', 'audio.everyayah.com', 'www.everyayah.com'];
+const FONT_HOSTS      = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
-/* Cap on cached audio files. 250 entries ≈ 20–40 MB typical.
-   Increase if you want more offline audio; the Cache API has no
-   built-in LRU, so we trim the oldest entries ourselves. */
-const AUDIO_MAX_ENTRIES = 250;
-
-/* ============================================================
-   INSTALL — precache the app shell
-   ============================================================ */
+/* ------------------------------------------------------------
+   install — precache the app shell and take over immediately.
+   ------------------------------------------------------------ */
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_FILES))
-      .catch((err) => console.warn('[SW] shell precache failed:', err))
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(SHELL_CACHE);
+    await Promise.allSettled(
+      SHELL_ASSETS.map(url =>
+        cache.add(new Request(url, { cache: 'reload' }))
+      )
+    );
+    await self.skipWaiting();
+  })());
 });
 
-/* ============================================================
-   ACTIVATE — drop caches from previous versions
-   ============================================================ */
+/* ------------------------------------------------------------
+   activate — drop old qc-* caches and claim open clients.
+   ------------------------------------------------------------ */
 self.addEventListener('activate', (event) => {
-  const keep = new Set([SHELL_CACHE, FONT_CACHE, API_CACHE, AUDIO_CACHE]);
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keep = new Set([SHELL_CACHE, API_CACHE, AUDIO_CACHE, FONT_CACHE]);
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter(n => n.startsWith('qc-') && !keep.has(n))
+        .map(n => caches.delete(n))
+    );
+    /* Navigation preload is not needed — our shell strategy already
+       does network-first. Disable it so we do not double-fetch. */
+    if (self.registration.navigationPreload) {
+      try { await self.registration.navigationPreload.disable(); } catch (_) {}
+    }
+    await self.clients.claim();
+  })());
 });
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
-function isSameOrigin(url) {
-  return url.origin === self.location.origin;
-}
+/* ------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------ */
 
+/** Drop the oldest N entries from a cache when it grows past the cap.
+    Cache-keys() returns entries in insertion order, so this is a
+    simple FIFO eviction. */
 async function trimCache(cacheName, maxEntries) {
   try {
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     if (keys.length <= maxEntries) return;
-    const toDelete = keys.length - maxEntries;
-    for (let i = 0; i < toDelete; i++) {
-      await cache.delete(keys[i]);
+    const drop = keys.length - maxEntries;
+    for (let i = 0; i < drop; i++) {
+      try { await cache.delete(keys[i]); } catch (_) {}
     }
-  } catch (_) { /* non-fatal */ }
+  } catch (_) {}
 }
 
-/* ============================================================
-   FETCH HANDLER
-   ============================================================ */
+/** Store a response only if it is a full 200 and a basic/cors type.
+    Anything else (opaque, redirect, error) is skipped. */
+function isCacheableResponse(res) {
+  if (!res) return false;
+  if (res.status !== 200) return false;
+  if (res.type !== 'basic' && res.type !== 'cors') return false;
+  return true;
+}
+
+/* ------------------------------------------------------------
+   Strategies
+   ------------------------------------------------------------ */
+
+/** Network-first with cache fallback.
+    For navigation requests, falls back to the cached shell so the
+    app still boots offline. */
+async function networkFirstShell(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  try {
+    const fresh = await fetch(request);
+    if (isCacheableResponse(fresh)) {
+      cache.put(request, fresh.clone()).catch(() => {});
+    }
+    return fresh;
+  } catch (_) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      const shell =
+        (await cache.match('./index.html')) ||
+        (await cache.match('./'));
+      if (shell) return shell;
+    }
+    return new Response(
+      'Offline — this page is not cached yet. Connect to the internet and try again.',
+      { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+    );
+  }
+}
+
+/** Stale-while-revalidate. Serves cached JSON immediately (so pages
+    open instantly offline), then quietly refreshes it in the
+    background for the next visit. */
+async function staleWhileRevalidate(cacheName, request, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  const networkPromise = fetch(request)
+    .then((res) => {
+      if (isCacheableResponse(res)) {
+        cache.put(request, res.clone()).catch(() => {});
+        trimCache(cacheName, maxEntries);
+      }
+      return res;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    /* Refresh in the background; do not await. */
+    networkPromise.catch(() => {});
+    return cached;
+  }
+
+  const fresh = await networkPromise;
+  if (fresh) return fresh;
+
+  return new Response(
+    JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
+    { status: 503, headers: { 'Content-Type': 'application/json; charset=utf-8' } }
+  );
+}
+
+/** Cache-first. Returns the cached copy if present; otherwise fetches,
+    stores, and returns. Falls back to a 504 when truly offline and
+    nothing is cached. */
+async function cacheFirst(cacheName, request, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  try {
+    const fresh = await fetch(request);
+    if (isCacheableResponse(fresh)) {
+      cache.put(request, fresh.clone()).catch(() => {});
+      trimCache(cacheName, maxEntries);
+    }
+    return fresh;
+  } catch (_) {
+    return new Response('', { status: 504 });
+  }
+}
+
+/* ------------------------------------------------------------
+   Fetch router
+   ------------------------------------------------------------ */
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  /* ---- GUARD 1 — never touch non-GET / non-HEAD requests ----
-     Critical for POST /api/feedback. The Cache API cannot store
-     a POST, and caches.match() on a POST throws, which the
-     browser surfaces to theet page as a failed fetch. */
-  if (workreq.method !== 'GET' && req.method !== 'HEAD') return;
+  /* Only GET is handled. POSTs to /api/feedback are untouched. */
+  if (req.method !== 'GET') return;
 
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
 
-  /* ---- GUARD 2 — never touch /api/* ------------------------
-     Our serverless functions must always hit the network. */
-  if (isSameOrigin(url) && url.pathname.startsWith('/api/')) return;
+  /* Ignore non-http(s) schemes (chrome-extension, blob, data, …) */
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  /* ---- Also skip Vercel's internal analytics route --------- */
-  if (isSameOrigin(url) && url.pathname.startsWith('/_vercel/')) return;
+  /* 1) Navigation → network-first shell */
+  if (req.mode === 'navigate') {
+    event.respondWith(networkFirstShell(req));
+    return;
+  }
 
-  /* ---- Strategy dispatch ---------------------------------- */
+  const sameOrigin = url.origin === self.location.origin;
 
-  // 1. Google Fonts — immutable, cache-first.
+  /* 2) Quran API JSON → stale-while-revalidate */
+  if (QURAN_API_HOSTS.includes(url.hostname)) {
+    event.respondWith(
+      staleWhileRevalidate(API_CACHE, req, MAX_API_ENTRIES)
+    );
+    return;
+  }
+
+  /* 3) Ayah audio → cache-first with LRU cap */
+  if (
+    AUDIO_HOSTS.includes(url.hostname) ||
+    AUDIO_HOSTS.some(h => url.hostname.endsWith('.' + h))
+  ) {
+    event.respondWith(
+      cacheFirst(AUDIO_CACHE, req, MAX_AUDIO_ENTRIES)
+    );
+    return;
+  }
+
+  /* 4) Google Fonts (CSS + woff2 files) → cache-first */
   if (FONT_HOSTS.includes(url.hostname)) {
-    event.respondWith(cacheFirst(req, FONT_CACHE));
+    event.respondWith(
+      cacheFirst(FONT_CACHE, req, MAX_FONT_ENTRIES)
+    );
     return;
   }
 
-  // 2. Quran API — instant from cache, refreshed in background.
-  if (API_HOSTS.includes(url.hostname)) {
-    event.respondWith(staleWhileRevalidate(req, API_CACHE));
+  /* 5) Same-origin static assets (icons, analytics script, …) →
+        network-first with cache fallback so redeploys take effect
+        on the next visit but the app still works offline. */
+  if (sameOrigin) {
+    event.respondWith((async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      try {
+        const fresh = await fetch(req);
+        if (isCacheableResponse(fresh)) {
+          cache.put(req, fresh.clone()).catch(() => {});
+        }
+        return fresh;
+      } catch (_) {
+        const cached = await cache.match(req);
+        if (cached) return cached;
+        return new Response('', { status: 504 });
+      }
+    })());
     return;
   }
 
-  // 3. Ayah audio — cache-first, size-limited.
-  if (AUDIO_HOSTS.includes(url.hostname)) {
-    event.respondWith(cacheFirst(req, AUDIO_CACHE, AUDIO_MAX_ENTRIES));
-    return;
-  }
-
-  // 4. Same-origin requests.
-  if (isSameOrigin(url)) {
-    if (req.mode === 'navigate') {
-      event.respondWith(nFirstShell(req));
-    } else {
-      event.respondWith(cacheFirst(req, SHELL_CACHE));
-    }
-    return;
-  }
-
-  // 5. Any other cross-origin request — let the browser handle it.
+  /* 6) Everything else (analytics, telemetry, third-party APIs) →
+        let the browser handle it directly. */
 });
 
-/* ============================================================
-   CACHING PRIMITIVES
-   ============================================================ */
-
-/* Cache-first: fast, good for immutable assets (fonts, audio,
-   hashed scripts). Falls back to network on a cache miss. */
-async function cacheFirst(req, cacheName, maxEntries) {
-  const cache = await caches.open(cacheName);
-  const hit = await cache.match(req);
-  if (hit) return hit;
-
-  try {
-    const res = await fetch(req);
-    // Cache successful basic/cors responses, and opaque ones
-    // (used by <audio> fetches that have no CORS headers).
-    if (res && (res.ok || res.type === 'opaque')) {
-      cache.put(req, res.clone())
-        .then(() => { if (maxEntries) trimCache(cacheName, maxEntries); })
-        .catch(() => {});
-    }
-    return res;
-  } catch (err) {
-    return new Response('', { status: 504, statusText: 'Offline' });
-  }
-}
-
-/* Stale-while-revalidate: return cached immediately if present,
-   refresh in the background. If not cached, wait for the network. */
-async function staleWhileRevalidate(req, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(req);
-
-  const networkPromise = fetch(req).then((res) => {
-    if (res && res.status === 200) {
-      cache.put(req, res.clone()).catch(() => {});
-    }
-    return res;
-  }).catch(() => null);
-
-  if (cached) return cached;
-
-  const res = await networkPromise;
-  if (res) return res;
-  return new Response('', { status: 504, statusText: 'Offline' });
-}
-
-/* Network-first for page navigations, with cached index.html as
-   the offline fallback. Keeps the app fresh after every deploy. */
-async function networkFirstShell(req) {
-  const cache = await caches.open(SHELL_CACHE);
-  try {
-    const res = await fetch(req);
-    if (res && res.status === 200) {
-      cache.put(req, res.clone()).catch(() => {});
-    }
-    return res;
-  } catch (err) {
-    const hit = await cache.match(req);
-    if (hit) return hit;
-    const shell = await cache.match('./index.html');
-    if (shell) return shell;
-    const root = await cache.match('./');
-    if (root) return root;
-    return new Response('Offline', {
-      status: 504,
-      statusText: 'Offline',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
-  }
-}
-
-/* ============================================================
-   MESSAGE CHANNEL — optional page-side controls
-   ============================================================ */
+/* ------------------------------------------------------------
+   Message channel — optional cache controls
+   ------------------------------------------------------------
+   page → worker:
+     postMessage({ type: 'SKIP_WAITING' })
+     postMessage({ type: 'CLEAR_API_CACHE' })
+     postMessage({ type: 'CLEAR_AUDIO_CACHE' })
+     postMessage({ type: 'CLEAR_ALL' })
+   ------------------------------------------------------------ */
 self.addEventListener('message', (event) => {
-  if (!event.data || !event.data.type) return;
-  if (event.data.type === 'SKIP_WAITING') self.skipWaiting();
-  if (event.data.type === 'GET_VERSION' && event.source) {
-    event.source.postMessage({ type: 'VERSION', version: CACHE_VERSION });
+  const data = event.data || {};
+
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+  if (data.type === 'CLEAR_API_CACHE') {
+    event.waitUntil(caches.delete(API_CACHE));
+    return;
+  }
+  if (data.type === 'CLEAR_AUDIO_CACHE') {
+    event.waitUntil(caches.delete(AUDIO_CACHE));
+    return;
+  }
+  if (data.type === 'CLEAR_ALL') {
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter(n => n.startsWith('qc-')).map(n => caches.delete(n))
+      );
+    })());
   }
 });

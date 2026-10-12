@@ -730,9 +730,18 @@ padding:14px 18px 8px;
 box-shadow:0 18px 46px rgba(0,0,0,.55);
 min-height:calc(100vh - var(--safe-top) - var(--safe-bottom) - 170px);
 position:relative;
-font-family:'Amiri Quran','Scheherazade New','Noto Naskh Arabic',serif;
-font-weight:700;
--webkit-text-stroke:0.6px currentColor;
+/* IndoPak-friendly stack first, then Naskh fallbacks.
+   All Unicode marks (shaddah, sukoon, kasrah, madd, etc.) are
+   rendered as stored in the quran-indopak edition text — nothing
+   is stripped or substituted by this stylesheet. */
+font-family:
+  'Al Majeed Quranic','PDMS Saleem Quran','Al Qalam Quran',
+  'KFGQPC Uthmanic Script HAFS','Amiri Quran',
+  'Scheherazade New','Noto Naskh Arabic',serif;
+font-weight:400;                    /* no synthetic bold — protects harakat */
+-webkit-text-stroke:0.25px currentColor;
+font-feature-settings:"kern" 1,"liga" 1,"calt" 1,"rlig" 1;
+text-rendering:optimizeLegibility;
 will-change:transform;
 backface-visibility:hidden;
 direction:rtl;
@@ -798,25 +807,33 @@ letter-spacing:.10em;text-transform:uppercase;font-weight:700;opacity:.8;
 -webkit-text-stroke:0;
 }
 
+/* ── Bismillah — ornate calligraphic line, mushaf style ─────────── */
 .mushaf-bismillah-line{
-display:block;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:14px;
 text-align:center;
 text-align-last:auto;
-padding:4px 0 14px;
-margin:4px 0 6px;
-font-family:'Amiri Quran',serif;
-font-size:1em;line-height:2;
--webkit-text-stroke:0.55px currentColor;
+padding:8px 0 18px;
+margin:6px 0 10px;
+font-family:'Amiri Quran','Scheherazade New',serif;
+font-size:1.08em;
+line-height:1.85;
+font-weight:400;
+-webkit-text-stroke:0.3px currentColor;
+white-space:nowrap;
 }
-.mushaf-bismillah-line::before,
-.mushaf-bismillah-line::after{
-content:'❁';
-display:inline-block;
-vertical-align:middle;
-margin:0 14px;
-opacity:.6;
-font-size:.8em;
+.mushaf-bismillah-line .bism-orn{
+flex:0 0 auto;
+font-size:1.05em;
+opacity:.9;
+line-height:1;
 -webkit-text-stroke:0;
+}
+.mushaf-bismillah-line .bism-text{
+flex:0 1 auto;
+padding:0 4px;
 }
 
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah{
@@ -4185,8 +4202,8 @@ async function loadReaderPage(pageNumber){
 }
 
 /* Place the “ع” ruku markers just OUTSIDE the double page border,
-   keeping them on the same visual line as the closing ayah of the
-   ruku / surah. */
+   on the LEFT margin, keeping them on the same visual line as the
+   closing ayah of the ruku / surah. */
 function placeRukuMarks(inner, content){
   if(!inner || !content) return;
   inner.querySelectorAll('.mushaf-ruku-mark').forEach(m => m.remove());
@@ -4194,12 +4211,15 @@ function placeRukuMarks(inner, content){
   if(!list.length) return;
 
   /* The bordered mushaf page is the closest block ancestor of the
-     content. We measure its right edge and hang the marker just
-     outside it, inside the inner's right padding strip. */
+     content. We measure its left edge and hang the marker just
+     outside it, inside the inner's left padding strip. */
   const frame = content.closest('.mushaf-book-page') || content.parentElement;
   const innerRect = inner.getBoundingClientRect();
   const frameRect = frame ? frame.getBoundingClientRect() : innerRect;
-  const edgeX = (frameRect.right - innerRect.left) + 4;
+  /* Place ع in the left margin, just outside the frame border.
+     `right` is measured from the inner’s padding box, so this
+     sits the mark’s right edge 4px to the left of the frame. */
+  const rightOffset = (innerRect.right - frameRect.left) + 4;
 
   const nextPageData = readerState.pages.get(readerState.currentPage + 1);
 
@@ -4241,16 +4261,17 @@ function placeRukuMarks(inner, content){
     if(!r || !r.width) continue;
 
     /* Vertical centre of the closing ayah — unchanged. Horizontal
-       position now sits just outside the page border. */
+       position now sits just outside the LEFT page border. */
     const top = (r.top + r.height / 2) - innerRect.top;
-    if(!isFinite(edgeX) || !isFinite(top)) continue;
+    if(!isFinite(rightOffset) || !isFinite(top)) continue;
 
     const m = document.createElement('span');
     m.className = 'mushaf-ruku-mark';
     m.textContent = 'ع';
     m.setAttribute('aria-hidden', 'true');
-    m.style.left = Math.round(edgeX) + 'px';
-    m.style.top  = Math.round(top)  + 'px';
+    m.style.left  = 'auto';
+    m.style.right = Math.round(rightOffset) + 'px';
+    m.style.top   = Math.round(top) + 'px';
     inner.appendChild(m);
   }
 }
@@ -4330,7 +4351,22 @@ function renderReaderPage(pageNumber, token){
       if(shouldShowBismillah(a.surah)){
         const b = document.createElement('div');
         b.className = 'mushaf-bismillah-line';
-        b.textContent = BISMILLAH_TEXT;
+
+        const o1 = document.createElement('span');
+        o1.className = 'bism-orn';
+        o1.setAttribute('aria-hidden','true');
+        o1.textContent = '۞';
+
+        const t = document.createElement('span');
+        t.className = 'bism-text';
+        t.textContent = BISMILLAH_TEXT;
+
+        const o2 = document.createElement('span');
+        o2.className = 'bism-orn';
+        o2.setAttribute('aria-hidden','true');
+        o2.textContent = '۞';
+
+        b.appendChild(o1); b.appendChild(t); b.appendChild(o2);
         content.appendChild(b);
       }
     }
@@ -4401,9 +4437,10 @@ function renderReaderPage(pageNumber, token){
     qvTitle.textContent = 'Page ' + pageNumber;
   }
 
+  /* Sajdah pop-up — 2 seconds, only when the page contains a sajdah verse. */
   if(sajdahRefs.length){
     setTimeout(() => {
-      showToast('۩ Sajidah verse · ' + sajdahRefs.join(' · '), 3600);
+      showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000);
     }, 420);
   }
 
