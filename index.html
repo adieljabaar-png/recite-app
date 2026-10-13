@@ -2556,20 +2556,26 @@ function gregorianToHijri(date){
 /* ============================================================
    SETTINGS
    ============================================================ */
-/* matchLevel is the FOLLOW-mode setting.
-   Default is 'balanced'. Follow-mode choice is persisted separately
-   under qc.followMatchLevel so switching to Tajweed and back keeps
-   the user's Follow preference intact. */
-let matchLevel = localStorage.getItem('qc.matchLevel') || 'balanced';
-if(matchLevel !== 'strict' && matchLevel !== 'balanced' && matchLevel !== 'lenient'){
-  matchLevel = 'balanced';
-}
-/* Restore the Follow-mode setting if it was saved */
+/* matchLevel is the FOLLOW-mode setting only.
+   Its default is 'balanced'.  It is persisted under
+   qc.followMatchLevel so that switching to Tajweed and back
+   keeps the user's Follow preference intact.
+
+   TAJWEED IS ALWAYS STRICT — see matchStrictness() below.
+   The Match selector is only ever shown while Follow is active. */
+let matchLevel = 'balanced';
 (function restoreFollowMatchLevel(){
   try{
     const saved = localStorage.getItem('qc.followMatchLevel');
     if(saved === 'strict' || saved === 'balanced' || saved === 'lenient'){
       matchLevel = saved;
+      return;
+    }
+    /* Migrate a legacy shared value into the new Follow-only key. */
+    const legacy = localStorage.getItem('qc.matchLevel');
+    if(legacy === 'strict' || legacy === 'balanced' || legacy === 'lenient'){
+      matchLevel = legacy;
+      try{ localStorage.setItem('qc.followMatchLevel', legacy); }catch(_){}
     }
   }catch(e){}
 })();
@@ -2664,21 +2670,38 @@ function lev(a, b){
   return r;
 }
 
+/* ============================================================
+   MATCHING STRICTNESS
+
+   The effective strictness is derived from the active mode:
+
+     • Follow mode   → the user's remembered Follow level
+                       (qc.followMatchLevel).
+     • Tajweed mode  → ALWAYS 'strict'.
+
+   This keeps the Follow preference completely independent
+   from Tajweed, which is permanently locked to strict.
+   ============================================================ */
+function matchStrictness(){
+  return followOnly ? matchLevel : 'strict';
+}
+
 const TOL_TABLE = {
   strict:   [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
   balanced: [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3],
   lenient:  [0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4]
 };
 function toleranceFor(L){
-  const t = TOL_TABLE[matchLevel] || TOL_TABLE.balanced;
+  const lvl = matchStrictness();
+  const t = TOL_TABLE[lvl] || TOL_TABLE.balanced;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
 const CONF_FLOOR_TABLE = { strict: 0.55, balanced: 0.45, lenient: 0.35 };
-function confidenceFloor(){ return CONF_FLOOR_TABLE[matchLevel] || 0.45; }
+function confidenceFloor(){ return CONF_FLOOR_TABLE[matchStrictness()] || 0.45; }
 
 const NOISE_LIMIT_TABLE = { strict: 2, balanced: 3, lenient: 4 };
-function noiseLimit(){ return NOISE_LIMIT_TABLE[matchLevel] || 3; }
+function noiseLimit(){ return NOISE_LIMIT_TABLE[matchStrictness()] || 3; }
 
 function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const wNorm = w.norm;
@@ -2690,7 +2713,7 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const tol = toleranceFor(L);
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
-  if(matchLevel === 'strict') return lev(hNorm, wNorm) <= tol;
+  if(matchStrictness() === 'strict') return lev(hNorm, wNorm) <= tol;
   if(lev(hNorm, wNorm) <= tol) return true;
   if(hPhon.length >= 3 && w.phon.length >= 3){
     if(lev(hPhon, w.phon) <= tol) return true;
@@ -3273,7 +3296,8 @@ async function resumeRecitationSession(modeKey){
     beepOn     = !followOnly;
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
 
-    /* Restore the Follow-mode match level if we are resuming Follow */
+    /* Restore the remembered Follow-mode level only when resuming Follow.
+       Tajweed is always strict — see matchStrictness(). */
     if(followOnly){
       try{
         const saved = localStorage.getItem('qc.followMatchLevel');
@@ -6024,7 +6048,8 @@ function applyMutexUI(){
     modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false');
   }
 
-  /* Match selector only shows with Follow mode. */
+  /* The Match selector is a FOLLOW-ONLY control.
+     Tajweed is permanently locked to strict and never exposes it. */
   if(matchChip) matchChip.hidden = !followOnly;
 
   /* Hide-text is a Follow-only aid. */
@@ -6032,7 +6057,8 @@ function applyMutexUI(){
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
 
-  /* Update the selector to reflect the current match level. */
+  /* The selector always shows the remembered Follow level.
+     While in Tajweed it is hidden, so its value is irrelevant. */
   if(selMatch) selMatch.value = matchLevel;
 
   applyHideTextUI();
@@ -6043,7 +6069,7 @@ function setRecitationMode(modeName){
   if(newFollow === followOnly && !updatingMutex) return;
   updatingMutex = true;
 
-  /* Save the Follow-mode match level before leaving Follow */
+  /* Save the Follow-mode choice before leaving Follow. */
   if(followOnly && !newFollow){
     try{ localStorage.setItem('qc.followMatchLevel', matchLevel); }catch(e){}
   }
@@ -6052,13 +6078,14 @@ function setRecitationMode(modeName){
   beepOn = !followOnly;
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
 
-  /* Restore the Follow-mode match level when returning to Follow */
+  /* Restore the remembered Follow level when returning to Follow.
+     Tajweed is always strict and never touches matchLevel — it
+     uses matchStrictness() which forces 'strict' on its own. */
   if(followOnly){
     try{
       const saved = localStorage.getItem('qc.followMatchLevel');
       if(saved === 'strict' || saved === 'balanced' || saved === 'lenient'){
         matchLevel = saved;
-        try{ localStorage.setItem('qc.matchLevel', matchLevel); }catch(_){}
       }
     }catch(e){}
   }
@@ -6068,7 +6095,7 @@ function setRecitationMode(modeName){
   if(followOnly){
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
   } else {
-    addFeedback('🎵 <b>Tajweed</b> mode — beeps and marks mispronounced words red, but keeps following.', false, true);
+    addFeedback('🎵 <b>Tajweed</b> mode — always strict. Mispronounced words are beeped and marked red, while the coach keeps following.', false, true);
   }
   updatingMutex = false;
 }
@@ -6731,7 +6758,7 @@ const FOLLOW_LOOKAHEAD = 2;
 function gradeFollowOnly(tokens, startIdx){
   const start = startIdx || 0;
   let used = 0;
-  const strictFollow = (matchLevel === 'strict');
+  const strictFollow = (matchStrictness() === 'strict');
   for(let ti = start; ti < tokens.length; ti++){
     if(ptr >= words.length){ used++; continue; }
     const rawTok = tokens[ti];
@@ -7503,15 +7530,16 @@ surahButton.addEventListener('click',openSurahPicker);
 
 selMatch.value = matchLevel;
 selMatch.addEventListener('change', e => {
+  /* The Match selector is shown only while Follow is active, so any
+     change here updates the remembered Follow-mode level. Tajweed
+     never uses this value — it is permanently strict. */
   matchLevel = e.target.value;
   try{
     localStorage.setItem('qc.matchLevel', matchLevel);
-    /* Keep the Follow-mode memory up to date when the user changes it
-       while Follow is the active mode. */
-    if(followOnly) localStorage.setItem('qc.followMatchLevel', matchLevel);
+    localStorage.setItem('qc.followMatchLevel', matchLevel);
   }catch(_){}
   const label = {strict:'Strict',balanced:'Balanced',lenient:'Lenient'}[matchLevel];
-  if(followOnly && matchLevel === 'strict'){
+  if(matchLevel === 'strict'){
     addFeedback('🤝 Match set to <b>Strict</b> — the coach will pause on a mispronounced word.', false, true);
   } else {
     addFeedback('🤝 Match set to <b>' + label + '</b>.', false, true);
@@ -7695,20 +7723,19 @@ function openCoachInfoModal(){
     '<h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3>' +
     '<ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite, so you keep your place even while learning.</li>' +
-      '<li>The <b>Match</b> selector next to the Follow tab lets you choose how strict the word matching should be: <b>Strict</b>, <b>Balanced</b> or <b>Lenient</b>.</li>' +
+      '<li>The <b>Match</b> selector next to the Follow tab lets you choose how strict the word matching should be: <b>Strict</b>, <b>Balanced</b> or <b>Lenient</b>. Your choice is remembered the next time you return to Follow mode.</li>' +
       '<li>On <b>Balanced</b> and <b>Lenient</b>, the coach is <b>forgiving</b> — it <b>may allow some incorrect pronunciations to pass</b> so that you are not stopped mid-flow. This is intentional for memorisation practice.</li>' +
       '<li>On <b>Follow + Strict</b>, the coach <b>pauses and stops listening</b> the moment a word is not recognised correctly. The word is <b>not marked red</b> — you simply review it and tap <b>Start reciting</b> to continue.</li>' +
       '<li>Follow mode never records mistakes or accuracy — its only job is to help you memorise.</li>' +
-      '<li>Your Follow-mode Match choice is remembered — when you switch to Tajweed and back, the same setting is restored automatically.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
     '<h3><span class="fnum">3</span> 🎵 Tajweed mode (error feedback)</h3>' +
     '<ul>' +
-      '<li><b>Tajweed</b> is stricter than Follow. It is designed to highlight every mispronunciation in a session.</li>' +
+      '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
+      '<li>Tajweed is <b>permanently locked to the Strict setting</b>. The <b>Match</b> selector is <b>hidden</b> in Tajweed mode and Tajweed never changes or inherits your Follow-mode choice.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
       '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active.</li>' +
-      '<li>The <b>Match</b> selector is hidden in Tajweed mode — the coach uses strict matching to catch as many pronunciation slips as possible.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
