@@ -1,373 +1,256 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
-   ------------------------------------------------------------
-   Caching strategy per request type:
+   ============================================================
+   Responsibilities:
+     • Cache the app shell (the HTML page + manifest + icons)
+       so the PWA launches offline.
+     • Runtime-cache Quran text / translation responses from
+       api.alquran.cloud so previously read surahs & pages
+       stay available offline.
+     • Cache Google Fonts.
+     • Cache audio responses from everyayah.com — but ONLY full
+       200 responses, and always let the request fall through to
+       the network first.  iOS Safari issues HTTP Range requests
+       for <audio> and mis-handles Service-Worker-supplied 206
+       responses; we deliberately do NOT synthesise ranges here.
+     • Never cache POST requests (feedback submissions).
 
-     • Navigations (index.html)
-         Network-first with a short timeout, falling back to the
-         cached shell when the network is slow or offline. The
-         fresh copy, when it arrives, updates the shell cache.
-
-     • Google Fonts (fonts.googleapis.com / fonts.gstatic.com)
-         Cache-first. Fonts are immutable — once fetched they are
-         reused forever.
-
-     • Quran API (api.alquran.cloud)
-         Stale-while-revalidate. Cached JSON is served instantly
-         while a fresh copy is fetched in the background.
-         Covers /surah, /page, /juz, /ayah, /surah/{n}/{edition}.
-
-     • Ayah audio (everyayah.com)
-         Cache-first with a bounded entry cap so the cache cannot
-         grow without limit.
-
-     • Everything else (same-origin static, misc cross-origin)
-         Stale-while-revalidate for same-origin, plain network
-         with cache fallback for cross-origin.
-
-   The worker deliberately ignores:
-
-     • Non-GET requests       — so POST /api/feedback is never touched.
-     • /_vercel/insights/*    — analytics must always reach the network.
-
-   Cache invalidation is automatic: bumping VERSION retires every
-   cache from the previous version on the next activate event.
+   Cache version is bumped whenever the shell changes.
    ============================================================ */
 
-const VERSION        = 'v1';
-const SHELL_CACHE    = `recite-shell-${VERSION}`;
-const FONTS_CACHE    = `recite-fonts-${VERSION}`;
-const API_CACHE      = `recite-api-${VERSION}`;
-const AUDIO_CACHE    = `recite-audio-${VERSION}`;
-const RUNTIME_CACHE  = `recite-runtime-${VERSION}`;
+'use strict';
 
-const CURRENT_CACHES = new Set([
-  SHELL_CACHE,
-  FONTS_CACHE,
-  API_CACHE,
-  AUDIO_CACHE,
-  RUNTIME_CACHE
-]);
+const VERSION        = 'v3';
+const SHELL_CACHE    = `qc-shell-${VERSION}`;
+const TEXT_CACHE     = `qc-text-${VERSION}`;
+const FONTS_CACHE    = `qc-fonts-${VERSION}`;
+const AUDIO_CACHE    = `qc-audio-${VERSION}`;
+const RUNTIME_CACHE  = `qc-runtime-${VERSION}`;
 
-/* The offline bootstrap. Both entries resolve to the same HTML. */
-const SHELL_URLS = ['./', './index.html'];
+const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, AUDIO_CACHE, RUNTIME_CACHE];
 
-/* Safety caps so a heavy reader cannot exhaust the origin quota. */
-const AUDIO_MAX_ENTRIES   = 200;
-const RUNTIME_MAX_ENTRIES = 120;
+/* Shell assets that must always be available offline. */
+const SHELL_URLS = [
+  './',
+  './index.html',
+  './manifest.webmanifest'
+];
 
-/* How long to wait for the network before falling back to the
-   cached shell. Long enough for a slow 3G round-trip, short
-   enough that an offline user is not left staring at a blank
-   screen. */
-const SHELL_NETWORK_TIMEOUT_MS = 3000;
+/* Hosts we recognise. */
+const HOST_ALQURAN = 'api.alquran.cloud';
+const HOST_EVERYAYAH = 'everyayah.com';
+const HOST_GOOGLE_FONTS_CSS = 'fonts.googleapis.com';
+const HOST_GOOGLE_FONTS_STATIC = 'fonts.gstatic.com';
 
-/* ============================================================
-   INSTALL — precache the app shell.
-   Per-URL failures are swallowed so a bad network at install
-   time still lets the worker activate and serve from cache.
-   ============================================================ */
-self.addEventListener('install', (event) => {
+/* Budgets — keep the caches from growing without bound. */
+const TEXT_CACHE_MAX  = 400;   /* ~400 API responses */
+const AUDIO_CACHE_MAX = 250;   /* ~250 ayah mp3s */
+const RUNTIME_MAX     = 120;
+
+/* ------------------------------------------------------------
+   INSTALL
+   ------------------------------------------------------------ */
+self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    try {
-      const cache = await caches.open(SHELL_CACHE);
-      await Promise.all(
-        SHELL_URLS.map(url =>
-          cache.add(new Request(url, { cache: 'reload' })).catch(() => {})
-        )
-      );
-    } catch (_) { /* keep going */ }
+    const cache = await caches.open(SHELL_CACHE);
+    /* Pre-cache the shell.  Use individual puts so a single 404
+       doesn't abort the whole install. */
+    await Promise.all(SHELL_URLS.map(async url => {
+      try{
+        const req = new Request(url, { cache: 'reload' });
+        const res = await fetch(req);
+        if(res && (res.ok || res.type === 'opaque')){
+          await cache.put(url, res.clone());
+        }
+      }catch(_){ /* ignore — offline installs can still proceed */ }
+    }));
     await self.skipWaiting();
   })());
 });
 
-/* ============================================================
-   ACTIVATE — drop old caches, take control immediately.
-   ============================================================ */
-self.addEventListener('activate', (event) => {
+/* ------------------------------------------------------------
+   ACTIVATE  —  drop old cache versions and take control.
+   ------------------------------------------------------------ */
+self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.map(k => (CURRENT_CACHES.has(k) ? null : caches.delete(k)))
-      );
-    } catch (_) { /* keep going */ }
-
-    /* We do not use navigation preload — the app relies on its
-       own fetch orchestration and preload adds nothing here. */
-    if (self.registration && self.registration.navigationPreload) {
-      try { await self.registration.navigationPreload.disable(); } catch (_) {}
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter(k => !ALL_CACHES.includes(k))
+        .map(k => caches.delete(k))
+    );
+    if(self.registration && self.registration.navigationPreload){
+      try{ await self.registration.navigationPreload.disable(); }catch(_){}
     }
-
     await self.clients.claim();
   })());
 });
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
-
-/* Drop the oldest N entries when a cache exceeds its cap.
-   Cache keys are iterated in insertion order, so the front of
-   the list is the oldest. */
-async function trimCache(cacheName, maxEntries) {
-  try {
-    const cache = await caches.open(cacheName);
-    const keys = await cache.keys();
-    if (keys.length <= maxEntries) return;
-    const drop = keys.length - maxEntries;
-    for (let i = 0; i < drop; i++) {
-      await cache.delete(keys[i]);
-    }
-  } catch (_) { /* non-fatal */ }
-}
-
-function isNavigationRequest(request) {
-  if (request.mode === 'navigate') return true;
-  if (request.method !== 'GET') return false;
-  const accept = request.headers.get('accept');
-  return !!(accept && accept.includes('text/html'));
-}
-
-function isGoogleFont(url) {
-  return url.hostname === 'fonts.googleapis.com' ||
-         url.hostname === 'fonts.gstatic.com';
-}
-
-function isQuranApi(url) {
-  return url.hostname === 'api.alquran.cloud';
-}
-
-function isAyahAudio(url) {
-  return url.hostname === 'everyayah.com';
-}
-
-function isAnalytics(url) {
-  return url.pathname.startsWith('/_vercel/');
-}
-
-function isFeedbackEndpoint(url) {
-  return url.pathname === '/api/feedback';
-}
-
-/* Only cache responses that are safe to replay. */
-function isCacheable(response) {
-  if (!response) return false;
-  if (response.type === 'opaque') return true;   /* cross-origin no-cors */
-  if (response.ok) return true;
-  return false;
-}
-
-/* ============================================================
-   STRATEGIES
-   ============================================================ */
-
-/* Cache-first with background revalidation. Ideal for stable,
-   versionable resources such as API JSON and static assets. */
-async function staleWhileRevalidate(request, cacheName, opts) {
-  opts = opts || {};
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (isCacheable(response)) {
-        cache.put(request, response.clone())
-          .then(() => {
-            if (opts.trim) return trimCache(cacheName, opts.trim);
-          })
-          .catch(() => {});
-      }
-      return response;
-    })
-    .catch(() => null);
-
-  if (cached) return cached;
-
-  const fresh = await fetchPromise;
-  if (fresh) return fresh;
-  return Response.error();
-}
-
-/* Cache-first without revalidation. Best for immutable assets:
-   fonts and ayah audio. The trim cap keeps storage bounded. */
-async function cacheFirst(request, cacheName, opts) {
-  opts = opts || {};
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  if (cached) {
-    if (opts.trim) trimCache(cacheName, opts.trim);
-    return cached;
-  }
-
-  try {
-    const response = await fetch(request);
-    if (isCacheable(response)) {
-      cache.put(request, response.clone())
-        .then(() => {
-          if (opts.trim) return trimCache(cacheName, opts.trim);
-        })
-        .catch(() => {});
-    }
-    return response;
-  } catch (_) {
-    return Response.error();
-  }
-}
-
-/* Network-first with a timeout, used for the HTML shell.
-   When the network wins, the shell cache is refreshed.
-   When the timeout wins, we return the cached shell immediately
-   while the network fetch continues in the background. */
-async function networkFirstShell(request) {
-  const cache = await caches.open(SHELL_CACHE);
-
-  let timedOut = false;
-  const timeoutPromise = new Promise((resolve) => {
-    setTimeout(() => {
-      timedOut = true;
-      resolve(null);
-    }, SHELL_NETWORK_TIMEOUT_MS);
-  });
-
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response && response.ok) {
-        cache.put(request, response.clone()).catch(() => {});
-      }
-      return response;
-    })
-    .catch(() => null);
-
-  const winner = await Promise.race([fetchPromise, timeoutPromise]);
-  if (winner) return winner;
-
-  /* Timeout fired first — serve from cache if we have one. */
-  const cached =
-    (await cache.match(request)) ||
-    (await cache.match('./index.html')) ||
-    (await cache.match('./'));
-  if (cached) return cached;
-
-  /* No cached shell yet — wait for the network to finish. */
-  const fresh = await fetchPromise;
-  if (fresh) return fresh;
-
-  /* Truly nothing to serve. */
-  if (timedOut) {
-    return new Response(
-      '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
-      '<body style="font-family:sans-serif;padding:2rem;text-align:center">' +
-      '<h1>You are offline</h1>' +
-      '<p>This page has not been saved for offline use yet. ' +
-      'Reconnect to the internet and try again.</p>',
-      { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-    );
-  }
-
-  return Response.error();
-}
-
-/* Plain network with a cache fallback. Used only for the
-   "everything else" tail so unexpected requests still degrade
-   gracefully when offline. */
-async function networkWithCacheFallback(request, cacheName) {
-  try {
-    return await fetch(request);
-  } catch (_) {
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    return Response.error();
-  }
-}
-
-/* ============================================================
-   FETCH ROUTER
-   ============================================================ */
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-
-  /* Never touch non-GET verbs. POST /api/feedback, PUT, DELETE…
-     all bypass the worker entirely. */
-  if (request.method !== 'GET') return;
-
-  let url;
-  try { url = new URL(request.url); } catch (_) { return; }
-
-  /* Skip schemes the Cache API cannot store. */
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-
-  /* Analytics must always reach the network untouched. */
-  if (isAnalytics(url)) return;
-
-  /* The feedback relay is POST-only, but guard the GET path too. */
-  if (isFeedbackEndpoint(url)) return;
-
-  /* 1. HTML navigations — network-first with a cached shell. */
-  if (isNavigationRequest(request)) {
-    event.respondWith(networkFirstShell(request));
-    return;
-  }
-
-  /* 2. Google Fonts — immutable, cache-first forever. */
-  if (isGoogleFont(url)) {
-    event.respondWith(cacheFirst(request, FONTS_CACHE));
-    return;
-  }
-
-  /* 3. Quran API — stale-while-revalidate for snappy + offline. */
-  if (isQuranApi(url)) {
-    event.respondWith(staleWhileRevalidate(request, API_CACHE));
-    return;
-  }
-
-  /* 4. Ayah audio — cache-first with a bounded entry cap. */
-  if (isAyahAudio(url)) {
-    event.respondWith(
-      cacheFirst(request, AUDIO_CACHE, { trim: AUDIO_MAX_ENTRIES })
-    );
-    return;
-  }
-
-  /* 5. Same-origin statics (icons, manifest, sw.js, etc.). */
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      staleWhileRevalidate(request, RUNTIME_CACHE, {
-        trim: RUNTIME_MAX_ENTRIES
-      })
-    );
-    return;
-  }
-
-  /* 6. Anything else — network, with a cache fallback. */
-  event.respondWith(networkWithCacheFallback(request, RUNTIME_CACHE));
-});
-
-/* ============================================================
-   MESSAGES
-   ============================================================
-   The app does not currently post messages to the worker, but
-   these commands are useful for manual control and debugging. */
-self.addEventListener('message', (event) => {
+/* ------------------------------------------------------------
+   MESSAGE  —  allow the page to ask for a cache clear.
+   ------------------------------------------------------------ */
+self.addEventListener('message', event => {
   const data = event.data || {};
-
-  if (data.type === 'SKIP_WAITING') {
+  if(data.type === 'SKIP_WAITING'){
     self.skipWaiting();
     return;
   }
-
-  if (data.type === 'CLEAR_CACHES') {
-    event.waitUntil(
-      caches.keys().then(keys =>
-        Promise.all(keys.map(k => caches.delete(k)))
-      )
-    );
-    return;
-  }
-
-  if (data.type === 'CLEAR_CACHE' && typeof data.name === 'string') {
-    event.waitUntil(caches.delete(data.name));
-    return;
+  if(data.type === 'CLEAR_CACHES'){
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      if(event.source && event.source.postMessage){
+        event.source.postMessage({ type: 'CACHES_CLEARED' });
+      }
+    })());
   }
 });
+
+/* ------------------------------------------------------------
+   FETCH  —  routing
+   ------------------------------------------------------------ */
+self.addEventListener('fetch', event => {
+  const req = event.request;
+
+  /* Only GET is cached.  Feedback POSTs, etc., always hit the network. */
+  if(req.method !== 'GET') return;
+
+  let url;
+  try{ url = new URL(req.url); }
+  catch(_){ return; }
+
+  /* Skip non-http(s) — data:, blob:, chrome-extension:, etc. */
+  if(url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  /* 1. everyayah.com audio — let the browser fetch it directly.
+        iOS Safari is very picky about <audio> and Range requests,
+        and a Service Worker in the middle can break playback
+        entirely.  We therefore DO NOT intercept audio requests. */
+  if(url.hostname === HOST_EVERYAYAH){
+    return; /* browser default behaviour */
+  }
+
+  /* 2. Google Fonts — cache-first, they're immutable. */
+  if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){
+    event.respondWith(cacheFirst(req, FONTS_CACHE));
+    return;
+  }
+
+  /* 3. alquran.cloud API — network-first, fall back to cache.
+        The Quran text is immutable, so a stale fallback is always
+        correct.  A short-lived background revalidation keeps the
+        cache fresh when online. */
+  if(url.hostname === HOST_ALQURAN){
+    event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
+    return;
+  }
+
+  /* 4. Same-origin requests (the app shell). */
+  if(url.origin === self.location.origin){
+    /* Navigations — try the cached shell first, then network. */
+    if(req.mode === 'navigate'){
+      event.respondWith(shellNavigation(req));
+      return;
+    }
+    /* Static same-origin assets — cache-first. */
+    event.respondWith(cacheFirst(req, RUNTIME_CACHE, RUNTIME_MAX));
+    return;
+  }
+
+  /* 5. Anything else — passthrough. */
+});
+
+/* ------------------------------------------------------------
+   STRATEGIES
+   ------------------------------------------------------------ */
+
+/* Cache-first with an optional max-entry trim. */
+async function cacheFirst(req, cacheName, maxEntries){
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(req, { ignoreSearch: false });
+  if(hit){
+    return hit;
+  }
+  try{
+    const res = await fetch(req);
+    /* Only cache successful, non-opaque-by-accident responses.
+       Opaque responses (status 0) from a cross-origin CDN are OK
+       to store — we just can't inspect them. */
+    if(res && (res.ok || res.type === 'opaque')){
+      /* Clone before we return, then put in the background. */
+      const clone = res.clone();
+      cache.put(req, clone).then(() => {
+        if(maxEntries) trimCache(cacheName, maxEntries);
+      }).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    /* Offline and not in cache — return a minimal error response
+       rather than throwing, so the page sees a clean failure. */
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
+
+/* Network-first with cache fallback. */
+async function networkFirst(req, cacheName, maxEntries){
+  const cache = await caches.open(cacheName);
+  try{
+    const res = await fetch(req);
+    if(res && res.ok){
+      const clone = res.clone();
+      cache.put(req, clone).then(() => {
+        if(maxEntries) trimCache(cacheName, maxEntries);
+      }).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    const hit = await cache.match(req, { ignoreSearch: false });
+    if(hit) return hit;
+    return new Response(
+      JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/* Navigation — serve the cached shell instantly when offline;
+   otherwise let the network serve it and update the cache. */
+async function shellNavigation(req){
+  const cache = await caches.open(SHELL_CACHE);
+  try{
+    const res = await fetch(req);
+    if(res && res.ok && res.type === 'basic'){
+      const clone = res.clone();
+      cache.put('./index.html', clone).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    const hit =
+      await cache.match(req, { ignoreSearch: true }) ||
+      await cache.match('./index.html', { ignoreSearch: true }) ||
+      await cache.match('./', { ignoreSearch: true });
+    if(hit) return hit;
+    return new Response(
+      '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
+      '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
+      '<h2>You are offline</h2><p>Open the app once while online to enable offline mode.</p>',
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
+  }
+}
+
+/* ------------------------------------------------------------
+   CACHE TRIMMING  —  FIFO by insertion order.
+   ------------------------------------------------------------ */
+async function trimCache(cacheName, maxEntries){
+  try{
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    const over = keys.length - maxEntries;
+    if(over <= 0) return;
+    /* keys() returns in insertion order in every current browser. */
+    for(let i = 0; i < over; i++){
+      await cache.delete(keys[i]);
+    }
+  }catch(_){}
+}
