@@ -2,38 +2,37 @@
    Quran Recitation Coach — Service Worker
    ============================================================
    Responsibilities:
-     • Cache the app shell (the HTML page + manifest + icons)
+     • Cache the app shell (index.html + manifest.json + icons)
        so the PWA launches offline.
      • Runtime-cache Quran text / translation responses from
-       api.alquran.cloud so previously read surahs & pages
-       stay available offline.
+       api.alquran.cloud.
      • Cache Google Fonts.
-     • Cache audio responses from everyayah.com — but ONLY full
-       200 responses, and always let the request fall through to
-       the network first.  iOS Safari issues HTTP Range requests
-       for <audio> and mis-handles Service-Worker-supplied 206
-       responses; we deliberately do NOT synthesise ranges here.
+     • NEVER intercept everyayah.com audio — iOS Safari needs the
+       raw HTTP Range handshake to play <audio>.
+     • NEVER intercept /my-analytics/* — the Vercel Analytics
+       proxy must reach the network untouched so the request
+       still looks like a normal first-party asset.
      • Never cache POST requests (feedback submissions).
 
-   Cache version is bumped whenever the shell changes.
+   Cache version is bumped whenever the shell changes — that
+   is what forces visitors to see the new HTML after a deploy.
    ============================================================ */
 
 'use strict';
 
-const VERSION        = 'v3';
+const VERSION        = 'v4';                     /* ← bumped from v3 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
-const AUDIO_CACHE    = `qc-audio-${VERSION}`;
 const RUNTIME_CACHE  = `qc-runtime-${VERSION}`;
 
-const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, AUDIO_CACHE, RUNTIME_CACHE];
+const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Shell assets that must always be available offline. */
 const SHELL_URLS = [
   './',
   './index.html',
-  './manifest.webmanifest'
+  './manifest.json'                              /* ← new */
 ];
 
 /* Hosts we recognise. */
@@ -43,8 +42,7 @@ const HOST_GOOGLE_FONTS_CSS = 'fonts.googleapis.com';
 const HOST_GOOGLE_FONTS_STATIC = 'fonts.gstatic.com';
 
 /* Budgets — keep the caches from growing without bound. */
-const TEXT_CACHE_MAX  = 400;   /* ~400 API responses */
-const AUDIO_CACHE_MAX = 250;   /* ~250 ayah mp3s */
+const TEXT_CACHE_MAX  = 400;
 const RUNTIME_MAX     = 120;
 
 /* ------------------------------------------------------------
@@ -53,8 +51,6 @@ const RUNTIME_MAX     = 120;
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
-    /* Pre-cache the shell.  Use individual puts so a single 404
-       doesn't abort the whole install. */
     await Promise.all(SHELL_URLS.map(async url => {
       try{
         const req = new Request(url, { cache: 'reload' });
@@ -62,7 +58,7 @@ self.addEventListener('install', event => {
         if(res && (res.ok || res.type === 'opaque')){
           await cache.put(url, res.clone());
         }
-      }catch(_){ /* ignore — offline installs can still proceed */ }
+      }catch(_){ /* offline installs can still proceed */ }
     }));
     await self.skipWaiting();
   })());
@@ -112,7 +108,7 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  /* Only GET is cached.  Feedback POSTs, etc., always hit the network. */
+  /* Only GET is cached.  Feedback POSTs always hit the network. */
   if(req.method !== 'GET') return;
 
   let url;
@@ -125,59 +121,55 @@ self.addEventListener('fetch', event => {
   /* 1. everyayah.com audio — let the browser fetch it directly.
         iOS Safari is very picky about <audio> and Range requests,
         and a Service Worker in the middle can break playback
-        entirely.  We therefore DO NOT intercept audio requests. */
+        entirely.  DO NOT intercept. */
   if(url.hostname === HOST_EVERYAYAH){
-    return; /* browser default behaviour */
+    return;
   }
 
-  /* 2. Google Fonts — cache-first, they're immutable. */
+  /* 2. Vercel Analytics proxy — must reach the network as a
+        normal same-origin request.  No SW caching, no rewriting. */
+  if(url.origin === self.location.origin && url.pathname.startsWith('/my-analytics/')){
+    return;
+  }
+
+  /* 3. Google Fonts — cache-first, they're immutable. */
   if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){
     event.respondWith(cacheFirst(req, FONTS_CACHE));
     return;
   }
 
-  /* 3. alquran.cloud API — network-first, fall back to cache.
-        The Quran text is immutable, so a stale fallback is always
-        correct.  A short-lived background revalidation keeps the
-        cache fresh when online. */
+  /* 4. alquran.cloud API — network-first, fall back to cache.
+        The Quran text is immutable, so a stale fallback is
+        always correct. */
   if(url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
   }
 
-  /* 4. Same-origin requests (the app shell). */
+  /* 5. Same-origin requests (the app shell). */
   if(url.origin === self.location.origin){
-    /* Navigations — try the cached shell first, then network. */
     if(req.mode === 'navigate'){
       event.respondWith(shellNavigation(req));
       return;
     }
-    /* Static same-origin assets — cache-first. */
     event.respondWith(cacheFirst(req, RUNTIME_CACHE, RUNTIME_MAX));
     return;
   }
 
-  /* 5. Anything else — passthrough. */
+  /* 6. Anything else — passthrough. */
 });
 
 /* ------------------------------------------------------------
    STRATEGIES
    ------------------------------------------------------------ */
 
-/* Cache-first with an optional max-entry trim. */
 async function cacheFirst(req, cacheName, maxEntries){
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req, { ignoreSearch: false });
-  if(hit){
-    return hit;
-  }
+  if(hit) return hit;
   try{
     const res = await fetch(req);
-    /* Only cache successful, non-opaque-by-accident responses.
-       Opaque responses (status 0) from a cross-origin CDN are OK
-       to store — we just can't inspect them. */
     if(res && (res.ok || res.type === 'opaque')){
-      /* Clone before we return, then put in the background. */
       const clone = res.clone();
       cache.put(req, clone).then(() => {
         if(maxEntries) trimCache(cacheName, maxEntries);
@@ -185,13 +177,10 @@ async function cacheFirst(req, cacheName, maxEntries){
     }
     return res;
   }catch(err){
-    /* Offline and not in cache — return a minimal error response
-       rather than throwing, so the page sees a clean failure. */
     return new Response('', { status: 504, statusText: 'Gateway Timeout' });
   }
 }
 
-/* Network-first with cache fallback. */
 async function networkFirst(req, cacheName, maxEntries){
   const cache = await caches.open(cacheName);
   try{
@@ -213,8 +202,6 @@ async function networkFirst(req, cacheName, maxEntries){
   }
 }
 
-/* Navigation — serve the cached shell instantly when offline;
-   otherwise let the network serve it and update the cache. */
 async function shellNavigation(req){
   const cache = await caches.open(SHELL_CACHE);
   try{
@@ -248,7 +235,6 @@ async function trimCache(cacheName, maxEntries){
     const keys = await cache.keys();
     const over = keys.length - maxEntries;
     if(over <= 0) return;
-    /* keys() returns in insertion order in every current browser. */
     for(let i = 0; i < over; i++){
       await cache.delete(keys[i]);
     }

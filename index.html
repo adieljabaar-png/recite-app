@@ -3,13 +3,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0d1119" />
+<meta name="google-site-verification" content="kSqzXbRlG9zes7RfT-dKa9P4EJMbWfy9S2KVqTJIU9Y" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Recite" />
 <meta name="application-name" content="Recite" />
 <meta name="description" content="Practice Quran recitation with live word-by-word feedback." />
-<link rel="manifest" id="manifestLink" />
+<link rel="manifest" href="/manifest.json" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1119'/%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1119'/%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/svg%3E" />
 <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
@@ -2184,40 +2185,6 @@ body.light-mode .feedback-status.err{color:#8a2033;}
   </div>
 </div><script>
 /* ============================================================
-   PWA MANIFEST
-   ============================================================ */
-(function buildManifest(){
-  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1119'/%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/svg%3E";
-  const iconMaskable = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230d1119'/%3E%3Cg transform='translate(90 90) scale(0.72) translate(-90 -90)'%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/g%3E%3C/svg%3E";
-  const manifest = {
-    name: "Quran Recitation Coach",
-    short_name: "Recite",
-    description: "Practice Quran recitation with live word-by-word feedback.",
-    start_url: ".",
-    scope: ".",
-    display: "standalone",
-    display_override: ["standalone", "fullscreen", "minimal-ui"],
-    orientation: "any",
-    background_color: "#0d1119",
-    theme_color: "#0d1119",
-    lang: "en",
-    dir: "ltr",
-    categories: ["education", "books"],
-    prefer_related_applications: false,
-    icons: [
-      { src: iconSvg,      sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: iconMaskable, sizes: "any", type: "image/svg+xml", purpose: "maskable" }
-    ]
-  };
-  try{
-    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
-    const url  = URL.createObjectURL(blob);
-    const link = document.getElementById('manifestLink');
-    if(link) link.href = url;
-  }catch(e){}
-})();
-
-/* ============================================================
    SERVICE WORKER REGISTRATION (page caching only)
    ============================================================ */
 async function initServiceWorker(){
@@ -4241,9 +4208,15 @@ function placeRukuMarks(inner, content){
   const list = Array.from(content.querySelectorAll('.ayah'));
   if(!list.length) return;
 
+  /* The bordered mushaf page is the closest block ancestor of the
+     content. We measure its left edge and hang the marker just
+     outside it, inside the inner's left padding strip. */
   const frame = content.closest('.mushaf-book-page') || content.parentElement;
   const innerRect = inner.getBoundingClientRect();
   const frameRect = frame ? frame.getBoundingClientRect() : innerRect;
+  /* Place ع in the left margin, just outside the frame border.
+     `right` is measured from the inner’s padding box, so this
+     sits the mark’s right edge 4px to the left of the frame. */
   const rightOffset = (innerRect.right - frameRect.left) + 4;
 
   const nextPageData = readerState.pages.get(readerState.currentPage + 1);
@@ -4285,6 +4258,8 @@ function placeRukuMarks(inner, content){
     const r = anchor.getBoundingClientRect();
     if(!r || !r.width) continue;
 
+    /* Vertical centre of the closing ayah — unchanged. Horizontal
+       position now sits just outside the LEFT page border. */
     const top = (r.top + r.height / 2) - innerRect.top;
     if(!isFinite(rightOffset) || !isFinite(top)) continue;
 
@@ -4460,6 +4435,7 @@ function renderReaderPage(pageNumber, token){
     qvTitle.textContent = 'Page ' + pageNumber;
   }
 
+  /* Sajdah pop-up — 2 seconds, only when the page contains a sajdah verse. */
   if(sajdahRefs.length){
     setTimeout(() => {
       showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000);
