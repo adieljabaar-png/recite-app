@@ -4533,6 +4533,7 @@ const viewerAudio = {
   ayahs: [],
   translations: [],
   meta: null,
+  metaLoaded: false,
   token: 0
 };
 
@@ -4884,10 +4885,18 @@ async function openSurahInViewer(surahNumber, targetMode){
 
 /* ============================================================
    AUDIO MODE
+
+   iOS Safari requires audio playback to start INSIDE a user
+   gesture.  The metadata fetches below suspend execution and
+   would otherwise break that gesture, so the very first ayah
+   is kicked off synchronously BEFORE any `await`.  Everything
+   else (metadata, translations, highlight re-attach) runs in
+   parallel and joins the already-playing audio when it's done.
    ============================================================ */
 async function loadViewerAudioSurah(surahNumber){
   viewerAudioStop();
   viewerAudio.token++;
+  const myToken = viewerAudio.token;
   viewerAudio.active = true;
   viewerAudio.paused = false;
   viewerAudio.surah = surahNumber;
@@ -4895,6 +4904,7 @@ async function loadViewerAudioSurah(surahNumber){
   viewerAudio.ayahs = [];
   viewerAudio.translations = [];
   viewerAudio.meta = null;
+  viewerAudio.metaLoaded = false;
   viewerAudioErrorStreak = 0;
 
   viewerMode = 'audio';
@@ -4906,8 +4916,26 @@ async function loadViewerAudioSurah(surahNumber){
   updateViewerPlayIcon();
   refreshAudioRowStates();
 
-  const myToken = viewerAudio.token;
+  /* ── iOS: start ayah 1 RIGHT NOW, inside the user gesture. ──
+     The fetches below suspend execution, which loses the gesture
+     on iOS Safari.  So the first play() must happen here, before
+     any await. */
+  const firstResultPromise = playUrl(
+    buildAyahUrl(reciter, surahNumber, 1),
+    { onStart: () => {
+        if(myToken !== viewerAudio.token) return;
+        if(!viewerAudio.active || viewerAudio.paused) return;
+        const el = findViewerAyahEl(surahNumber, 1);
+        if(el){
+          pageEl.querySelectorAll('.ayah.playing').forEach(a => a.classList.remove('playing'));
+          el.classList.add('playing');
+          el.classList.remove('done');
+          scrollElementIntoView(el, true);
+        }
+      } }
+  );
 
+  /* ── Fetch surah text + translation in parallel ── */
   try{
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/quran-uthmani', FETCH_TIMEOUT_MS),
@@ -4917,6 +4945,7 @@ async function loadViewerAudioSurah(surahNumber){
     if(arSettled.status !== 'fulfilled' || !arSettled.value.ok) throw new Error('Arabic fetch failed');
     const arJson = await arSettled.value.json();
     if(arJson.code !== 200 || !arJson.data) throw new Error('Bad response');
+    if(myToken !== viewerAudio.token) return;
 
     viewerAudio.ayahs = arJson.data.ayahs || [];
     viewerAudio.meta = {
@@ -4938,6 +4967,8 @@ async function loadViewerAudioSurah(surahNumber){
       }catch(_){}
     }
 
+    if(myToken !== viewerAudio.token) return;
+
     renderVerses(viewerAudio.ayahs, viewerAudio.translations);
     mushafDirtyForViewer = true;
     document.body.classList.add('viewer-audio-mode');
@@ -4945,8 +4976,18 @@ async function loadViewerAudioSurah(surahNumber){
     updateViewerPlayIcon();
     refreshAudioRowStates();
     showViewerChrome();
+    viewerAudio.metaLoaded = true;
 
-    playCurrentViewerAyah();
+    /* Re-attach the ayah-1 highlight to the freshly rendered DOM */
+    if(myToken === viewerAudio.token && viewerAudio.active && !viewerAudio.paused &&
+       currentAudio && !currentAudio.paused){
+      const el = findViewerAyahEl(surahNumber, 1);
+      if(el){
+        pageEl.querySelectorAll('.ayah.playing').forEach(a => a.classList.remove('playing'));
+        el.classList.add('playing');
+        scrollElementIntoView(el, true);
+      }
+    }
   }catch(e){
     if(myToken !== viewerAudio.token) return;
     viewerAudio.active = false;
@@ -4954,7 +4995,44 @@ async function loadViewerAudioSurah(surahNumber){
     showToast('⚠️ Could not load audio for this surah.');
     updateViewerPlayIcon();
     refreshAudioRowStates();
+    return;
   }
+
+  /* ── Ayah 1 has finished — continue the chain with ayah 2 ── */
+  const firstResult = await firstResultPromise;
+  if(myToken !== viewerAudio.token) return;
+  if(!viewerAudio.active) return;
+  if(viewerAudio.paused) return;
+
+  if(firstResult && firstResult.ok === false){
+    if(firstResult.reason === 'autoplay-blocked'){
+      viewerAudioPause();
+      showToast(
+        '🔊 Tap the ▶ button in the reader to start playback ' +
+        '(the browser needs one more tap from you).',
+        4200
+      );
+      const el = findViewerAyahEl(surahNumber, 1);
+      if(el) el.classList.remove('playing');
+      return;
+    }
+    if(firstResult.reason === 'superseded' || firstResult.reason === 'stopped') return;
+    viewerAudioErrorStreak++;
+    if(viewerAudioErrorStreak >= 3){
+      viewerAudioPause();
+      showToast('⚠️ Audio is failing. Check your connection and tap ▶ to retry.', 4200);
+      return;
+    }
+    viewerAudio.ayahIdx = 1;
+    playCurrentViewerAyah();
+    return;
+  }
+
+  viewerAudioErrorStreak = 0;
+  const el1 = findViewerAyahEl(surahNumber, 1);
+  if(el1){ el1.classList.remove('playing'); el1.classList.add('done'); }
+  viewerAudio.ayahIdx = 1;
+  playCurrentViewerAyah();
 }
 
 function viewerAudioPause(){
@@ -4982,8 +5060,13 @@ function viewerAudioResume(){
       if(a._safetyTimer){ clearTimeout(a._safetyTimer); a._safetyTimer = null; }
       if(a._finish){ a._finish(false, 'superseded'); a._finish = null; }
       a.pause();
-      try{ a.removeAttribute('src'); a.load(); }catch(_){}
     }catch(e){}
+  }
+  /* If metadata hasn't arrived yet, re-kick the whole load from
+     inside this tap — that preserves the iOS user gesture. */
+  if(!viewerAudio.metaLoaded){
+    loadViewerAudioSurah(viewerAudio.surah);
+    return;
   }
   playCurrentViewerAyah();
   updateViewerPlayIcon();
@@ -4998,6 +5081,7 @@ function viewerAudioStop(){
   viewerAudio.ayahs = [];
   viewerAudio.translations = [];
   viewerAudio.meta = null;
+  viewerAudio.metaLoaded = false;
   viewerAudioErrorStreak = 0;
   if(currentAudio){
     const a = currentAudio;
@@ -5025,6 +5109,10 @@ function viewerAudioStartFromCurrent(){
     return;
   }
   viewerAudio.paused = false;
+  if(!viewerAudio.metaLoaded){
+    loadViewerAudioSurah(viewerAudio.surah);
+    return;
+  }
   playCurrentViewerAyah();
 }
 
@@ -5045,6 +5133,7 @@ async function playCurrentViewerAyah(){
   if(!viewerAudio.active) return;
   if(!viewerOpen) return;
   if(viewerAudio.paused) return;
+  if(!viewerAudio.metaLoaded) return;
 
   if(viewerAudio.ayahIdx >= viewerAudio.ayahs.length){
     const meta = viewerAudio.meta;
@@ -5667,7 +5756,6 @@ function playUrl(url, opts){
       try{
         if(a._safetyTimer){ clearTimeout(a._safetyTimer); a._safetyTimer = null; }
         a.src = fbUrl;
-        try{ a.load(); }catch(_){}
         const p = a.play();
         if(p && typeof p.catch === 'function'){
           p.catch(err => {
@@ -5684,7 +5772,6 @@ function playUrl(url, opts){
     a.onended = () => finish(true);
 
     a.src = url;
-    try{ a.load(); }catch(_){}
     a.volume = Math.max(0, Math.min(1, currentVolume));
 
     currentAudio = a;
