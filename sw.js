@@ -5,7 +5,7 @@
      • Cache the app shell (index.html + manifest.json + icons)
        so the PWA launches offline.
      • Runtime-cache Quran text / translation responses from
-       api.alquran.cloud.
+       api.quran.com (v4) and api.alquran.cloud (fallback).
      • Cache Google Fonts.
      • NEVER intercept everyayah.com audio — iOS Safari needs the
        raw HTTP Range handshake to play <audio>.
@@ -16,11 +16,19 @@
 
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
+
+   v10 — Version bumped so browsers pick up the new shell after
+         the vercel.json header/rewrite fix.  The vercel.json now
+         forces sw.js and index.html to revalidate on every load
+         and correctly proxies /my-analytics/* to Vercel, which
+         was previously being rewritten to index.html by the
+         catch-all rule and breaking both Analytics and the SW
+         registration silently.
    ============================================================ */
 
 'use strict';
 
-const VERSION        = 'v4';                     /* ← bumped from v3 */
+const VERSION        = 'v10';                    /* ← bumped from v9 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -32,14 +40,15 @@ const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 const SHELL_URLS = [
   './',
   './index.html',
-  './manifest.json'                              /* ← new */
+  './manifest.json'
 ];
 
 /* Hosts we recognise. */
-const HOST_ALQURAN = 'api.alquran.cloud';
-const HOST_EVERYAYAH = 'everyayah.com';
-const HOST_GOOGLE_FONTS_CSS = 'fonts.googleapis.com';
-const HOST_GOOGLE_FONTS_STATIC = 'fonts.gstatic.com';
+const HOST_ALQURAN              = 'api.alquran.cloud';
+const HOST_QURAN_COM            = 'api.quran.com';
+const HOST_EVERYAYAH            = 'everyayah.com';
+const HOST_GOOGLE_FONTS_CSS     = 'fonts.googleapis.com';
+const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 
 /* Budgets — keep the caches from growing without bound. */
 const TEXT_CACHE_MAX  = 400;
@@ -127,7 +136,10 @@ self.addEventListener('fetch', event => {
   }
 
   /* 2. Vercel Analytics proxy — must reach the network as a
-        normal same-origin request.  No SW caching, no rewriting. */
+        normal same-origin request.  No SW caching, no rewriting.
+        The vercel.json rewrite sends this to va.vercel-scripts.com
+        so the request still looks like a normal first-party asset
+        from the browser's point of view. */
   if(url.origin === self.location.origin && url.pathname.startsWith('/my-analytics/')){
     return;
   }
@@ -138,15 +150,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 4. alquran.cloud API — network-first, fall back to cache.
-        The Quran text is immutable, so a stale fallback is
-        always correct. */
+  /* 4. Quran.com API v4 — the reader’s primary source for the
+        IndoPak text with the full Tajweed symbol set.
+        Network-first with cache fallback. */
+  if(url.hostname === HOST_QURAN_COM){
+    event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
+    return;
+  }
+
+  /* 5. alquran.cloud API — coach’s Uthmani text, English
+        translation, and the reader’s fallback edition.
+        Network-first. */
   if(url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
   }
 
-  /* 5. Same-origin requests (the app shell). */
+  /* 6. Same-origin requests (the app shell). */
   if(url.origin === self.location.origin){
     if(req.mode === 'navigate'){
       event.respondWith(shellNavigation(req));
@@ -156,7 +176,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 6. Anything else — passthrough. */
+  /* 7. Anything else — passthrough. */
 });
 
 /* ------------------------------------------------------------

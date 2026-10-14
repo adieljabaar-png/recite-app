@@ -13,7 +13,7 @@
 <link rel="manifest" href="/manifest.json" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1119'/%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1119'/%3E%3Cpath d='M25 55 Q60 45 90 60 L90 138 Q60 123 25 133 Z' fill='%234f8cff'/%3E%3Cpath d='M155 55 Q120 45 90 60 L90 138 Q120 123 155 133 Z' fill='%233a72e6'/%3E%3C/svg%3E" />
-<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
 <title>Quran Recitation Coach</title>
 <!-- Vercel Web Analytics (proxied via /my-analytics to bypass ad blockers) -->
 <script>
@@ -21,6 +21,17 @@
 </script>
 <script defer src="/my-analytics/script.js"></script>
 <style>
+  /* ============================================================
+     QURANIC ARABIC FONT
+     ============================================================
+     Amiri is the classical Naskh typeface from the Amiri Project.
+     It renders the shaddah above the letter and the kasrah clearly
+     below the base letter — they do not stack vertically.  Its
+     maddah is a clean wavy line drawn without a horizontal stroke.
+     Amiri Quran, Scheherazade New and Noto Naskh Arabic are kept
+     as fallbacks in case Amiri fails to load.
+     ============================================================ */
+
   :root{
     --bg:#0d1119;--panel:#151c2b;--panel-2:#1b2436;--line:#28334a;
     --text:#e8edf7;--muted:#8f9bb3;--accent:#4f8cff;
@@ -84,7 +95,7 @@ margin-top:5px;position:relative;
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .hijri-alt{
-display:block;font-family:'Amiri Quran',serif;font-size:1.15rem;
+display:block;font-family:'Amiri',serif;font-size:1.15rem;
 color:#9dc0ff;margin-top:2px;line-height:1.4;position:relative;
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
@@ -233,7 +244,7 @@ font-variant-numeric:tabular-nums;
 .bookmark-row .bm-en{font-size:.85rem;font-weight:700;color:var(--text);
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bookmark-row .bm-sub{font-size:.66rem;color:var(--muted);letter-spacing:.02em;}
-.bookmark-row .bm-ar{font-family:'Amiri Quran',serif;font-size:1.05rem;
+.bookmark-row .bm-ar{font-family:'Amiri',serif;font-size:1.05rem;
 color:#9dc0ff;white-space:nowrap;flex-shrink:0;}
 .bookmark-row .bm-del{
 width:32px;height:32px;border-radius:50%;padding:0;
@@ -499,7 +510,7 @@ letter-spacing:.03em;text-transform:uppercase;
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .surah-row .ar{
-font-family:'Amiri Quran',serif;font-size:1.2rem;color:#9dc0ff;
+font-family:'Amiri',serif;font-size:1.2rem;color:#9dc0ff;
 white-space:nowrap;flex-shrink:0;line-height:1;padding:0 4px;
 }
 .surah-row .playbtn{
@@ -694,14 +705,23 @@ color:#2a4a7a;border-top-color:rgba(42,111,224,.20);
 }
 
 /* ==================================================================
-   INDO-PAK MUSHAF PAGE  (used by the Surah index / Juz index reader)
+   INDO-PAK MUSHAF PAGE
+   ==================================================================
+   font-family: 'Amiri' is the primary renderer.
+   Amiri places the shaddah above the letter and the kasrah cleanly
+   below the base letter — they do not stack vertically — and its
+   maddah is a clean wavy line drawn without a horizontal stroke.
    ================================================================== */
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book{
 padding-top:calc(var(--safe-top) + 62px);
 padding-bottom:calc(var(--safe-bottom) + 96px);
 padding-left:calc(var(--safe-left) + 10px);
 padding-right:calc(var(--safe-right) + 10px);
-font-size:clamp(1.35rem,5.5vw,1.9rem);line-height:2.2;
+/* --- tuned for the 13-line IndoPak Mushaf density --- */
+font-size:clamp(1.4rem,5.8vw,2rem);
+line-height:2.15;
+letter-spacing:0;
+word-spacing:0.02em;
 background:transparent;touch-action:pan-y;
 --page-bg:#000000;
 --page-fg:#ffffff;
@@ -718,7 +738,7 @@ body.page-dark.viewer-read-mode .qv-slot .mushaf.mushaf-book{
 --page-border:#ffffff;
 }
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-inner{
-padding:0 clamp(30px,7vw,52px);
+padding:0 clamp(28px,6.5vw,50px);
 max-width:900px;margin:0 auto;
 position:relative;
 }
@@ -732,16 +752,14 @@ padding:14px 18px 8px;
 box-shadow:0 18px 46px rgba(0,0,0,.55);
 min-height:calc(100vh - var(--safe-top) - var(--safe-bottom) - 170px);
 position:relative;
-/* IndoPak-friendly stack first, then Naskh fallbacks.
-   All Unicode marks (shaddah, sukoon, kasrah, madd, etc.) are
-   rendered as stored in the quran-indopak edition text — nothing
-   is stripped or substituted by this stylesheet. */
+/* ---- Amiri is the primary renderer ---- */
 font-family:
+  'Amiri',
+  'Amiri Quran',
   'Al Majeed Quranic','PDMS Saleem Quran','Al Qalam Quran',
-  'KFGQPC Uthmanic Script HAFS','Amiri Quran',
-  'Scheherazade New','Noto Naskh Arabic',serif;
-font-weight:400;                    /* no synthetic bold — protects harakat */
--webkit-text-stroke:0.25px currentColor;
+  'KFGQPC Uthmanic Script HAFS','Scheherazade New',
+  'Noto Naskh Arabic',serif;
+font-weight:400;
 font-feature-settings:"kern" 1,"liga" 1,"calt" 1,"rlig" 1;
 text-rendering:optimizeLegibility;
 will-change:transform;
@@ -759,7 +777,7 @@ gap:8px;
 padding:2px 2px 8px;
 margin-bottom:12px;
 border-bottom:1px solid currentColor;
-font-family:'Amiri Quran',serif;
+font-family:'Amiri','Amiri Quran',serif;
 font-size:.82em;line-height:1.25;
 direction:ltr;
 -webkit-text-stroke:0.2px currentColor;
@@ -778,11 +796,26 @@ flex:0 0 auto;font-weight:800;font-size:1em;text-align:center;
 
 .mushaf-book-content{
 text-align:justify;
-text-align-last:justify;
+text-align-last:center;    /* short final lines (end of surah / end of page)
+                              sit centred with open space on both sides
+                              instead of being stretched word-by-word. */
 text-justify:inter-word;
-line-height:2.25;
+line-height:2.15;
 font-size:1em;
 padding:0 2px 2px;
+}
+
+/* ---- Waqf / pause marks (U+06D6–U+06DC) ----
+   Amiri places these marks correctly on its own. This rule is a
+   safety net for any fallback font that might render before Amiri
+   has finished loading.  */
+.mushaf-book-content .waqf-mark{
+position:relative;
+top:-0.08em;
+display:inline;
+font-size:1em;
+line-height:1;
+-webkit-text-stroke:0.15px currentColor;
 }
 
 .mushaf-book-header{
@@ -800,7 +833,7 @@ color:currentColor;font-size:.9rem;line-height:1;
 -webkit-text-stroke:0;
 }
 .mushaf-surah-name{
-margin:0;font-family:'Amiri Quran',serif;font-size:1.35em;
+margin:0;font-family:'Amiri','Amiri Quran',serif;font-size:1.35em;
 color:currentColor;line-height:1.35;font-weight:700;
 }
 .mushaf-surah-meta{
@@ -809,7 +842,7 @@ letter-spacing:.10em;text-transform:uppercase;font-weight:700;opacity:.8;
 -webkit-text-stroke:0;
 }
 
-/* ── Bismillah — ornate calligraphic line, mushaf style ─────────── */
+/* ---- Bismillah line ---- */
 .mushaf-bismillah-line{
 display:flex;
 align-items:center;
@@ -819,7 +852,7 @@ text-align:center;
 text-align-last:auto;
 padding:8px 0 18px;
 margin:6px 0 10px;
-font-family:'Amiri Quran','Scheherazade New',serif;
+font-family:'Amiri','Amiri Quran',serif;
 font-size:1.08em;
 line-height:1.85;
 font-weight:400;
@@ -884,7 +917,7 @@ min-width:1.75em;
 text-align:center;
 line-height:1.55;
 vertical-align:middle;
-font-family:'Amiri Quran',serif;
+font-family:'Amiri','Amiri Quran',serif;
 font-weight:700;
 color:currentColor;
 background:transparent;
@@ -896,7 +929,7 @@ display:block;text-align:center;
 padding:8px 0 2px;
 margin-top:12px;
 border-top:1px solid currentColor;
-font-family:'Amiri Quran',serif;
+font-family:'Amiri','Amiri Quran',serif;
 font-size:.82em;line-height:1.4;
 -webkit-text-stroke:0.2px currentColor;
 }
@@ -924,7 +957,7 @@ body.page-light.viewer-read-mode.viewer-translation-mode .qv-slot .mushaf.mushaf
 background:rgba(0,0,0,.05);
 }
 
-/* ── Juz-opening ayah: invert ONLY the first visual line ───────────── */
+/* ---- Juz-opening ayah: invert ONLY the first visual line ---- */
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start{
 display:block;
 position:relative;
@@ -941,8 +974,8 @@ position:absolute;
 left:-6px;
 right:-6px;
 top:0;
-height:2.25em;    /* fallback for browsers without the lh unit */
-height:1lh;       /* exactly one line of this block */
+height:2.25em;
+height:1lh;
 background:#ffffff;
 border-radius:8px;
 mix-blend-mode:difference;
@@ -956,16 +989,16 @@ border-color:currentColor !important;
 
 .mushaf-page-num{
 display:block;text-align:center;margin:0 0 14px;padding:0;
-font-family:'Amiri Quran',serif;color:currentColor;font-size:1.05rem;
+font-family:'Amiri','Amiri Quran',serif;color:currentColor;font-size:1.05rem;
 letter-spacing:.14em;opacity:.8;
 border:none;
 }
 
-/* ── Ruku “ع” marker ─────────────────────────────────────────── */
+/* ---- Ruku "ع" marker ---- */
 .mushaf-ruku-mark{
   position:absolute;
   transform:translate(0,-50%);
-  font-family:'Amiri Quran','Scheherazade New',serif;
+  font-family:'Amiri','Amiri Quran','Scheherazade New',serif;
   font-size:1.05em;
   line-height:1;
   color:var(--page-fg,currentColor);
@@ -1082,7 +1115,7 @@ background:rgba(79,140,255,.08);border:1px solid rgba(79,140,255,.22);
 border-radius:12px;text-align:center;min-height:56px;
 }
 .cal-today-info .hijri{
-display:block;font-family:'Amiri Quran',serif;font-size:1.1rem;
+display:block;font-family:'Amiri','Amiri Quran',serif;font-size:1.1rem;
 color:#9dc0ff;margin-bottom:4px;line-height:1.4;
 }
 .cal-today-info .greg{display:block;font-size:.78rem;color:var(--muted);font-weight:600;line-height:1.45;}
@@ -1122,7 +1155,7 @@ background:currentColor;border:1.5px solid #111827;
 50%{box-shadow:0 0 0 6px rgba(79,140,255,0)}
 }
 
-/* ── Bigger, light-blue hamburger on the Home screen ─────────────── */
+/* ---- Bigger, light-blue hamburger on the Home screen ---- */
 #homeMenuBtn{
 width:52px;height:52px;border-radius:15px;
 font-size:1.7rem;line-height:1;font-weight:800;
@@ -1217,7 +1250,7 @@ display:block;font-size:.92rem;font-weight:700;
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .surah-info .surah-ar{
-display:block;font-family:'Amiri Quran',serif;font-size:.92rem;
+display:block;font-family:'Amiri','Amiri Quran',serif;font-size:.92rem;
 color:#9dc0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .surah-info .surah-count{
@@ -1231,7 +1264,7 @@ padding:9px 11px;border-radius:11px;min-height:42px;white-space:nowrap;
 }
 .toggle input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 
-/* ── Follow / Tajweed pill buttons (no checkboxes) ─────────────── */
+/* ---- Follow / Tajweed pill buttons ---- */
 .toggle.mode-pill{
 cursor:pointer;-webkit-appearance:none;font-family:inherit;
 font-weight:700;letter-spacing:.01em;
@@ -1330,11 +1363,11 @@ font-size:.68rem;font-weight:700;flex-shrink:0;
 font-family:-apple-system,sans-serif;
 }
 .mistakes-list .correct{
-font-family:'Amiri Quran',serif;font-size:1.15rem;color:#fff;
+font-family:'Amiri','Amiri Quran',serif;font-size:1.15rem;color:#fff;
 direction:rtl;flex-shrink:0;
 }
 .mistakes-list .heard{
-color:var(--muted);font-family:'Amiri Quran',serif;
+color:var(--muted);font-family:'Amiri','Amiri Quran',serif;
 font-size:.95rem;direction:rtl;
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 min-width:0;flex-shrink:1;
@@ -1346,10 +1379,19 @@ font-family:-apple-system,sans-serif;
 }
 @keyframes slide-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
+/* ==================================================================
+   COACH / AUDIO VIEW MUSHAF CONTAINER
+   ==================================================================
+   text-align:start (not justify) — Arabic lines flow with their own
+   natural word spacing, so short lines no longer stretch.
+   font-weight:400 — Amiri ships a clean weight 400 that renders
+   every harakah at its correct position, so no synthetic bold is
+   needed.
+   ================================================================== */
 .mushaf{
-direction:rtl;text-align:justify;text-align-last:center;
-font-family:'Amiri Quran',"Traditional Arabic",serif;
-font-weight:700;
+direction:rtl;text-align:start;
+font-family:'Amiri','Amiri Quran',"Traditional Arabic",serif;
+font-weight:400;
 font-size:clamp(1.5rem,7.2vw,2rem);line-height:2.45;
 min-height:200px;max-height:46vh;overflow-y:auto;overflow-x:hidden;
 -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
@@ -1517,7 +1559,7 @@ direction:ltr;-webkit-overflow-scrolling:touch;
 .feedback .line.bad b{color:var(--bad)}
 .feedback .line.soft{color:#cbd6ea}
 .feedback .line.good{color:#9ce0bd}
-.feedback .ar{font-family:'Amiri Quran',serif;font-size:1.4em;color:#fff;direction:rtl;display:inline-block}
+.feedback .ar{font-family:'Amiri','Amiri Quran',serif;font-size:1.4em;color:#fff;direction:rtl;display:inline-block}
 @keyframes fadein{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--muted);padding:0 4px}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:middle}
@@ -2212,7 +2254,7 @@ const barEl          = document.getElementById('bar');
 const statusbar      = document.getElementById('statusbar');
 const statusLabel    = document.getElementById('statusLabel');
 const statusHint     = document.getElementById('statusHint');
-const micBtn         = document.getElementById('btnMicPerm');  /* may be null */
+const micBtn         = document.getElementById('btnMicPerm');
 const micButton      = document.getElementById('btnMic');
 const stopButton     = document.getElementById('btnStop');
 const resetButton    = document.getElementById('btnReset');
@@ -2224,7 +2266,7 @@ const surahNavRow    = document.getElementById('surahNavRow');
 const surahEnEl      = document.getElementById('surahEn');
 const surahArEl      = document.getElementById('surahAr');
 const surahCountEl   = document.getElementById('surahCount');
-const fullscreenBtn  = document.getElementById('btnFullscreen');   /* may be null */
+const fullscreenBtn  = document.getElementById('btnFullscreen');
 const themeBtn       = document.getElementById('btnTheme');
 const infoBtn        = document.getElementById('btnInfo');
 const selMatch       = document.getElementById('selMatch');
@@ -2234,7 +2276,7 @@ const hideTextChip   = document.getElementById('hideTextChip');
 const modeFollowBtn  = document.getElementById('modeFollowBtn');
 const modeTajweedBtn = document.getElementById('modeTajweedBtn');
 const supportBox     = document.getElementById('support');
-const connBadge      = document.getElementById('connBadge');       /* may be null */
+const connBadge      = document.getElementById('connBadge');
 const mistakesPanel  = document.getElementById('mistakesPanel');
 const mistakesList   = document.getElementById('mistakesList');
 const mistakeCountBadge = document.getElementById('mistakeCountBadge');
@@ -2321,11 +2363,12 @@ const qvFullscreen       = document.getElementById('qvFullscreen');
    CONSTANTS
    ============================================================ */
 const ALQURAN_API = 'https://api.alquran.cloud/v1';
+const QURAN_API_V4 = 'https://api.quran.com/api/v4';
 const AYAH_AUDIO_BASE = 'https://everyayah.com/data/';
 const FALLBACK_RECITER = 'Alafasy_128kbps';
 const FETCH_TIMEOUT_MS = 15000;
 
-const EDITION_READ = 'quran-indopak';
+const READER_EDITION = 'text_indopak';
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 
@@ -2369,7 +2412,6 @@ const JUZ_START_VERSE = {
   '46:1':26, '51:31':27, '58:1':28,  '67:1':29,  '78:1':30
 };
 
-/* The 15 verses of Sajdah (Sajdah Tilawat) */
 const SAJDAH_VERSES = new Set([
   '7:206','13:15','16:50','17:109','19:58','22:18','22:77','25:60',
   '27:26','32:15','38:24','41:38','53:62','84:21','96:19'
@@ -2387,7 +2429,6 @@ const IS_TOUCH   = ('ontouchstart' in window) ||
 const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches ||
   window.navigator.standalone === true;
 
-/* Browser-family detection used only for the install guide. */
 const IS_IOS_SAFARI = IS_IOS && !/CriOS|FxiOS|EdgiOS|OPiOS|Mercury|DuckDuckGo/i.test(UA);
 const IS_FIREFOX    = /Firefox|FxiOS/i.test(UA) && !/Seamonkey/i.test(UA);
 const IS_SAMSUNG_BROWSER = /SamsungBrowser/i.test(UA);
@@ -2524,13 +2565,6 @@ function gregorianToHijri(date){
 /* ============================================================
    SETTINGS
    ============================================================ */
-/* matchLevel is the FOLLOW-mode setting only.
-   Its default is 'balanced'.  It is persisted under
-   qc.followMatchLevel so that switching to Tajweed and back
-   keeps the user's Follow preference intact.
-
-   TAJWEED IS ALWAYS STRICT — see matchStrictness() below.
-   The Match selector is only ever shown while Follow is active. */
 let matchLevel = 'balanced';
 (function restoreFollowMatchLevel(){
   try{
@@ -2539,7 +2573,6 @@ let matchLevel = 'balanced';
       matchLevel = saved;
       return;
     }
-    /* Migrate a legacy shared value into the new Follow-only key. */
     const legacy = localStorage.getItem('qc.matchLevel');
     if(legacy === 'strict' || legacy === 'balanced' || legacy === 'lenient'){
       matchLevel = legacy;
@@ -2640,15 +2673,6 @@ function lev(a, b){
 
 /* ============================================================
    MATCHING STRICTNESS
-
-   The effective strictness is derived from the active mode:
-
-     • Follow mode   → the user's remembered Follow level
-                       (qc.followMatchLevel).
-     • Tajweed mode  → ALWAYS 'strict'.
-
-   This keeps the Follow preference completely independent
-   from Tajweed, which is permanently locked to strict.
    ============================================================ */
 function matchStrictness(){
   return followOnly ? matchLevel : 'strict';
@@ -3114,7 +3138,6 @@ let coachLoading = false;
 let coachLoaded = false;
 let mushafDirtyForViewer = true;
 
-/* Guard so a strict-mispronunciation stop only fires once per pause. */
 let strictFollowStopping = false;
 
 /* ============================================================
@@ -3264,8 +3287,6 @@ async function resumeRecitationSession(modeKey){
     beepOn     = !followOnly;
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
 
-    /* Restore the remembered Follow-mode level only when resuming Follow.
-       Tajweed is always strict — see matchStrictness(). */
     if(followOnly){
       try{
         const saved = localStorage.getItem('qc.followMatchLevel');
@@ -4049,14 +4070,14 @@ async function getSurahStartPage(surahNumber){
   if(_surahStartPageCache.has(surahNumber)) return _surahStartPageCache.get(surahNumber);
   try{
     const res = await fetchWithTimeout(
-      ALQURAN_API + '/ayah/' + surahNumber + ':1/' + EDITION_READ,
+      QURAN_API_V4 + '/verses/by_chapter/' + surahNumber + '?fields=' + READER_EDITION + '&per_page=1',
       FETCH_TIMEOUT_MS
     );
     if(res.ok){
       const j = await res.json();
-      if(j.code === 200 && j.data && typeof j.data.page === 'number'){
-        _surahStartPageCache.set(surahNumber, j.data.page);
-        return j.data.page;
+      if(j.verses && j.verses.length && typeof j.verses[0].page_number === 'number'){
+        _surahStartPageCache.set(surahNumber, j.verses[0].page_number);
+        return j.verses[0].page_number;
       }
     }
   }catch(e){}
@@ -4082,15 +4103,14 @@ async function getJuzStartPage(juzNumber){
   const fallback = JUZ_START_PAGES_FALLBACK[juzNumber - 1] || 1;
   try{
     const res = await fetchWithTimeout(
-      ALQURAN_API + '/juz/' + juzNumber + '/' + EDITION_READ,
+      QURAN_API_V4 + '/verses/by_juz/' + juzNumber + '?fields=' + READER_EDITION + '&per_page=1',
       FETCH_TIMEOUT_MS
     );
     if(res.ok){
       const j = await res.json();
-      if(j.code === 200 && j.data && Array.isArray(j.data.ayahs) && j.data.ayahs.length &&
-         typeof j.data.ayahs[0].page === 'number'){
-        _juzStartPageCache.set(juzNumber, j.data.ayahs[0].page);
-        return j.data.ayahs[0].page;
+      if(j.verses && j.verses.length && typeof j.verses[0].page_number === 'number'){
+        _juzStartPageCache.set(juzNumber, j.verses[0].page_number);
+        return j.verses[0].page_number;
       }
     }
   }catch(e){}
@@ -4098,8 +4118,94 @@ async function getJuzStartPage(juzNumber){
   return fallback;
 }
 
-async function _fetchPageByEdition(pageNumber, edition){
-  const arUrl = ALQURAN_API + '/page/' + pageNumber + '/' + edition;
+async function fetchSurahIndopak(surahNumber){
+  const url = QURAN_API_V4 + '/verses/by_chapter/' + surahNumber +
+              '?fields=' + READER_EDITION +
+              '&per_page=300' +
+              '&word_fields=text_indopak' +
+              '&translations=en.sahih';
+  const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if(!json || !Array.isArray(json.verses)) throw new Error('Bad response');
+
+  const verses = json.verses;
+  return {
+    surahNumber,
+    ayahs: verses.map(v => {
+      const key = v.verse_key || '';
+      const [sStr, aStr] = key.split(':');
+      const s = parseInt(sStr, 10) || surahNumber;
+      const a = parseInt(aStr, 10) || 1;
+
+      let translation = '';
+      if(Array.isArray(v.translations) && v.translations.length){
+        translation = v.translations.map(t => t.text || '').join(' ').trim();
+      }
+
+      return {
+        text: v.text_indopak || '',
+        numberInSurah: a,
+        surah: s,
+        surahName: '',
+        surahEnglishName: '',
+        surahNumberOfAyahs: 0,
+        juz: v.juz_number || 1,
+        manzil: v.manzil_number || 1,
+        ruku: (typeof v.ruku_number === 'number') ? v.ruku_number : null,
+        sajda: !!v.sajdah,
+        pageNumber: v.page_number || null,
+        translation: translation || null
+      };
+    })
+  };
+}
+
+async function fetchPageIndopak(pageNumber){
+  const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber +
+              '?fields=' + READER_EDITION +
+              '&per_page=300' +
+              '&word_fields=text_indopak' +
+              '&translations=en.sahih';
+  const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if(!json || !Array.isArray(json.verses)) throw new Error('Bad response');
+
+  const verses = json.verses;
+  return {
+    pageNumber,
+    ayahs: verses.map(v => {
+      const key = v.verse_key || '';
+      const [sStr, aStr] = key.split(':');
+      const s = parseInt(sStr, 10) || 1;
+      const a = parseInt(aStr, 10) || 1;
+
+      let translation = '';
+      if(Array.isArray(v.translations) && v.translations.length){
+        translation = v.translations.map(t => t.text || '').join(' ').trim();
+      }
+
+      return {
+        text: v.text_indopak || '',
+        numberInSurah: a,
+        surah: s,
+        surahName: '',
+        surahEnglishName: '',
+        surahNumberOfAyahs: 0,
+        juz: v.juz_number || 1,
+        manzil: v.manzil_number || 1,
+        ruku: (typeof v.ruku_number === 'number') ? v.ruku_number : null,
+        sajda: !!v.sajdah,
+        pageNumber: v.page_number || pageNumber,
+        translation: translation || null
+      };
+    })
+  };
+}
+
+async function _fetchPageByEditionFallback(pageNumber){
+  const arUrl = ALQURAN_API + '/page/' + pageNumber + '/quran-indopak';
   const res = await fetchWithTimeout(arUrl, FETCH_TIMEOUT_MS);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
@@ -4110,49 +4216,51 @@ async function _fetchPageByEdition(pageNumber, edition){
 }
 
 async function fetchPageData(pageNumber){
-  const enPromise = fetchWithTimeout(
-    ALQURAN_API + '/page/' + pageNumber + '/en.sahih',
-    FETCH_TIMEOUT_MS
-  ).catch(() => null);
-
-  let arData = null;
+  let data = null;
   try{
-    arData = await _fetchPageByEdition(pageNumber, EDITION_READ);
+    data = await fetchPageIndopak(pageNumber);
   }catch(e1){
     try{
-      arData = await _fetchPageByEdition(pageNumber, EDITION_FALLBACK);
+      const fb = await _fetchPageByEditionFallback(pageNumber);
+      data = {
+        pageNumber,
+        ayahs: fb.ayahs.map(a => ({
+          text: a.text,
+          numberInSurah: a.numberInSurah,
+          surah: a.surah ? a.surah.number : 1,
+          surahName: a.surah ? a.surah.name : '',
+          surahEnglishName: a.surah ? a.surah.englishName : '',
+          surahNumberOfAyahs: (a.surah && a.surah.numberOfAyahs) ? a.surah.numberOfAyahs : 0,
+          juz: (typeof a.juz === 'number') ? a.juz : 1,
+          manzil: (typeof a.manzil === 'number') ? a.manzil : 1,
+          ruku: (typeof a.ruku === 'number') ? a.ruku : null,
+          sajda: !!a.sajda,
+          translation: null
+        }))
+      };
     }catch(e2){
       throw new Error('Could not load page');
     }
   }
 
-  let trans = [];
-  try{
-    const enRes = await enPromise;
-    if(enRes && enRes.ok){
-      const enJson = await enRes.json();
-      if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
-        trans = enJson.data.ayahs.map(a => a.text);
+  const hasTranslations = data.ayahs.some(a => a.translation && a.translation.length);
+  if(!hasTranslations){
+    try{
+      const enRes = await fetchWithTimeout(
+        ALQURAN_API + '/page/' + pageNumber + '/en.sahih',
+        FETCH_TIMEOUT_MS
+      ).catch(() => null);
+      if(enRes && enRes.ok){
+        const enJson = await enRes.json();
+        if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
+          const trans = enJson.data.ayahs.map(a => a.text);
+          data.ayahs.forEach((a, i) => { a.translation = trans[i] || null; });
+        }
       }
-    }
-  }catch(_){}
+    }catch(_){}
+  }
 
-  return {
-    pageNumber,
-    ayahs: arData.ayahs.map((a, i) => ({
-      text: a.text,
-      numberInSurah: a.numberInSurah,
-      surah: a.surah ? a.surah.number : 1,
-      surahName: a.surah ? a.surah.name : '',
-      surahEnglishName: a.surah ? a.surah.englishName : '',
-      surahNumberOfAyahs: (a.surah && a.surah.numberOfAyahs) ? a.surah.numberOfAyahs : 0,
-      juz: (typeof a.juz === 'number') ? a.juz : 1,
-      manzil: (typeof a.manzil === 'number') ? a.manzil : 1,
-      ruku: (typeof a.ruku === 'number') ? a.ruku : null,
-      sajda: !!a.sajda,
-      translation: trans[i] || null
-    }))
-  };
+  return data;
 }
 
 function prefetchAdjacentPages(n){
@@ -4199,24 +4307,15 @@ async function loadReaderPage(pageNumber){
   }
 }
 
-/* Place the “ع” ruku markers just OUTSIDE the double page border,
-   on the LEFT margin, keeping them on the same visual line as the
-   closing ayah of the ruku / surah. */
 function placeRukuMarks(inner, content){
   if(!inner || !content) return;
   inner.querySelectorAll('.mushaf-ruku-mark').forEach(m => m.remove());
   const list = Array.from(content.querySelectorAll('.ayah'));
   if(!list.length) return;
 
-  /* The bordered mushaf page is the closest block ancestor of the
-     content. We measure its left edge and hang the marker just
-     outside it, inside the inner's left padding strip. */
   const frame = content.closest('.mushaf-book-page') || content.parentElement;
   const innerRect = inner.getBoundingClientRect();
   const frameRect = frame ? frame.getBoundingClientRect() : innerRect;
-  /* Place ع in the left margin, just outside the frame border.
-     `right` is measured from the inner’s padding box, so this
-     sits the mark’s right edge 4px to the left of the frame. */
   const rightOffset = (innerRect.right - frameRect.left) + 4;
 
   const nextPageData = readerState.pages.get(readerState.currentPage + 1);
@@ -4258,8 +4357,6 @@ function placeRukuMarks(inner, content){
     const r = anchor.getBoundingClientRect();
     if(!r || !r.width) continue;
 
-    /* Vertical centre of the closing ayah — unchanged. Horizontal
-       position now sits just outside the LEFT page border. */
     const top = (r.top + r.height / 2) - innerRect.top;
     if(!isFinite(rightOffset) || !isFinite(top)) continue;
 
@@ -4435,7 +4532,6 @@ function renderReaderPage(pageNumber, token){
     qvTitle.textContent = 'Page ' + pageNumber;
   }
 
-  /* Sajdah pop-up — 2 seconds, only when the page contains a sajdah verse. */
   if(sajdahRefs.length){
     setTimeout(() => {
       showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000);
@@ -4598,7 +4694,6 @@ function applyViewerTranslateUI(){
   }
 }
 
-/* The mushaf page colour simply follows the light/dark theme. */
 function applyPageColor(){
   const light = (theme === 'light');
   document.body.classList.toggle('page-light', light);
@@ -4827,7 +4922,7 @@ function openViewerSurahPicker(){
               '<span style="color:var(--muted);font-size:.68rem">' + s.numberOfAyahs + ' ayahs</span>' +
             '</span>' +
           '</span>' +
-          '<span style="font-family:\'Amiri Quran\',serif;font-size:1.2rem;color:#9dc0ff;white-space:nowrap">' + escapeHtml(s.name) + '</span>';
+          '<span style="font-family:\'Amiri\',\'Amiri Quran\',serif;font-size:1.2rem;color:#9dc0ff;white-space:nowrap">' + escapeHtml(s.name) + '</span>';
         btn.addEventListener('click', () => {
           close();
           if(viewerMode === 'audio' || viewerAudio.active){
@@ -4859,13 +4954,6 @@ async function openSurahInViewer(surahNumber, targetMode){
 
 /* ============================================================
    AUDIO MODE
-
-   iOS Safari requires audio playback to start INSIDE a user
-   gesture.  The metadata fetches below suspend execution and
-   would otherwise break that gesture, so the very first ayah
-   is kicked off synchronously BEFORE any `await`.  Everything
-   else (metadata, translations, highlight re-attach) runs in
-   parallel and joins the already-playing audio when it's done.
    ============================================================ */
 async function loadViewerAudioSurah(surahNumber){
   viewerAudioStop();
@@ -6085,7 +6173,6 @@ function syncFsButtons(){
 let updatingMutex = false;
 
 function applyMutexUI(){
-  /* Follow and Tajweed are mutually exclusive; exactly one is always active. */
   if(!followOnly && !beepOn){
     followOnly = true;
   }
@@ -6100,17 +6187,12 @@ function applyMutexUI(){
     modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false');
   }
 
-  /* The Match selector is a FOLLOW-ONLY control.
-     Tajweed is permanently locked to strict and never exposes it. */
   if(matchChip) matchChip.hidden = !followOnly;
 
-  /* Hide-text is a Follow-only aid. */
   if(hideTextChip) hideTextChip.hidden = !followOnly;
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
 
-  /* The selector always shows the remembered Follow level.
-     While in Tajweed it is hidden, so its value is irrelevant. */
   if(selMatch) selMatch.value = matchLevel;
 
   applyHideTextUI();
@@ -6121,7 +6203,6 @@ function setRecitationMode(modeName){
   if(newFollow === followOnly && !updatingMutex) return;
   updatingMutex = true;
 
-  /* Save the Follow-mode choice before leaving Follow. */
   if(followOnly && !newFollow){
     try{ localStorage.setItem('qc.followMatchLevel', matchLevel); }catch(e){}
   }
@@ -6130,9 +6211,6 @@ function setRecitationMode(modeName){
   beepOn = !followOnly;
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
 
-  /* Restore the remembered Follow level when returning to Follow.
-     Tajweed is always strict and never touches matchLevel — it
-     uses matchStrictness() which forces 'strict' on its own. */
   if(followOnly){
     try{
       const saved = localStorage.getItem('qc.followMatchLevel');
@@ -6841,9 +6919,6 @@ function gradeFollowOnly(tokens, startIdx){
       used++;
       continue;
     }
-    /* No matching word found. In Follow + Strict, stop the session
-       without marking the word red. In the other Follow levels, just
-       keep following along (memorisation aid). */
     if(strictFollow){
       stopFollowStrictMispronunciation();
       return used;
@@ -6853,7 +6928,6 @@ function gradeFollowOnly(tokens, startIdx){
   return used;
 }
 
-/* Pause the Follow+Strict session — the word is NOT marked red. */
 function stopFollowStrictMispronunciation(){
   if(strictFollowStopping) return;
   strictFollowStopping = true;
@@ -7180,7 +7254,7 @@ async function openSurahPicker(){
             '<span style="color:var(--muted);font-size:.68rem">' + s.numberOfAyahs + ' ayahs · ' + escapeHtml(s.revelationType) + '</span>' +
           '</span>' +
         '</span>' +
-        '<span style="font-family:\'Amiri Quran\',serif;font-size:1.2rem;color:#9dc0ff;white-space:nowrap">' + escapeHtml(s.name) + '</span>';
+        '<span style="font-family:\'Amiri\',\'Amiri Quran\',serif;font-size:1.2rem;color:#9dc0ff;white-space:nowrap">' + escapeHtml(s.name) + '</span>';
       btn.addEventListener('click',()=>{ close(); loadSurah(s.number); });
       list.appendChild(btn);
     });
@@ -7582,9 +7656,6 @@ surahButton.addEventListener('click',openSurahPicker);
 
 selMatch.value = matchLevel;
 selMatch.addEventListener('change', e => {
-  /* The Match selector is shown only while Follow is active, so any
-     change here updates the remembered Follow-mode level. Tajweed
-     never uses this value — it is permanently strict. */
   matchLevel = e.target.value;
   try{
     localStorage.setItem('qc.matchLevel', matchLevel);
@@ -7747,11 +7818,7 @@ if(qrFullscreen){
 
 /* ============================================================
    COACH INFO MODAL
-   ============================================================
-   Shown from the Info tab on the Quran Recitation Coach page.
-   It explains ONLY the Coach itself — its two modes (Follow and
-   Tajweed), the matching rules, and how progress memory works.
-   Nothing about the rest of the app is shown here. */
+   ============================================================ */
 function openCoachInfoModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -7811,11 +7878,8 @@ function openCoachInfoModal(){
 }
 
 /* ============================================================
-   ABOUT APP MODAL  (Home-screen ☰ → About app)
-   ============================================================
-   Explains every part of the app EXCEPT the Recitation Coach.
-   A note at the top points the user to the Coach page's Info tab
-   for the rules of the Recitation Coach itself. */
+   ABOUT APP MODAL
+   ============================================================ */
 function openInfoModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -7938,8 +8002,6 @@ function openInfoModal(){
   });
 }
 
-/* The Info tab on the Coach screen opens the coach-specific info modal.
-   The ☰ → About app on the Home screen opens the general app info modal. */
 if(infoBtn) infoBtn.addEventListener('click', openCoachInfoModal);
 
 async function shareApp(){
@@ -7963,12 +8025,7 @@ async function shareApp(){
 
 /* ============================================================
    FEEDBACK MODAL
-   ============================================================
-   Users submit feedback with a required email address. The
-   message is relayed to the owner through the serverless
-   endpoint /api/feedback, so the destination inbox never
-   appears in the HTML, the network request, or in any mail
-   client the user might open.                                */
+   ============================================================ */
 const FEEDBACK_ENDPOINT = '/api/feedback';
 const FEEDBACK_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
