@@ -3129,6 +3129,8 @@ let lastSpeechResultIndex = -1;
 let lastResultAt = 0;
 let sessionHadResult = false;
 let speechServiceNotified = false;
+let speechKeepaliveTimer = null;
+const SPEECH_KEEPALIVE_MS = 40000;
 
 let micStream = null;
 let lastMicError = null;
@@ -3638,6 +3640,7 @@ function createSpeechRecognition(){
     lastSpeechResultIndex = -1;
     interimProgress.clear();
     lastResultAt = performance.now();
+    armSpeechKeepalive();
   };
 
   rec.onresult = (event) => {
@@ -3705,6 +3708,7 @@ function createSpeechRecognition(){
     if(err === 'service-not-allowed'){
       speechFatalError = true;
       wantMic = false;
+      disarmSpeechKeepalive();
       setMicButton();
       updateFsMicBtn(); syncFsButtons();
       notifySpeechServiceUnreachable();
@@ -3714,6 +3718,7 @@ function createSpeechRecognition(){
     if(err === 'not-allowed'){
       speechFatalError = true;
       wantMic = false;
+      disarmSpeechKeepalive();
       setMicButton();
       setStatus('Microphone blocked', 'error');
       addFeedback('⚠️ Microphone access denied. Enable it in your browser settings and try again.', true);
@@ -3726,6 +3731,7 @@ function createSpeechRecognition(){
     if(err === 'audio-capture'){
       speechFatalError = true;
       wantMic = false;
+      disarmSpeechKeepalive();
       setMicButton();
       setStatus('No microphone', 'error');
       addFeedback('⚠️ No microphone was found on this device.', true);
@@ -3758,6 +3764,41 @@ function createSpeechRecognition(){
 
   speechRecognition = rec;
   return rec;
+}
+
+/* ============================================================
+   SPEECH KEEPALIVE  —  silent mic restart every 40 s
+   ============================================================
+   Chrome's Web Speech API silently stops delivering results after
+   roughly 60 s of continuous recognition. While a session is active
+   we silently call recognizer.stop() every 40 s; the existing onend
+   handler restarts it 180 ms later. Nothing is shown to the user,
+   no status changes, no audio cue.
+
+   When the session ends — silence timeout, user Stop, tab hidden,
+   app close, fatal error, or completion — disarmSpeechKeepalive()
+   is called and the mic is switched off exactly as before.
+   ============================================================ */
+function armSpeechKeepalive(){
+  clearTimeout(speechKeepaliveTimer);
+  speechKeepaliveTimer = null;
+  if(!wantMic || fsPaused || speechFatalError) return;
+
+  speechKeepaliveTimer = setTimeout(() => {
+    speechKeepaliveTimer = null;
+    if(!wantMic || fsPaused || speechFatalError) return;
+    if(!speechRecognition) return;
+
+    // Silent mic off. onend auto-restarts it 180 ms later.
+    if(!speechStarting){
+      try{ speechRecognition.stop(); }catch(e){}
+    }
+    armSpeechKeepalive();
+  }, SPEECH_KEEPALIVE_MS);
+}
+function disarmSpeechKeepalive(){
+  clearTimeout(speechKeepaliveTimer);
+  speechKeepaliveTimer = null;
 }
 
 /* ============================================================
@@ -6934,6 +6975,7 @@ function stopFollowStrictMispronunciation(){
   setTimeout(() => { strictFollowStopping = false; }, 1200);
 
   wantMic = false;
+  disarmSpeechKeepalive();
   setMicButton();
   recRunning = false;
   speechStarting = false;
@@ -7090,6 +7132,7 @@ async function startReciting(){
     sessionHadResult = false;
     micWarningShown = false;
     startMicWatchdog();
+    armSpeechKeepalive();
 
     setStatus('Listening', 'listening', contextLabel());
     addFeedback('🎧 Listening — recite from anywhere in the page or surah.');
@@ -7108,6 +7151,7 @@ async function startReciting(){
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false;
+  disarmSpeechKeepalive();
   pendingJumpTarget = -1;
   setMicButton();
   recRunning = false;
@@ -7127,6 +7171,7 @@ function stopReciting(silent){
 
 function pauseMic(){
   recRunning = false;
+  disarmSpeechKeepalive();
   stopMicWatchdog();
   if(speechRecognition){
     try{ speechRecognition.stop(); }catch(e){}
@@ -7139,6 +7184,7 @@ function resumeMic(){
     micWarningShown = false;
     lastResultAt = performance.now();
     startMicWatchdog();
+    armSpeechKeepalive();
     try{
       speechStarting = true;
       speechRecognition && speechRecognition.start();
@@ -7159,6 +7205,7 @@ function stopEverything(silent){
 
 function finish(){
   finished=true; wantMic=false;
+  disarmSpeechKeepalive();
   setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer();
   stopMicWatchdog();
