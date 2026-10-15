@@ -526,27 +526,94 @@ pointer-events:none;
 }
 .surah-row .playbtn:active{transform:scale(.9);filter:brightness(1.1)}
 
-.reciter-chips{
-display:flex;gap:7px;overflow-x:auto;padding:4px 0 8px;
-scrollbar-width:none;-webkit-overflow-scrolling:touch;
+/* ============================================================
+   RECITER DROPDOWN  (replaces the old chip bar)
+   ============================================================ */
+.reciter-dropdown{position:relative;margin:4px 0 10px;}
+.reciter-trigger{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:10px 14px;height:auto;min-height:56px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);border-radius:14px;
+  color:var(--text);font-family:inherit;font-weight:600;
+  text-align:left;cursor:pointer;-webkit-appearance:none;
+  box-shadow:0 6px 18px rgba(0,0,0,.24);
+  transition:border-color .2s,transform .12s,box-shadow .2s;
 }
-.reciter-chips::-webkit-scrollbar{display:none}
-.chip{
-flex-shrink:0;padding:9px 15px;height:auto;min-height:40px;
-border-radius:999px;background:var(--panel-2);
-border:1px solid var(--line);color:var(--muted);
-font-size:.76rem;font-weight:700;white-space:nowrap;
-transition:background .18s,color .18s,border-color .18s,box-shadow .18s,transform .12s;
-cursor:pointer;letter-spacing:.01em;-webkit-appearance:none;font-family:inherit;
+.reciter-trigger:hover{border-color:rgba(79,140,255,.45)}
+.reciter-trigger:active{transform:scale(.993)}
+.reciter-dropdown.open .reciter-trigger{
+  border-color:rgba(79,140,255,.70);
+  box-shadow:0 8px 22px rgba(79,140,255,.20);
 }
-.chip:active{transform:scale(.96)}
-.chip.active{
-background:rgba(79,140,255,.18);border-color:rgba(79,140,255,.7);color:#fff;
-box-shadow:0 4px 14px rgba(79,140,255,.3);
+.rt-icon{
+  font-size:1.1rem;width:40px;height:40px;border-radius:11px;
+  background:rgba(79,140,255,.12);
+  border:1px solid rgba(79,140,255,.28);
+  display:inline-flex;align-items:center;justify-content:center;
+  flex-shrink:0;
 }
-body.light-mode .chip.active{
-background:rgba(42,111,224,.15);border-color:rgba(42,111,224,.6);color:#1a2233;
+.rt-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.rt-label{
+  font-size:.60rem;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);
 }
+.rt-value{
+  font-size:.90rem;font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rt-chev{
+  font-size:1rem;color:var(--muted);
+  transition:transform .22s;flex-shrink:0;
+}
+.reciter-dropdown.open .rt-chev{transform:rotate(180deg);}
+
+.reciter-menu{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:40;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 18px 44px rgba(0,0,0,.55);
+  max-height:min(60vh,360px);overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:5px;
+  animation:fadein .16s ease;
+}
+.reciter-menu::-webkit-scrollbar{width:6px;}
+.reciter-menu::-webkit-scrollbar-thumb{background:#2b3a55;border-radius:6px;}
+body.light-mode .reciter-menu::-webkit-scrollbar-thumb{background:#c8d3e6;}
+body.light-mode .reciter-menu{background:linear-gradient(180deg,#ffffff,#eef2f8);}
+
+.reciter-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:10px 12px;height:auto;min-height:46px;
+  background:transparent;border:none;border-radius:10px;
+  color:var(--text);font-family:inherit;font-weight:600;
+  font-size:.86rem;text-align:left;cursor:pointer;
+  -webkit-appearance:none;
+  transition:background .14s,color .14s,box-shadow .14s;
+}
+.reciter-item:hover{background:rgba(79,140,255,.08)}
+.reciter-item:active{background:rgba(79,140,255,.16)}
+.reciter-item.active{
+  background:rgba(79,140,255,.16);
+  color:#fff;
+  box-shadow:inset 0 0 0 1px rgba(79,140,255,.50);
+}
+body.light-mode .reciter-item.active{color:#1a2233;}
+.reciter-item .ri-num{
+  min-width:26px;text-align:right;
+  font-size:.70rem;font-weight:700;color:var(--muted);
+  font-variant-numeric:tabular-nums;flex-shrink:0;
+}
+.reciter-item .ri-name{
+  flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.reciter-item .ri-check{
+  width:18px;flex-shrink:0;text-align:center;
+  color:var(--accent);font-weight:800;opacity:0;
+}
+.reciter-item.active .ri-check{opacity:1;}
 
 .quran-viewer{
 position:fixed;inset:0;z-index:75;
@@ -1891,7 +1958,6 @@ body.light-mode .tile:nth-child(2)::before{background:radial-gradient(200px 140p
 body.light-mode .tile:nth-child(3)::before{background:radial-gradient(200px 140px at 30% 120%, rgba(198,138,0,.18), transparent 70%)}
 body.light-mode .tile:nth-child(4)::before{background:radial-gradient(200px 140px at 70% 120%, rgba(120,80,220,.18), transparent 70%)}
 body.light-mode .surah-row{background:linear-gradient(180deg,#ffffff,#eef2f8)}
-body.light-mode .chip{background:#eef2f8;color:#5a6884}
 body.light-mode .islamic-dates{background:linear-gradient(180deg,#ffffff,#eef2f8)}
 body.light-mode .islamic-dates-list li{border-bottom-color:rgba(0,0,0,.05)}
 body.light-mode .islamic-dates-list .greg{color:#2a6fe0}
@@ -1980,6 +2046,10 @@ body.light-mode .feedback-status.err{color:#8a2033;}
   .surah-row .en{font-size:.85rem}
   .surah-row .sub{font-size:.6rem}
   .surah-row .ar{font-size:1.05rem}
+  .reciter-trigger{padding:9px 12px;min-height:52px;gap:9px}
+  .rt-icon{width:36px;height:36px;font-size:1rem;border-radius:10px}
+  .rt-value{font-size:.85rem}
+  .reciter-item{padding:9px 10px;font-size:.82rem}
 }
 @media (max-width:320px){
   .home-tiles{grid-template-columns:1fr}
@@ -2037,7 +2107,7 @@ body.light-mode .feedback-status.err{color:#8a2033;}
     <button class="tile" id="tilePlayAudio" type="button">
       <span class="tile-icon">▶️</span>
       <span class="tile-title">Play audio</span>
-      <span class="tile-sub">English translation</span>
+      <span class="tile-sub">English translation by Yusuf Ali</span>
     </button>
     <button class="tile" id="tileBookmarks" type="button">
       <span class="tile-icon">🔖</span>
@@ -2111,9 +2181,21 @@ body.light-mode .feedback-status.err{color:#8a2033;}
   <div class="sub-header">
     <button id="backFromAudio" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Play audio</h1>
-    <span class="sub-note">English translation</span>
+    <span class="sub-note">English translation by Yusuf Ali</span>
   </div>
-  <div class="reciter-chips" id="reciterChips" role="tablist" aria-label="Reciter"></div>
+  <div class="reciter-dropdown" id="reciterDropdown">
+    <button class="reciter-trigger" id="reciterTrigger" type="button"
+            aria-haspopup="listbox" aria-expanded="false" aria-label="Select reciter">
+      <span class="rt-icon">🎙️</span>
+      <span class="rt-meta">
+        <span class="rt-label">Reciter</span>
+        <span class="rt-value" id="reciterValue">—</span>
+      </span>
+      <span class="rt-chev">▾</span>
+    </button>
+    <div class="reciter-menu" id="reciterMenu" role="listbox"
+         aria-label="Available Qaris" hidden></div>
+  </div>
   <div class="surah-list" id="audioSurahList">
     <div class="loading">Loading…</div>
   </div>
@@ -2334,8 +2416,13 @@ const surahIndexList = document.getElementById('surahIndexList');
 const juzIndexList   = document.getElementById('juzIndexList');
 const bookmarksScreenList = document.getElementById('bookmarksScreenList');
 const audioSurahList = document.getElementById('audioSurahList');
-const reciterChips   = document.getElementById('reciterChips');
 const islamicDatesList = document.getElementById('islamicDatesList');
+
+/* Reciter dropdown (replaces the old chip bar) */
+const reciterDropdown = document.getElementById('reciterDropdown');
+const reciterTrigger  = document.getElementById('reciterTrigger');
+const reciterMenu     = document.getElementById('reciterMenu');
+const reciterValue    = document.getElementById('reciterValue');
 
 const progressSection   = document.getElementById('progressSection');
 const progressTrigger   = document.getElementById('progressTrigger');
@@ -2371,6 +2458,18 @@ const FETCH_TIMEOUT_MS = 15000;
 const READER_EDITION = 'text_indopak';
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
+
+/* ---- Translation ---------------------------------------------------
+   The English translation shown throughout the app is Yusuf Ali.
+   • alquran.cloud identifier:  en.yusufali
+   • quran.com v4 identifier:   203  (numeric ID required; the v4 API
+     silently ignores string identifiers like "en.sahih" or
+     "en.yusufali", which is why the v4 calls were already falling
+     back to alquran.cloud — this restores proper v4 translations.)
+   ------------------------------------------------------------------- */
+const TRANSLATION_ALQURAN = 'en.yusufali';
+const TRANSLATION_QURANCOM_ID = 203;
+const TRANSLATION_LABEL = 'Abdullah Yusuf Ali';
 
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 const toAr = s => String(s).replace(/\d/g, d => AR_DIGITS[+d]);
@@ -2457,6 +2556,32 @@ function normAr(s){
     .replace(/[\u0649\u06CC\u06D2]/g,'\u064A')
     .replace(/[\u06C0\u06C1\u06D5]/g,'\u0647')
     .replace(/[^\u0621-\u064A]/g,'').trim();
+}
+
+/* ============================================================
+   TRANSLATION CLEANING — strip footnote markers from the
+   Yusuf Ali translation.
+   ------------------------------------------------------------
+   Different sources deliver footnote references differently:
+     • quran.com v4:      <sup foot_note="12345">1</sup> inline
+     • alquran.cloud:     [1]  or  <sup>1</sup>  inline
+   We remove the markers, keep the entire translation text,
+   including Yusuf Ali's own explanatory parentheses — those are
+   part of the translation itself, not footnotes.
+   ============================================================ */
+function cleanTranslation(s){
+  if(s === null || s === undefined) return '';
+  let t = String(s);
+  // Remove <sup foot_note="…">N</sup> blocks entirely (marker + number)
+  t = t.replace(/<sup\b[^>]*>[\s\S]*?<\/sup>/gi, '');
+  // Remove any remaining HTML tags, keeping their inner text
+  // (covers <i>…</i>, <em>…</em>, stray <br/> etc.)
+  t = t.replace(/<[^>]*>/g, '');
+  // Remove bracket footnote references such as [1] or [ 12 ]
+  t = t.replace(/\[\s*\d+\s*\]/g, '');
+  // Collapse the whitespace left behind
+  t = t.replace(/\s+/g, ' ').trim();
+  return t;
 }
 
 const PHON = {
@@ -2596,31 +2721,55 @@ if(!isFinite(lastNonZeroVolume) || lastNonZeroVolume <= 0) lastNonZeroVolume = 1
 
 let reciter = localStorage.getItem('qc.reciter') || FALLBACK_RECITER;
 
+/* ============================================================
+   RECITERS — 20 Qaris, all available in the everyayah.com
+   mirror (https://everyayah.com/data/<folder>/SSSAAA.mp3).
+   ============================================================ */
 const RECITER_LABELS = {
-  'Alafasy_128kbps':                 'Mishary Alafasy',
+  'Alafasy_128kbps':                 'Mishary Rashid Alafasy',
   'Abdul_Basit_Murattal_64kbps':     'Abdul Basit (Murattal)',
   'Abdul_Basit_Mujawwad_128kbps':    'Abdul Basit (Mujawwad)',
   'Husary_128kbps':                  'Mahmoud Khalil Al-Husary',
   'Husary_Mujawwad_64kbps':          'Al-Husary (Mujawwad)',
-  'Minshawy_Murattal_128kbps':       'Mohamed Minshawi',
+  'Minshawy_Murattal_128kbps':       'Mohamed Siddiq Al-Minshawi',
+  'Minshawy_Mujawwad_64kbps':        'Al-Minshawi (Mujawwad)',
   'Muhammad_AbdulKareem_128kbps':    'Muhammad AbdulKareem',
   'Muhsin_Al_Qasim_192kbps':         'Abdul Muhsin Al-Qasim',
   'Hudhaify_128kbps':                'Ali Al-Hudhaify',
-  'Abu_Bakr_Ash-Shaatree_128kbps':   'Abu Bakr Ash-Shaatree'
+  'Abu_Bakr_Ash-Shaatree_128kbps':   'Abu Bakr Ash-Shaatree',
+  'Ghamadi_40kbps':                  'Saad Al-Ghamdi',
+  'Maher_AlMuaiqly_128kbps':         'Maher Al-Muaiqly',
+  'Abdurrahmaan_As-Sudais_192kbps':  'Abdurrahman As-Sudais',
+  'Hani_Rifai_192kbps':              'Hani Ar-Rifai',
+  'Muhammad_Ayyoub_128kbps':         'Muhammad Ayyoub',
+  'Nasser_Alqatami_128kbps':         'Nasser Al-Qatami',
+  'Yasser_Ad-Dussary_128kbps':       'Yasser Ad-Dussary',
+  'Salah_Al_Budair_128kbps':         'Salah Al-Budair',
+  'Ali_Jaber_64kbps':                'Ali Jaber'
 };
 function reciterLabel(){ return RECITER_LABELS[reciter] || reciter; }
 
 const RECITER_ORDER = [
   'Alafasy_128kbps',
   'Abdul_Basit_Murattal_64kbps',
-  'Husary_128kbps',
-  'Minshawy_Murattal_128kbps',
   'Abdul_Basit_Mujawwad_128kbps',
+  'Husary_128kbps',
   'Husary_Mujawwad_64kbps',
+  'Minshawy_Murattal_128kbps',
+  'Minshawy_Mujawwad_64kbps',
   'Muhammad_AbdulKareem_128kbps',
   'Muhsin_Al_Qasim_192kbps',
   'Hudhaify_128kbps',
-  'Abu_Bakr_Ash-Shaatree_128kbps'
+  'Abu_Bakr_Ash-Shaatree_128kbps',
+  'Ghamadi_40kbps',
+  'Maher_AlMuaiqly_128kbps',
+  'Abdurrahmaan_As-Sudais_192kbps',
+  'Hani_Rifai_192kbps',
+  'Muhammad_Ayyoub_128kbps',
+  'Nasser_Alqatami_128kbps',
+  'Yasser_Ad-Dussary_128kbps',
+  'Salah_Al_Budair_128kbps',
+  'Ali_Jaber_64kbps'
 ];
 
 /* ============================================================
@@ -3180,6 +3329,7 @@ function showScreen(name){
   });
   if(name !== 'coach' && readerFullscreen) exitReaderFullscreen();
   if(name === 'home') refreshProgressMenu();
+  closeReciterMenu();
   window.scrollTo(0, 0);
 }
 
@@ -4003,37 +4153,84 @@ function openBookmark(b){
    ============================================================ */
 let audioListRendered = false;
 
-function renderReciterChips(){
-  reciterChips.innerHTML = '';
-  RECITER_ORDER.forEach(id => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip' + (reciter === id ? ' active' : '');
-    chip.dataset.reciter = id;
-    chip.textContent = RECITER_LABELS[id] || id;
-    chip.addEventListener('pointerdown', () => {
-      reciterChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-    }, {passive:true});
-    chip.addEventListener('click', () => changeReciterFromChips(id));
-    reciterChips.appendChild(chip);
+/* ---- Reciter dropdown (replaces chip bar) ---- */
+function renderReciterSelect(){
+  if(!reciterMenu) return;
+  reciterMenu.innerHTML = '';
+  RECITER_ORDER.forEach((id, i) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'reciter-item' + (reciter === id ? ' active' : '');
+    item.dataset.reciter = id;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', reciter === id ? 'true' : 'false');
+    item.innerHTML =
+      '<span class="ri-num">' + (i + 1) + '</span>' +
+      '<span class="ri-name">' + escapeHtml(RECITER_LABELS[id] || id) + '</span>' +
+      '<span class="ri-check">✓</span>';
+    item.addEventListener('click', () => {
+      closeReciterMenu();
+      changeReciter(id);
+    });
+    reciterMenu.appendChild(item);
   });
+  updateReciterTrigger();
 }
 
-function changeReciterFromChips(id){
+function updateReciterTrigger(){
+  if(reciterValue) reciterValue.textContent = RECITER_LABELS[reciter] || reciter;
+}
+
+function openReciterMenu(){
+  if(!reciterMenu || !reciterTrigger || !reciterDropdown) return;
+  reciterMenu.querySelectorAll('.reciter-item').forEach(it => {
+    const on = it.dataset.reciter === reciter;
+    it.classList.toggle('active', on);
+    it.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  reciterDropdown.classList.add('open');
+  reciterMenu.hidden = false;
+  reciterTrigger.setAttribute('aria-expanded', 'true');
+  const active = reciterMenu.querySelector('.reciter-item.active');
+  if(active && active.scrollIntoView){
+    try{ active.scrollIntoView({ block: 'nearest' }); }catch(_){}
+  }
+}
+
+function closeReciterMenu(){
+  if(!reciterMenu || !reciterTrigger || !reciterDropdown) return;
+  reciterDropdown.classList.remove('open');
+  reciterMenu.hidden = true;
+  reciterTrigger.setAttribute('aria-expanded', 'false');
+}
+
+function toggleReciterMenu(){
+  if(!reciterMenu) return;
+  if(reciterMenu.hidden) openReciterMenu();
+  else closeReciterMenu();
+}
+
+function changeReciter(id){
   reciter = id;
   localStorage.setItem('qc.reciter', id);
-  reciterChips.querySelectorAll('.chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.reciter === id);
-  });
+
+  updateReciterTrigger();
+  if(reciterMenu){
+    reciterMenu.querySelectorAll('.reciter-item').forEach(it => {
+      const on = it.dataset.reciter === id;
+      it.classList.toggle('active', on);
+      it.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
   showToast('🎙️ Reciter: <b>' + (RECITER_LABELS[id] || id) + '</b>');
+
+  /* If audio is currently playing, restart the current ayah with the new qari. */
   if(viewerAudio.active && !viewerAudio.paused){
     if(currentAudio){
       const a = currentAudio;
       currentAudio = null;
       try{
-        a.onended = null;
-        a.onerror = null;
+        a.onended = null; a.onerror = null;
         if(a._playingHandler){ a.removeEventListener('playing', a._playingHandler); a._playingHandler = null; }
         if(a._safetyTimer){ clearTimeout(a._safetyTimer); a._safetyTimer = null; }
         if(a._finish){ a._finish(false, 'superseded'); a._finish = null; }
@@ -4160,11 +4357,12 @@ async function getJuzStartPage(juzNumber){
 }
 
 async function fetchSurahIndopak(surahNumber){
+  /* Yusuf Ali translation via quran.com v4 — numeric translation ID 203. */
   const url = QURAN_API_V4 + '/verses/by_chapter/' + surahNumber +
               '?fields=' + READER_EDITION +
               '&per_page=300' +
               '&word_fields=text_indopak' +
-              '&translations=en.sahih';
+              '&translations=' + TRANSLATION_QURANCOM_ID;
   const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
@@ -4181,7 +4379,7 @@ async function fetchSurahIndopak(surahNumber){
 
       let translation = '';
       if(Array.isArray(v.translations) && v.translations.length){
-        translation = v.translations.map(t => t.text || '').join(' ').trim();
+        translation = cleanTranslation(v.translations.map(t => t.text || '').join(' '));
       }
 
       return {
@@ -4203,11 +4401,12 @@ async function fetchSurahIndopak(surahNumber){
 }
 
 async function fetchPageIndopak(pageNumber){
+  /* Yusuf Ali translation via quran.com v4 — numeric translation ID 203. */
   const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber +
               '?fields=' + READER_EDITION +
               '&per_page=300' +
               '&word_fields=text_indopak' +
-              '&translations=en.sahih';
+              '&translations=' + TRANSLATION_QURANCOM_ID;
   const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
@@ -4224,7 +4423,7 @@ async function fetchPageIndopak(pageNumber){
 
       let translation = '';
       if(Array.isArray(v.translations) && v.translations.length){
-        translation = v.translations.map(t => t.text || '').join(' ').trim();
+        translation = cleanTranslation(v.translations.map(t => t.text || '').join(' '));
       }
 
       return {
@@ -4286,15 +4485,16 @@ async function fetchPageData(pageNumber){
 
   const hasTranslations = data.ayahs.some(a => a.translation && a.translation.length);
   if(!hasTranslations){
+    /* alquran.cloud — Yusuf Ali edition (footnote markers stripped). */
     try{
       const enRes = await fetchWithTimeout(
-        ALQURAN_API + '/page/' + pageNumber + '/en.sahih',
+        ALQURAN_API + '/page/' + pageNumber + '/' + TRANSLATION_ALQURAN,
         FETCH_TIMEOUT_MS
       ).catch(() => null);
       if(enRes && enRes.ok){
         const enJson = await enRes.json();
         if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
-          const trans = enJson.data.ayahs.map(a => a.text);
+          const trans = enJson.data.ayahs.map(a => cleanTranslation(a.text));
           data.ayahs.forEach((a, i) => { a.translation = trans[i] || null; });
         }
       }
@@ -5035,9 +5235,10 @@ async function loadViewerAudioSurah(surahNumber){
   );
 
   try{
+    /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/quran-uthmani', FETCH_TIMEOUT_MS),
-      fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/en.sahih', FETCH_TIMEOUT_MS)
+      fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/' + TRANSLATION_ALQURAN, FETCH_TIMEOUT_MS)
     ]);
     if(myToken !== viewerAudio.token) return;
     if(arSettled.status !== 'fulfilled' || !arSettled.value.ok) throw new Error('Arabic fetch failed');
@@ -5060,7 +5261,7 @@ async function loadViewerAudioSurah(surahNumber){
       try{
         const enJson = await enSettled.value.json();
         if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
-          viewerAudio.translations = enJson.data.ayahs.map(a => a.text);
+          viewerAudio.translations = enJson.data.ayahs.map(a => cleanTranslation(a.text));
         }
       }catch(_){}
     }
@@ -6387,7 +6588,8 @@ async function loadPage(n, keepFeedback){
   ensureMushafFsBtn();
   setStatus('Loading page ' + pageNum + '…', 'loading');
   const arUrl = ALQURAN_API + '/page/' + pageNum + '/' + EDITION_COACH;
-  const enUrl = ALQURAN_API + '/page/' + pageNum + '/en.sahih';
+  /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
+  const enUrl = ALQURAN_API + '/page/' + pageNum + '/' + TRANSLATION_ALQURAN;
   try{
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(arUrl, FETCH_TIMEOUT_MS),
@@ -6405,7 +6607,7 @@ async function loadPage(n, keepFeedback){
       try{
         const enJson = await enSettled.value.json();
         if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
-          translations = enJson.data.ayahs.map(a => a.text);
+          translations = enJson.data.ayahs.map(a => cleanTranslation(a.text));
         }
       }catch(_){}
     }
@@ -6431,7 +6633,8 @@ async function loadSurah(n, keepFeedback){
   ensureMushafFsBtn();
   setStatus('Downloading Surah ' + surahNum + '…', 'loading');
   const arUrl = ALQURAN_API + '/surah/' + surahNum + '/' + EDITION_COACH;
-  const enUrl = ALQURAN_API + '/surah/' + surahNum + '/en.sahih';
+  /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
+  const enUrl = ALQURAN_API + '/surah/' + surahNum + '/' + TRANSLATION_ALQURAN;
   try{
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(arUrl, FETCH_TIMEOUT_MS),
@@ -6458,7 +6661,7 @@ async function loadSurah(n, keepFeedback){
       try{
         const enJson = await enSettled.value.json();
         if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
-          translations = enJson.data.ayahs.map(a => a.text);
+          translations = enJson.data.ayahs.map(a => cleanTranslation(a.text));
         }
       }catch(_){}
     }
@@ -7578,7 +7781,8 @@ tileJuzIndex.addEventListener('click', () => {
 });
 tilePlayAudio.addEventListener('click', () => {
   showScreen('audio');
-  renderReciterChips();
+  renderReciterSelect();
+  closeReciterMenu();
   renderAudioSurahList();
 });
 tileBookmarks.addEventListener('click', () => {
@@ -7629,6 +7833,25 @@ btnBackHome.addEventListener('click', () => {
   if(homeMenuQr)    homeMenuQr.addEventListener('click',    () => { closeMenu(); openQrScreen(); });
   if(homeMenuFeedback) homeMenuFeedback.addEventListener('click', () => { closeMenu(); openFeedbackModal(); });
   if(homeMenuAbout) homeMenuAbout.addEventListener('click', () => { closeMenu(); openInfoModal(); });
+})();
+
+/* Reciter dropdown */
+(function wireReciterDropdown(){
+  if(!reciterTrigger || !reciterMenu || !reciterDropdown) return;
+  reciterTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleReciterMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if(reciterMenu.hidden) return;
+    if(reciterDropdown.contains(e.target)) return;
+    closeReciterMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && !reciterMenu.hidden){
+      closeReciterMenu();
+    }
+  });
 })();
 
 /* Progress dropdown */
@@ -7730,7 +7953,7 @@ document.addEventListener('visibilitychange',()=>{
 let lastTouch=0;
 document.addEventListener('touchend',e=>{
   const now=Date.now();
-  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .chip, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step')){
+  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step')){
     e.preventDefault();
   }
   lastTouch=now;
@@ -7756,6 +7979,7 @@ window.addEventListener('beforeunload',()=>{
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
     if(qrFullscreen && !qrFullscreen.hidden){ closeQrScreen(); return; }
+    if(reciterMenu && !reciterMenu.hidden){ closeReciterMenu(); return; }
     if(homeMenu && !homeMenu.hidden){ homeMenu.hidden = true; homeMenuBtn.setAttribute('aria-expanded','false'); return; }
     if(viewerOpen){ closeViewer(); return; }
     if(readerFullscreen){ exitReaderFullscreen(); return; }
@@ -7851,6 +8075,7 @@ if(qrFullscreen){
   volumeSlider.value = String(currentVolume);
   qvVolSlider.value = String(currentVolume);
   updateVolIcon();
+  updateReciterTrigger();
   refreshPermissionState();
 
   loadBookmarks();
@@ -7928,6 +8153,13 @@ function openCoachInfoModal(){
    ABOUT APP MODAL
    ============================================================ */
 function openInfoModal(){
+  /* Build the reciter list from the single source of truth so the
+     About dialog always matches the dropdown. */
+  const reciterListHtml = RECITER_ORDER.map((id, i) => {
+    const label = RECITER_LABELS[id] || id;
+    return '<li>' + (i + 1) + '. <b>' + escapeHtml(label) + '</b></li>';
+  }).join('');
+
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.innerHTML = '<div class="modal info-modal">' +
@@ -7966,31 +8198,49 @@ function openInfoModal(){
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">4</span> Bookmarks</h3>' +
+    '<h3><span class="fnum">4</span> 📖 Translation — ' + escapeHtml(TRANSLATION_LABEL) + '</h3>' +
+    '<ul>' +
+      '<li>Every English translation shown in the reader, the audio player and the recitation coach is the <b>Holy Qur\'an translation by ' + escapeHtml(TRANSLATION_LABEL) + '</b> (1872–1953), one of the most widely read English renderings of the Qur\'an.</li>' +
+      '<li><b>Translator:</b> ' + escapeHtml(TRANSLATION_LABEL) + '.<br>' +
+          '<b>Edition ID:</b> <code>en.yusufali</code> (alquran.cloud) · <code>' + TRANSLATION_QURANCOM_ID + '</code> (quran.com v4).</li>' +
+      '<li>The Arabic mushaf text is the classical <b>IndoPak</b> orthography (13-line South-Asian script), independent of the translation.</li>' +
+      '<li><b>Footnotes are omitted.</b> Only the translation text itself is shown — numbered footnote markers and reference brackets are stripped so the verse reads as a single clean passage.</li>' +
+      '<li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li>' +
+    '</ul>' +
+  '</div>' +
+  '<div class="feature">' +
+    '<h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3>' +
+    '<ul>' +
+      '<li>On the <b>Play audio</b> screen, tap the <b>Reciter</b> dropdown to open a scrollable list of all ' + RECITER_ORDER.length + ' Qaris. Tap any name to select it.</li>' +
+      '<li>Your choice is remembered and used everywhere ayah audio is played (audio player and the recitation coach fallback).</li>' +
+      '<li><b>Default reciter:</b> Mishary Rashid Alafasy.</li>' +
+    '</ul>' +
+    '<div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px">' +
+      '<div style="font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:6px">Available Qaris (' + RECITER_ORDER.length + ')</div>' +
+      '<ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' +
+        reciterListHtml +
+      '</ul>' +
+    '</div>' +
+  '</div>' +
+  '<div class="feature">' +
+    '<h3><span class="fnum">6</span> Bookmarks</h3>' +
     '<ul>' +
       '<li><b>Hold any verse for 3 seconds</b> in the reader to bookmark it.</li>' +
       '<li>Tap a bookmark to jump back to that page.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">5</span> Play audio with translation</h3>' +
+    '<h3><span class="fnum">7</span> Play audio with translation</h3>' +
     '<ul>' +
       '<li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li>' +
-      '<li>Plays ayah by ayah with <b>English translation</b> shown below each ayah.</li>' +
+      '<li>Plays ayah by ayah with the <b>' + escapeHtml(TRANSLATION_LABEL) + ' English translation</b> shown below each ayah.</li>' +
       '<li>The highlighted ayah follows the <b>actual audio</b> — it lights up the moment the sound starts.</li>' +
       '<li>If playback does not start on its own, tap the ▶ button once — the browser sometimes needs one extra tap.</li>' +
       '<li>Holding a word in the audio player does nothing — the microphone is only for the recitation coach.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">6</span> Ten Qari reciters</h3>' +
-    '<ul>' +
-      '<li>The chip bar on top of the surah list lets you pick a reciter.</li>' +
-      '<li><b>Qari Mishary Alafasy</b> is the default.</li>' +
-    '</ul>' +
-  '</div>' +
-  '<div class="feature">' +
-    '<h3><span class="fnum">7</span> Share with a QR code</h3>' +
+    '<h3><span class="fnum">8</span> Share with a QR code</h3>' +
     '<ul>' +
       '<li>On the Home screen, open the <b>☰</b> menu and tap <b>Scan barcode</b>.</li>' +
       '<li>A full-screen <b>QR code</b> appears that opens <b>recite-hazel.vercel.app</b>.</li>' +
@@ -7998,13 +8248,13 @@ function openInfoModal(){
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">8</span> Light / dark theme</h3>' +
+    '<h3><span class="fnum">9</span> Light / dark theme</h3>' +
     '<ul>' +
       '<li>Top-right on Home, or from the coach screen\'s top bar.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">9</span> 🌐 Which browser should I use?</h3>' +
+    '<h3><span class="fnum">10</span> 🌐 Which browser should I use?</h3>' +
     '<ul>' +
       '<li><b>Android — Google Chrome</b> or <b>Microsoft Edge</b>: everything works, including the live recitation coach.</li>' +
       '<li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works. Chrome on iOS also works because Apple requires every iOS browser to use Safari\'s engine.</li>' +
@@ -8014,12 +8264,12 @@ function openInfoModal(){
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">10</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3>' +
+    '<h3><span class="fnum">11</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3>' +
     '<ul>' +
       '<li>Most Chinese-market phones — <b>Huawei, Honor, Xiaomi, Redmi, OPPO, vivo, realme, OnePlus CN</b> — ship <b>without Google Play Services</b> and without Google Chrome.</li>' +
       '<li>Their built-in browsers (<b>Huawei Browser, Mi Browser, UC Browser, QQ Browser</b>) do <b>not</b> implement the Web Speech API. Because of that, the <b>Recitation Coach cannot work</b> in them — the app will tell you speech recognition is unavailable.</li>' +
       '<li>Speech recognition is not built into the browser itself: it is a service provided by Google (on Chromium browsers) or Apple (on Safari). If that service is absent from the device, no web page can do live recitation.</li>' +
-      '<li>Everything else works fine on these phones: the <b>Surah index, Juz index, Quran text, book-form pages, English translation, bookmarks and ayah-by-ayah audio</b> only need an internet connection.</li>' +
+      '<li>Everything else works fine on these phones: the <b>Surah index, Juz index, Quran text, book-form pages, English translation (' + escapeHtml(TRANSLATION_LABEL) + '), bookmarks and ayah-by-ayah audio</b> only need an internet connection.</li>' +
       '<li><b>To get the coach:</b> install <b>Google Chrome</b> — Huawei users can get it from the <b>AppGallery</b>, others from the Play Store — and open this page in Chrome.</li>' +
       '<li>If Chrome cannot be installed and the built-in browser has no speech service, there is unfortunately no workaround on that device.</li>' +
     '</ul>' +

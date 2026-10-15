@@ -17,6 +17,19 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v13 — Shell updated:
+         • Reciter picker converted from a horizontal chip bar to
+           a proper dropdown with a scrollable list of all 20 Qaris.
+         • English translation switched to Yusuf Ali
+           (alquran.cloud `en.yusufali` / quran.com v4 id 203).
+         • Footnote markers stripped from every translation string
+           before it is rendered, so only the verse text itself is
+           shown — no [1], <sup>…</sup> or bracket references.
+         • Reciter roster expanded from 10 to 20 Qaris.
+         Nothing changed in the caching strategy itself — the
+         routing, caches, and trim budgets are identical to v12.
+         The bump exists purely so clients pick up the new shell.
+
    v12 — Shell updated with a simplified speech keepalive.
          The recognizer now performs a silent stop()/restart every
          40 s while a session is active, with no deferral logic.
@@ -25,7 +38,7 @@
          caused the app to stall immediately.  Restart behaviour
          on session end (silence timeout, Stop button, tab close,
          fatal error) is unchanged — the mic is switched off as
-         before.  Version bumped so clients pick up the new shell.
+         before.
 
    v11 — Shell updated with a speech-recognition keepalive.
          Chrome/Chromium silently stop delivering Web Speech API
@@ -44,7 +57,7 @@
 
 'use strict';
 
-const VERSION        = 'v12';                    /* ← bumped from v11 */
+const VERSION        = 'v13';                    /* ← bumped from v12 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -167,16 +180,18 @@ self.addEventListener('fetch', event => {
   }
 
   /* 4. Quran.com API v4 — the reader’s primary source for the
-        IndoPak text with the full Tajweed symbol set.
+        IndoPak text with the full Tajweed symbol set, and now the
+        primary source for the Yusuf Ali translation
+        (numeric translation id 203).
         Network-first with cache fallback. */
   if(url.hostname === HOST_QURAN_COM){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
   }
 
-  /* 5. alquran.cloud API — coach’s Uthmani text, English
-        translation, and the reader’s fallback edition.
-        Network-first. */
+  /* 5. alquran.cloud API — coach’s Uthmani text, the Yusuf Ali
+        translation (en.yusufali), and the reader’s fallback
+        edition.  Network-first. */
   if(url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
