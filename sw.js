@@ -17,17 +17,8 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
-   v11 — Shell updated with a speech-recognition keepalive.
-         Chrome/Chromium silently stop delivering Web Speech API
-         results after ~60 s of continuous recognition, which made
-         the live recitation coach stall mid-session and required
-         a manual mic off/on to recover.  index.html now recycles
-         the recognizer every ~40 s (only during a natural gap
-         between words) so the mic never goes silent.  Version is
-         bumped so clients pick up the new shell immediately.
-
-   v10 — Version bumped so browsers pick up the shell after the
-         vercel.json header/rewrite fix.  The vercel.json now
+   v10 — Version bumped so browsers pick up the new shell after
+         the vercel.json header/rewrite fix.  The vercel.json now
          forces sw.js and index.html to revalidate on every load
          and correctly proxies /my-analytics/* to Vercel, which
          was previously being rewritten to index.html by the
@@ -37,7 +28,7 @@
 
 'use strict';
 
-const VERSION        = 'v11';                    /* ← bumped from v10 */
+const VERSION        = 'v10';                    /* ← bumped from v9 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
