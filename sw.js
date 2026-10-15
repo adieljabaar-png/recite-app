@@ -17,6 +17,27 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v14 — Shell updated:
+         • Follow-mode matching tuned.
+           – TOL_TABLE.balanced: 5- and 6-letter words now
+             allow an edit-distance of 2 (previously 1).
+           – Strict no longer short-circuits to letter-exact
+             Levenshtein. It now falls through to the same
+             phonetic-Levenshtein and 85 % prefix/suffix overlap
+             checks as Balanced and Lenient.
+           – CONF_FLOOR_TABLE.strict lowered from 0.55 to 0.50.
+         • Tajweed continues to be hard-locked to Strict, so it
+           inherits both the relaxed phonetic matching and the
+           lower confidence floor. This was an explicit choice:
+           Tajweed becomes noticeably more permissive towards
+           regional pronunciation variants that merge letters
+           such as ذ→ز or ط→ت.
+         • NOISE_LIMIT_TABLE unchanged (strict 2, balanced 3,
+           lenient 4).
+         Nothing changed in the caching strategy itself — the
+         routing, caches, and trim budgets are identical to v13.
+         The bump exists purely so clients pick up the new shell.
+
    v13 — Shell updated:
          • Reciter picker converted from a horizontal chip bar to
            a proper dropdown with a scrollable list of all 20 Qaris.
@@ -57,7 +78,7 @@
 
 'use strict';
 
-const VERSION        = 'v13';                    /* ← bumped from v12 */
+const VERSION        = 'v14';                    /* ← bumped from v13 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
