@@ -14,10 +14,62 @@
        still looks like a normal first-party asset.
      • Never cache POST requests (feedback submissions).
 
-   Cache version is bumped whenever the shell changes — that
-   is what forces visitors to see the new HTML after a deploy.
+   ═════════════════════════════════════════════════════════════
+   ⚠️  PRAYER TIME SETTINGS ARE NEVER TOUCHED BY THIS FILE
+   ═════════════════════════════════════════════════════════════
+   Prayer time adjustments, chosen calculation method, Asr
+   school, per-prayer ±minute offsets, alarm toggles and alarm
+   sound preference are all stored by the page in
+   `localStorage` under the key  `qc.prayer`.
 
-   v18 — Shell refreshed for the current index.html.
+   A Service Worker has no access to `localStorage` — it runs in
+   a completely separate global scope.  Nothing in this file
+   reads, writes, clears or resets any `localStorage` key, and
+   nothing in this file can.  Cache Storage (what this file
+   manages) and `localStorage` (what prayer settings live in)
+   are two entirely independent storage systems.
+
+   Therefore:
+     • Bumping VERSION below and deleting old caches on
+       `activate` does NOT reset prayer time adjustments.
+     • Clearing runtime caches via the `CLEAR_CACHES` message
+       does NOT reset prayer time adjustments.
+     • The `REFRESH_MANIFEST` message that wipes the shell cache
+       does NOT reset prayer time adjustments.
+     • Re-installing the service worker does NOT reset prayer
+       time adjustments.
+     • The only code path in the whole app that resets prayer
+       settings is the “Reset app” button in the About dialog
+       (index.html → `localStorage.clear()`), which is a
+       deliberate, user-initiated action.
+
+   ═════════════════════════════════════════════════════════════
+   CACHE VERSION — bumped whenever the shell changes.  That is
+   what forces visitors to see the new HTML after a deploy.
+   ═════════════════════════════════════════════════════════════
+
+   v19 — Shell refreshed for the new app icon.
+         • index.html now uses a new inline SVG icon: an open
+           golden book inside a black rounded square.  The old
+           blue-open-book, the wooden rehl (Qur'an stand) and
+           the golden microphone have all been removed.
+         • The same SVG is used for <link rel="icon"> and
+           <link rel="apple-touch-icon">.  No new files are
+           fetched — the icon is still a single inline data-URI,
+           so the shell size is unchanged apart from the icon
+           markup itself.
+         • Nothing changed in the caching strategy, routing,
+           cache names, or trim budgets.  The bump exists purely
+           so clients pick up the new shell and redraw the tab /
+           home-screen icon.
+         • PRAYER TIME SAFETY: as with every previous bump, this
+           version change only rotates Cache Storage.  It does
+           NOT touch `localStorage`, and therefore it does NOT
+           reset any user's prayer time adjustments, offsets,
+           alarms, method, Asr school or sound choice.  See the
+           block above for the full explanation.
+
+   v18 — Shell refreshed for the previous index.html.
          • Verified against the shipped index.html — every
            external host the page touches is accounted for:
              – api.quran.com/v4   → network-first  (IndoPak
@@ -45,14 +97,11 @@
                the GET guard at the top already lets it
                through).
          • No routing, cache-name, or trim-budget changes
-           versus v17.  The bump exists purely so clients
-           pick up the new shell.
-         • The RELOAD-on-deploy guarantee still comes from the
-           version string below being embedded in the cache
-           names — bump it whenever index.html changes.
+           versus v17.  The bump existed purely so clients
+           picked up the new shell.
 
    v17 — Manifest freshness for icon updates.
-         • manifest.json is now served NETWORK-FIRST (with a
+         • manifest.json is served NETWORK-FIRST (with a
            2-second fallback to cache on failure) instead of
            cache-first.  Every time Chrome, the OS launcher, or
            a manifest re-read asks for the manifest, it gets the
@@ -79,67 +128,25 @@
                time the installed PWA is launched, because
                Chrome now sees the newest manifest every time
                it asks.
-           Nothing changed in the routing, caches, or trim
-           budgets — only the manifest branch and the new
-           message handler.
 
-   v16 — Shell updated: new app icon.
-         • The launcher / favicon / apple-touch-icon in index.html
-           has been replaced. The old icon (a small blue open
-           book) is gone; the new one shows an open Qur'an
-           resting on a wooden rehl (the classical X-shaped
-           Qur'an stand) with a golden microphone floating above
-           it, all on the app's blue gradient background.
-         • The same SVG is used for <link rel="icon">,
-           <link rel="apple-touch-icon"> and, if you have added
-           it, the manifest icons array. No new files are
-           fetched — the icon is still a single inline data-URI,
-           so the shell size is unchanged apart from the icon
-           markup itself.
-         • Nothing changed in the caching strategy, routing,
-           caches, or trim budgets. The bump exists purely so
-           clients pick up the new shell and redraw the tab /
-           home-screen icon.
+   v16 — Shell updated: app icon refreshed (Qur'an on a rehl
+         with a golden microphone — since replaced in v19).
 
    v15 — Shell updated: Prayer Times feature added.
          • New Home-screen tile “🕌 Prayer Times” linking to a
            full Prayer Times screen (#screenPrayer).
-         • Screen shows the user's city, the Hijri and Gregorian
-           dates plus a live clock on one row, and the five daily
-           prayers (with Sunrise for reference) as a vertical list
-           matching a printed timetable layout.
-         • Settings modal (⚙️) with four tabs:
-             – 📍 Location — GPS “Use my current location” via
-               navigator.geolocation plus city search via the
-               Open-Meteo geocoding API, reverse geocode via
-               BigDataCloud, calculation method and Asr school.
-             – 🕐 Adjust — per-prayer ±59 minute offsets.
-             – 🔔 Alarms — Athaan / Beep / Mute sound choice,
-               per-prayer on/off bells, and a “Test alarm” button.
-             – 🧭 Qibla — compass rose with live
-               DeviceOrientation heading.
+         • Settings modal (⚙️) with four tabs: Location, Adjust,
+           Alarms, Qibla.
          • Astronomical prayer-time calculation (PrayTimes
            algorithm) runs entirely on-device — no prayer-time
            API is contacted, so no new runtime caching is needed.
          • Per-prayer alarm bells are toggled from the main list
            and from the Alarms pane; state persists in
            localStorage under key `qc.prayer`.
-         • Alarm notification uses the Web Notifications API
-           (permission requested on first alarm toggle) plus an
-           in-page toast, and plays the chosen sound via Web
-           Audio (beep) or an external Athaan MP3.
          • External assets used by this feature — the Open-Meteo
            geocoding API, the BigDataCloud reverse-geocode API,
            and the two Athaan MP3 hosts — are deliberately NOT
-           intercepted by the SW. They fall through to the
-           default network path exactly like everyayah.com audio
-           and /my-analytics/*, which keeps GPS-driven city
-           lookup fresh and lets the browser handle the audio
-           element's own buffering / Range requests.
-         Nothing changed in the caching strategy itself — the
-         routing, caches, and trim budgets are identical to v14.
-         The bump exists purely so clients pick up the new shell
-         that contains the Prayer Times UI.
+           intercepted by the SW.
 
    v14 — Shell updated:
          • Follow-mode matching tuned.
@@ -150,17 +157,7 @@
              phonetic-Levenshtein and 85 % prefix/suffix overlap
              checks as Balanced and Lenient.
            – CONF_FLOOR_TABLE.strict lowered from 0.55 to 0.50.
-         • Tajweed continues to be hard-locked to Strict, so it
-           inherits both the relaxed phonetic matching and the
-           lower confidence floor. This was an explicit choice:
-           Tajweed becomes noticeably more permissive towards
-           regional pronunciation variants that merge letters
-           such as ذ→ز or ط→ت.
-         • NOISE_LIMIT_TABLE unchanged (strict 2, balanced 3,
-           lenient 4).
-         Nothing changed in the caching strategy itself — the
-         routing, caches, and trim budgets are identical to v13.
-         The bump exists purely so clients pick up the new shell.
+         • Tajweed continues to be hard-locked to Strict.
 
    v13 — Shell updated:
          • Reciter picker converted from a horizontal chip bar to
@@ -168,41 +165,24 @@
          • English translation switched to Yusuf Ali
            (alquran.cloud `en.yusufali` / quran.com v4 id 203).
          • Footnote markers stripped from every translation string
-           before it is rendered, so only the verse text itself is
-           shown — no [1], <sup>…</sup> or bracket references.
+           before it is rendered.
          • Reciter roster expanded from 10 to 20 Qaris.
-         Nothing changed in the caching strategy itself — the
-         routing, caches, and trim budgets are identical to v12.
-         The bump exists purely so clients pick up the new shell.
 
    v12 — Shell updated with a simplified speech keepalive.
          The recognizer now performs a silent stop()/restart every
-         40 s while a session is active, with no deferral logic.
-         The previous deferral could (under continuous recitation)
-         postpone the restart past Chrome's ~60 s limit, which
-         caused the app to stall immediately.  Restart behaviour
-         on session end (silence timeout, Stop button, tab close,
-         fatal error) is unchanged — the mic is switched off as
-         before.
+         40 s while a session is active.
 
    v11 — Shell updated with a speech-recognition keepalive.
          Chrome/Chromium silently stop delivering Web Speech API
-         results after ~60 s of continuous recognition, which made
-         the live recitation coach stall mid-session and required
-         a manual mic off/on to recover.
+         results after ~60 s of continuous recognition.
 
    v10 — Version bumped so browsers pick up the shell after the
-         vercel.json header/rewrite fix.  The vercel.json now
-         forces sw.js and index.html to revalidate on every load
-         and correctly proxies /my-analytics/* to Vercel, which
-         was previously being rewritten to index.html by the
-         catch-all rule and breaking both Analytics and the SW
-         registration silently.
+         vercel.json header/rewrite fix.
    ============================================================ */
 
 'use strict';
 
-const VERSION        = 'v18';                    /* ← bumped from v17 */
+const VERSION        = 'v19';                    /* ← bumped from v18 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -254,6 +234,11 @@ self.addEventListener('install', event => {
 
 /* ------------------------------------------------------------
    ACTIVATE  —  drop old cache versions and take control.
+   ------------------------------------------------------------
+   NOTE: this only deletes Cache Storage entries whose names are
+   not in ALL_CACHES.  It never touches `localStorage`, so a
+   user's saved prayer time adjustments (`qc.prayer`) are
+   completely unaffected by a version bump.
    ------------------------------------------------------------ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
@@ -272,6 +257,10 @@ self.addEventListener('activate', event => {
 
 /* ------------------------------------------------------------
    MESSAGE  —  page → SW control channel.
+   ------------------------------------------------------------
+   None of these handlers touch `localStorage`.  Prayer time
+   settings live in `localStorage` under `qc.prayer` and are
+   therefore completely outside the reach of this file.
    ------------------------------------------------------------ */
 self.addEventListener('message', event => {
   const data = event.data || {};
@@ -283,6 +272,8 @@ self.addEventListener('message', event => {
     event.waitUntil((async () => {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
+      /* Cache Storage only — `localStorage` is untouched, so
+         prayer time adjustments survive this operation. */
       if(event.source && event.source.postMessage){
         event.source.postMessage({ type: 'CACHES_CLEARED' });
       }
@@ -294,7 +285,9 @@ self.addEventListener('message', event => {
      This is the strongest thing a web page can do to nudge the
      OS launcher towards reading the newest manifest. It cannot
      redraw the icon of an install that already exists — see the
-     v17 header note. */
+     v17 header note.
+     It also cannot and does not touch `localStorage`, so prayer
+     time adjustments are unaffected. */
   if(data.type === 'REFRESH_MANIFEST'){
     event.waitUntil((async () => {
       try{
@@ -406,7 +399,9 @@ self.addEventListener('fetch', event => {
             because the GET guard at the top returns first, but
             listed for completeness).
         These are left to the browser so location lookups stay
-        fresh and <audio> Range requests are handled natively. */
+        fresh and <audio> Range requests are handled natively.
+        None of this touches `localStorage`, so the user's
+        prayer time adjustments are unaffected. */
 });
 
 /* ------------------------------------------------------------
