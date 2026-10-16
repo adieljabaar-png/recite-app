@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -2370,6 +2369,9 @@ body.light-mode .qibla-compass{
           </span>
           <span class="hmi-badge" id="homeMenuInstallBadge" hidden>✓</span>
         </button>
+        <button class="home-menu-item" id="homeMenuNotify" type="button" role="menuitem">
+          <span class="hmi-ico">🔔</span><span>Enable notifications</span>
+        </button>
         <button class="home-menu-item" id="homeMenuShare" type="button" role="menuitem">
           <span class="hmi-ico">↗</span><span>Share app</span>
         </button>
@@ -2724,6 +2726,7 @@ const homeMenuInstallIcon = document.getElementById('homeMenuInstallIcon');
 const homeMenuInstallTitle = document.getElementById('homeMenuInstallTitle');
 const homeMenuInstallSub = document.getElementById('homeMenuInstallSub');
 const homeMenuInstallBadge = document.getElementById('homeMenuInstallBadge');
+const homeMenuNotify = document.getElementById('homeMenuNotify');
 const homeMenuShare  = document.getElementById('homeMenuShare');
 const homeMenuQr     = document.getElementById('homeMenuQr');
 const homeMenuAbout  = document.getElementById('homeMenuAbout');
@@ -2802,6 +2805,13 @@ const EDITION_COACH = 'quran-uthmani';
 const TRANSLATION_ALQURAN = 'en.yusufali';
 const TRANSLATION_QURANCOM_ID = 203;
 const TRANSLATION_LABEL = 'Abdullah Yusuf Ali';
+
+/* ---- Push Notification Config --------------------------------------
+   VAPID public key generated at https://vapidkeys.com
+   Safe to expose — this key is designed to be public.
+   The matching private key lives ONLY in Vercel env vars.
+   ------------------------------------------------------------------- */
+const VAPID_PUBLIC_KEY = 'BHpU2OJZjHoYab_-F8I369UTsJjx9ArleSiggsdQ2dcch4mTQFQLTEvanyto6J5f8xFh-tshGyGsJNiDj9xy1aE';
 
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 const toAr = s => String(s).replace(/\d/g, d => AR_DIGITS[+d]);
@@ -3676,6 +3686,62 @@ async function openCoachScreen(){
     coachLoaded = true;
   }finally{
     coachLoading = false;
+  }
+}
+
+/* ============================================================
+   PUSH NOTIFICATIONS
+   ============================================================ */
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  const out     = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function enableNotifications(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    showToast('⚠️ Notifications are not supported in this browser.');
+    return;
+  }
+
+  // On iOS, PushManager only exists after the user has added the app to Home Screen.
+  if(IS_IOS && !IS_STANDALONE){
+    showToast('📲 To enable notifications on iPhone, first add this app to your Home Screen from the Share menu.', 5200);
+    return;
+  }
+
+  try{
+    const reg = await navigator.serviceWorker.ready;
+
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      showToast('Notifications were not allowed.');
+      return;
+    }
+
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const res = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub)
+    });
+
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+
+    showToast('✅ Notifications enabled.');
+  }catch(err){
+    console.warn('[Push] subscribe failed:', err);
+    showToast('⚠️ Could not enable notifications. Please try again.');
   }
 }
 
@@ -8160,6 +8226,10 @@ btnBackHome.addEventListener('click', () => {
   if(homeMenuInstall) homeMenuInstall.addEventListener('click', () => {
     closeMenu();
     handleInstallMenuTap();
+  });
+  if(homeMenuNotify) homeMenuNotify.addEventListener('click', () => {
+    closeMenu();
+    enableNotifications();
   });
   if(homeMenuShare) homeMenuShare.addEventListener('click', () => { closeMenu(); shareApp(); });
   if(homeMenuQr)    homeMenuQr.addEventListener('click',    () => { closeMenu(); openQrScreen(); });
