@@ -17,6 +17,24 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v16 — Shell updated: new app icon.
+         • The launcher / favicon / apple-touch-icon in index.html
+           has been replaced. The old icon (a small blue open
+           book) is gone; the new one shows an open Qur'an
+           resting on a wooden rehl (the classical X-shaped
+           Qur'an stand) with a golden microphone floating above
+           it, all on the app's blue gradient background.
+         • The same SVG is used for <link rel="icon">,
+           <link rel="apple-touch-icon"> and, if you have added
+           it, the manifest icons array. No new files are
+           fetched — the icon is still a single inline data-URI,
+           so the shell size is unchanged apart from the icon
+           markup itself.
+         • Nothing changed in the caching strategy, routing,
+           caches, or trim budgets. The bump exists purely so
+           clients pick up the new shell and redraw the tab /
+           home-screen icon.
+
    v15 — Shell updated: Prayer Times feature added.
          • New Home-screen tile “🕌 Prayer Times” linking to a
            full Prayer Times screen (#screenPrayer).
@@ -118,7 +136,7 @@
 
 'use strict';
 
-const VERSION        = 'v15';                    /* ← bumped from v14 */
+const VERSION        = 'v16';                    /* ← bumped from v15 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -282,3 +300,85 @@ self.addEventListener('fetch', event => {
         These are left to the browser so location lookups stay
         fresh and <audio> Range requests are handled natively. */
 });
+
+/* ------------------------------------------------------------
+   STRATEGIES
+   ------------------------------------------------------------ */
+
+async function cacheFirst(req, cacheName, maxEntries){
+  const cache = await caches.open(cacheName);
+  const hit = await cache.match(req, { ignoreSearch: false });
+  if(hit) return hit;
+  try{
+    const res = await fetch(req);
+    if(res && (res.ok || res.type === 'opaque')){
+      const clone = res.clone();
+      cache.put(req, clone).then(() => {
+        if(maxEntries) trimCache(cacheName, maxEntries);
+      }).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
+
+async function networkFirst(req, cacheName, maxEntries){
+  const cache = await caches.open(cacheName);
+  try{
+    const res = await fetch(req);
+    if(res && res.ok){
+      const clone = res.clone();
+      cache.put(req, clone).then(() => {
+        if(maxEntries) trimCache(cacheName, maxEntries);
+      }).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    const hit = await cache.match(req, { ignoreSearch: false });
+    if(hit) return hit;
+    return new Response(
+      JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+async function shellNavigation(req){
+  const cache = await caches.open(SHELL_CACHE);
+  try{
+    const res = await fetch(req);
+    if(res && res.ok && res.type === 'basic'){
+      const clone = res.clone();
+      cache.put('./index.html', clone).catch(() => {});
+    }
+    return res;
+  }catch(err){
+    const hit =
+      await cache.match(req, { ignoreSearch: true }) ||
+      await cache.match('./index.html', { ignoreSearch: true }) ||
+      await cache.match('./', { ignoreSearch: true });
+    if(hit) return hit;
+    return new Response(
+      '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
+      '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
+      '<h2>You are offline</h2><p>Open the app once while online to enable offline mode.</p>',
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
+  }
+}
+
+/* ------------------------------------------------------------
+   CACHE TRIMMING  —  FIFO by insertion order.
+   ------------------------------------------------------------ */
+async function trimCache(cacheName, maxEntries){
+  try{
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    const over = keys.length - maxEntries;
+    if(over <= 0) return;
+    for(let i = 0; i < over; i++){
+      await cache.delete(keys[i]);
+    }
+  }catch(_){}
+}
