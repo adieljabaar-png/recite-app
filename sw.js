@@ -17,6 +17,38 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v17 — Manifest freshness for icon updates.
+         • manifest.json is now served NETWORK-FIRST (with a
+           2-second fallback to cache on failure) instead of
+           cache-first.  Every time Chrome, the OS launcher, or
+           a manifest re-read asks for the manifest, it gets the
+           current version from the server — never a stale copy
+           sitting in the SW runtime cache.
+         • A new postMessage handler `REFRESH_MANIFEST` lets the
+           page wipe the shell cache on demand, so the next PWA
+           launch is guaranteed to fetch fresh HTML + fresh
+           manifest.
+         • IMPORTANT — what this does NOT and cannot do:
+             – It cannot change the icon of an app that is
+               already installed on the user's home screen. That
+               icon is owned by the OS launcher (Android
+               ShortcutManager) or springboard (iOS IconState),
+               both outside the reach of any web API.
+             – On iOS it has zero effect on an existing install:
+               Safari never re-reads the apple-touch-icon after
+               the shortcut has been created.  The only reliable
+               iOS fix is: delete the shortcut → clear Safari
+               website data for the domain → restart the device
+               → re-add to Home Screen.
+             – On Android it gives Chrome the best possible
+               chance of picking up a new launcher icon the next
+               time the installed PWA is launched, because
+               Chrome now sees the newest manifest every time
+               it asks.
+           Nothing changed in the routing, caches, or trim
+           budgets — only the manifest branch and the new
+           message handler.
+
    v16 — Shell updated: new app icon.
          • The launcher / favicon / apple-touch-icon in index.html
            has been replaced. The old icon (a small blue open
@@ -136,7 +168,7 @@
 
 'use strict';
 
-const VERSION        = 'v16';                    /* ← bumped from v15 */
+const VERSION        = 'v17';                    /* ← bumped from v16 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -161,6 +193,11 @@ const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 /* Budgets — keep the caches from growing without bound. */
 const TEXT_CACHE_MAX  = 400;
 const RUNTIME_MAX     = 120;
+
+/* Manifest freshness window — how long the SW will tolerate
+   serving a cached manifest when the network is slow.  Kept very
+   short on purpose: icon updates must propagate fast. */
+const MANIFEST_TIMEOUT_MS = 2000;
 
 /* ------------------------------------------------------------
    INSTALL
@@ -200,7 +237,7 @@ self.addEventListener('activate', event => {
 });
 
 /* ------------------------------------------------------------
-   MESSAGE  —  allow the page to ask for a cache clear.
+   MESSAGE  —  page → SW control channel.
    ------------------------------------------------------------ */
 self.addEventListener('message', event => {
   const data = event.data || {};
@@ -216,6 +253,29 @@ self.addEventListener('message', event => {
         event.source.postMessage({ type: 'CACHES_CLEARED' });
       }
     })());
+    return;
+  }
+  /* NEW — lets the page wipe the shell cache so the next launch
+     re-downloads index.html and manifest.json from the server.
+     This is the strongest thing a web page can do to nudge the
+     OS launcher towards reading the newest manifest. It cannot
+     redraw the icon of an install that already exists — see the
+     v17 header note. */
+  if(data.type === 'REFRESH_MANIFEST'){
+    event.waitUntil((async () => {
+      try{
+        const cache = await caches.open(SHELL_CACHE);
+        await Promise.all([
+          cache.delete('./manifest.json', { ignoreSearch: true }),
+          cache.delete('./index.html',   { ignoreSearch: true }),
+          cache.delete('./',             { ignoreSearch: true })
+        ]);
+      }catch(_){}
+      if(event.source && event.source.postMessage){
+        event.source.postMessage({ type: 'MANIFEST_REFRESHED' });
+      }
+    })());
+    return;
   }
 });
 
@@ -281,6 +341,17 @@ self.addEventListener('fetch', event => {
 
   /* 6. Same-origin requests (the app shell). */
   if(url.origin === self.location.origin){
+
+    /* 6a. manifest.json — ALWAYS network-first, very short
+           fallback timeout.  When Chrome or the OS launcher asks
+           for the manifest (e.g. the next time the installed PWA
+           is launched), it must see the freshest bytes so the
+           newest icon and metadata are on hand. */
+    if(url.pathname.endsWith('/manifest.json')){
+      event.respondWith(manifestFresh(req));
+      return;
+    }
+
     if(req.mode === 'navigate'){
       event.respondWith(shellNavigation(req));
       return;
@@ -340,6 +411,52 @@ async function networkFirst(req, cacheName, maxEntries){
     return new Response(
       JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+/* ------------------------------------------------------------------
+   manifestFresh — manifest.json is always read from the network.
+   Only if the network is unreachable (or slower than
+   MANIFEST_TIMEOUT_MS) do we fall back to a cached copy, so the
+   PWA still launches offline. On every successful fetch the fresh
+   copy replaces the cached one.
+
+   This is what gives Chrome the best possible chance to notice a
+   new launcher icon the next time the installed PWA is opened.
+   It is a nudge, not a guarantee — see the v17 header note.
+   ------------------------------------------------------------------ */
+async function manifestFresh(req){
+  const cache = await caches.open(SHELL_CACHE);
+  try{
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
+    const res = await fetch(req, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    if(res && res.ok){
+      const clone = res.clone();
+      cache.put('./manifest.json', clone).catch(() => {});
+      return res;
+    }
+    throw new Error('bad response');
+  }catch(_){
+    const hit =
+      await cache.match('./manifest.json', { ignoreSearch: true }) ||
+      await cache.match(req,                 { ignoreSearch: true });
+    if(hit) return hit;
+    /* No cache either — return an empty manifest so the browser
+       doesn't 404 and the app can still boot. */
+    return new Response(
+      JSON.stringify({
+        name: 'Quran Recitation Coach',
+        short_name: 'Recite',
+        start_url: './',
+        display: 'standalone',
+        background_color: '#0d1119',
+        theme_color: '#0d1119',
+        icons: []
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/manifest+json' } }
     );
   }
 }
