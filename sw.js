@@ -17,6 +17,35 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v18 — Universal icon set (real PNG files, not data-URIs).
+         • index.html now references seven real PNG files plus
+           one SVG master, all sitting next to index.html:
+               icon.svg                  ← vector master
+               favicon-16.png
+               favicon-32.png
+               favicon-48.png
+               apple-touch-icon.png      ← iOS home-screen icon
+               icon-192.png              ← Android / Windows tile
+               icon-512.png              ← Android splash / store
+               icon-maskable-512.png     ← Android adaptive icon
+         • iOS does NOT render SVG for apple-touch-icon — it only
+           accepts PNG. That is why the previous SVG data-URI icon
+           never appeared on the iPhone home screen. This release
+           replaces every icon reference with a real file URL so
+           iOS, Android, Windows, macOS and desktop browsers all
+           read the same canonical set.
+         • All icon files are now listed in SHELL_URLS so they are
+           pre-cached on install and available offline from the
+           very first launch.
+         • Icon files are also served through the existing
+           same-origin cacheFirst branch, so versioned URLs such
+           as `icon-192.png?v=3` (used by the HTML as a cache-
+           buster) are cached separately on first request and then
+           served from cache on every subsequent visit.
+         • Nothing changed in the routing, cache budgets, or the
+           manifest-first strategy. Only the shell URL list and
+           the version constant have been touched.
+
    v17 — Manifest freshness for icon updates.
          • manifest.json is now served NETWORK-FIRST (with a
            2-second fallback to cache on failure) instead of
@@ -49,23 +78,15 @@
            budgets — only the manifest branch and the new
            message handler.
 
-   v16 — Shell updated: new app icon.
+   v16 — Shell updated: new app icon (SVG data-URI version).
          • The launcher / favicon / apple-touch-icon in index.html
-           has been replaced. The old icon (a small blue open
-           book) is gone; the new one shows an open Qur'an
-           resting on a wooden rehl (the classical X-shaped
-           Qur'an stand) with a golden microphone floating above
-           it, all on the app's blue gradient background.
-         • The same SVG is used for <link rel="icon">,
-           <link rel="apple-touch-icon"> and, if you have added
-           it, the manifest icons array. No new files are
-           fetched — the icon is still a single inline data-URI,
-           so the shell size is unchanged apart from the icon
-           markup itself.
+           was replaced with an inline SVG data-URI showing an
+           open Qur'an on a wooden rehl with a golden microphone.
+         • That approach worked on desktop and Android but not
+           on iOS — iOS silently ignores SVG for
+           apple-touch-icon. Superseded by v18's real PNG set.
          • Nothing changed in the caching strategy, routing,
-           caches, or trim budgets. The bump exists purely so
-           clients pick up the new shell and redraw the tab /
-           home-screen icon.
+           caches, or trim budgets.
 
    v15 — Shell updated: Prayer Times feature added.
          • New Home-screen tile “🕌 Prayer Times” linking to a
@@ -168,7 +189,7 @@
 
 'use strict';
 
-const VERSION        = 'v17';                    /* ← bumped from v16 */
+const VERSION        = 'v18';                    /* ← bumped from v17 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -176,11 +197,24 @@ const RUNTIME_CACHE  = `qc-runtime-${VERSION}`;
 
 const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
-/* Shell assets that must always be available offline. */
+/* Shell assets that must always be available offline.
+   The eight icon files below are the canonical universal icon set —
+   real PNGs plus the SVG master, sitting next to index.html. They
+   are pre-cached here so the app has its complete icon set on
+   first install, even before the user has opened any menu. */
 const SHELL_URLS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  /* Universal icon set — v18 */
+  './icon.svg',
+  './favicon-16.png',
+  './favicon-32.png',
+  './favicon-48.png',
+  './apple-touch-icon.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png'
 ];
 
 /* Hosts we recognise. */
@@ -255,7 +289,7 @@ self.addEventListener('message', event => {
     })());
     return;
   }
-  /* NEW — lets the page wipe the shell cache so the next launch
+  /* Lets the page wipe the shell cache so the next launch
      re-downloads index.html and manifest.json from the server.
      This is the strongest thing a web page can do to nudge the
      OS launcher towards reading the newest manifest. It cannot
