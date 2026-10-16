@@ -17,6 +17,46 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
+   v15 — Shell updated: Prayer Times feature added.
+         • New Home-screen tile “🕌 Prayer Times” linking to a
+           full Prayer Times screen (#screenPrayer).
+         • Screen shows the user's city, the Hijri and Gregorian
+           dates plus a live clock on one row, and the five daily
+           prayers (with Sunrise for reference) as a vertical list
+           matching a printed timetable layout.
+         • Settings modal (⚙️) with four tabs:
+             – 📍 Location — GPS “Use my current location” via
+               navigator.geolocation plus city search via the
+               Open-Meteo geocoding API, reverse geocode via
+               BigDataCloud, calculation method and Asr school.
+             – 🕐 Adjust — per-prayer ±59 minute offsets.
+             – 🔔 Alarms — Athaan / Beep / Mute sound choice,
+               per-prayer on/off bells, and a “Test alarm” button.
+             – 🧭 Qibla — compass rose with live
+               DeviceOrientation heading.
+         • Astronomical prayer-time calculation (PrayTimes
+           algorithm) runs entirely on-device — no prayer-time
+           API is contacted, so no new runtime caching is needed.
+         • Per-prayer alarm bells are toggled from the main list
+           and from the Alarms pane; state persists in
+           localStorage under key `qc.prayer`.
+         • Alarm notification uses the Web Notifications API
+           (permission requested on first alarm toggle) plus an
+           in-page toast, and plays the chosen sound via Web
+           Audio (beep) or an external Athaan MP3.
+         • External assets used by this feature — the Open-Meteo
+           geocoding API, the BigDataCloud reverse-geocode API,
+           and the two Athaan MP3 hosts — are deliberately NOT
+           intercepted by the SW. They fall through to the
+           default network path exactly like everyayah.com audio
+           and /my-analytics/*, which keeps GPS-driven city
+           lookup fresh and lets the browser handle the audio
+           element's own buffering / Range requests.
+         Nothing changed in the caching strategy itself — the
+         routing, caches, and trim budgets are identical to v14.
+         The bump exists purely so clients pick up the new shell
+         that contains the Prayer Times UI.
+
    v14 — Shell updated:
          • Follow-mode matching tuned.
            – TOL_TABLE.balanced: 5- and 6-letter words now
@@ -78,7 +118,7 @@
 
 'use strict';
 
-const VERSION        = 'v14';                    /* ← bumped from v13 */
+const VERSION        = 'v15';                    /* ← bumped from v14 */
 const SHELL_CACHE    = `qc-shell-${VERSION}`;
 const TEXT_CACHE     = `qc-text-${VERSION}`;
 const FONTS_CACHE    = `qc-fonts-${VERSION}`;
@@ -180,7 +220,10 @@ self.addEventListener('fetch', event => {
   /* 1. everyayah.com audio — let the browser fetch it directly.
         iOS Safari is very picky about <audio> and Range requests,
         and a Service Worker in the middle can break playback
-        entirely.  DO NOT intercept. */
+        entirely.  DO NOT intercept.
+        (Athaan MP3 hosts used by the Prayer Times alarms are
+        different hostnames and simply fall through to the
+        passthrough branch below — same reasoning applies.) */
   if(url.hostname === HOST_EVERYAYAH){
     return;
   }
@@ -228,87 +271,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 7. Anything else — passthrough. */
+  /* 7. Anything else — passthrough.
+        This deliberately includes:
+          • the Open-Meteo geocoding API used by the Prayer Times
+            city search (geocoding-api.open-meteo.com),
+          • the BigDataCloud reverse-geocode API used by the GPS
+            button (api.bigdatacloud.net),
+          • the Athaan MP3 hosts used by the Prayer Times alarms
+            (cdn.islamic.network, islamcan.com).
+        These are left to the browser so location lookups stay
+        fresh and <audio> Range requests are handled natively. */
 });
-
-/* ------------------------------------------------------------
-   STRATEGIES
-   ------------------------------------------------------------ */
-
-async function cacheFirst(req, cacheName, maxEntries){
-  const cache = await caches.open(cacheName);
-  const hit = await cache.match(req, { ignoreSearch: false });
-  if(hit) return hit;
-  try{
-    const res = await fetch(req);
-    if(res && (res.ok || res.type === 'opaque')){
-      const clone = res.clone();
-      cache.put(req, clone).then(() => {
-        if(maxEntries) trimCache(cacheName, maxEntries);
-      }).catch(() => {});
-    }
-    return res;
-  }catch(err){
-    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
-  }
-}
-
-async function networkFirst(req, cacheName, maxEntries){
-  const cache = await caches.open(cacheName);
-  try{
-    const res = await fetch(req);
-    if(res && res.ok){
-      const clone = res.clone();
-      cache.put(req, clone).then(() => {
-        if(maxEntries) trimCache(cacheName, maxEntries);
-      }).catch(() => {});
-    }
-    return res;
-  }catch(err){
-    const hit = await cache.match(req, { ignoreSearch: false });
-    if(hit) return hit;
-    return new Response(
-      JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-async function shellNavigation(req){
-  const cache = await caches.open(SHELL_CACHE);
-  try{
-    const res = await fetch(req);
-    if(res && res.ok && res.type === 'basic'){
-      const clone = res.clone();
-      cache.put('./index.html', clone).catch(() => {});
-    }
-    return res;
-  }catch(err){
-    const hit =
-      await cache.match(req, { ignoreSearch: true }) ||
-      await cache.match('./index.html', { ignoreSearch: true }) ||
-      await cache.match('./', { ignoreSearch: true });
-    if(hit) return hit;
-    return new Response(
-      '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
-      '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
-      '<h2>You are offline</h2><p>Open the app once while online to enable offline mode.</p>',
-      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-    );
-  }
-}
-
-/* ------------------------------------------------------------
-   CACHE TRIMMING  —  FIFO by insertion order.
-   ------------------------------------------------------------ */
-async function trimCache(cacheName, maxEntries){
-  try{
-    const cache = await caches.open(cacheName);
-    const keys = await cache.keys();
-    const over = keys.length - maxEntries;
-    if(over <= 0) return;
-    for(let i = 0; i < over; i++){
-      await cache.delete(keys[i]);
-    }
-  }catch(_){}
-}
