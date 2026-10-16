@@ -17,34 +17,39 @@
    Cache version is bumped whenever the shell changes — that
    is what forces visitors to see the new HTML after a deploy.
 
-   v18 — Universal icon set (real PNG files, not data-URIs).
-         • index.html now references seven real PNG files plus
-           one SVG master, all sitting next to index.html:
-               icon.svg                  ← vector master
-               favicon-16.png
-               favicon-32.png
-               favicon-48.png
-               apple-touch-icon.png      ← iOS home-screen icon
-               icon-192.png              ← Android / Windows tile
-               icon-512.png              ← Android splash / store
-               icon-maskable-512.png     ← Android adaptive icon
-         • iOS does NOT render SVG for apple-touch-icon — it only
-           accepts PNG. That is why the previous SVG data-URI icon
-           never appeared on the iPhone home screen. This release
-           replaces every icon reference with a real file URL so
-           iOS, Android, Windows, macOS and desktop browsers all
-           read the same canonical set.
-         • All icon files are now listed in SHELL_URLS so they are
-           pre-cached on install and available offline from the
-           very first launch.
-         • Icon files are also served through the existing
-           same-origin cacheFirst branch, so versioned URLs such
-           as `icon-192.png?v=3` (used by the HTML as a cache-
-           buster) are cached separately on first request and then
-           served from cache on every subsequent visit.
-         • Nothing changed in the routing, cache budgets, or the
-           manifest-first strategy. Only the shell URL list and
-           the version constant have been touched.
+   v18 — Shell refreshed for the current index.html.
+         • Verified against the shipped index.html — every
+           external host the page touches is accounted for:
+             – api.quran.com/v4   → network-first  (IndoPak
+               mushaf text, page/surah/juz reads, Yusuf Ali
+               translation id 203).
+             – api.alquran.cloud  → network-first  (coach
+               Uthmani text, page reads, Yusuf Ali
+               en.yusufali translation, chapter list).
+             – fonts.googleapis.com / fonts.gstatic.com
+                                  → cache-first  (Amiri,
+               Amiri Quran, Scheherazade New, Noto Naskh).
+             – everyayah.com      → passthrough   (iOS Range
+               handshake for <audio>).
+             – cdn.islamic.network + islamcan.com
+                                  → passthrough   (Athaan MP3s
+               used by the Prayer Times alarm).
+             – api.bigdatacloud.net
+                                  → passthrough   (reverse
+               geocode for GPS button).
+             – geocoding-api.open-meteo.com
+                                  → passthrough   (city search).
+             – /my-analytics/*    → passthrough   (Vercel
+               Analytics rewrite must stay first-party).
+             – /api/feedback      → passthrough   (POST, so
+               the GET guard at the top already lets it
+               through).
+         • No routing, cache-name, or trim-budget changes
+           versus v17.  The bump exists purely so clients
+           pick up the new shell.
+         • The RELOAD-on-deploy guarantee still comes from the
+           version string below being embedded in the cache
+           names — bump it whenever index.html changes.
 
    v17 — Manifest freshness for icon updates.
          • manifest.json is now served NETWORK-FIRST (with a
@@ -78,15 +83,23 @@
            budgets — only the manifest branch and the new
            message handler.
 
-   v16 — Shell updated: new app icon (SVG data-URI version).
+   v16 — Shell updated: new app icon.
          • The launcher / favicon / apple-touch-icon in index.html
-           was replaced with an inline SVG data-URI showing an
-           open Qur'an on a wooden rehl with a golden microphone.
-         • That approach worked on desktop and Android but not
-           on iOS — iOS silently ignores SVG for
-           apple-touch-icon. Superseded by v18's real PNG set.
+           has been replaced. The old icon (a small blue open
+           book) is gone; the new one shows an open Qur'an
+           resting on a wooden rehl (the classical X-shaped
+           Qur'an stand) with a golden microphone floating above
+           it, all on the app's blue gradient background.
+         • The same SVG is used for <link rel="icon">,
+           <link rel="apple-touch-icon"> and, if you have added
+           it, the manifest icons array. No new files are
+           fetched — the icon is still a single inline data-URI,
+           so the shell size is unchanged apart from the icon
+           markup itself.
          • Nothing changed in the caching strategy, routing,
-           caches, or trim budgets.
+           caches, or trim budgets. The bump exists purely so
+           clients pick up the new shell and redraw the tab /
+           home-screen icon.
 
    v15 — Shell updated: Prayer Times feature added.
          • New Home-screen tile “🕌 Prayer Times” linking to a
@@ -197,24 +210,11 @@ const RUNTIME_CACHE  = `qc-runtime-${VERSION}`;
 
 const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
-/* Shell assets that must always be available offline.
-   The eight icon files below are the canonical universal icon set —
-   real PNGs plus the SVG master, sitting next to index.html. They
-   are pre-cached here so the app has its complete icon set on
-   first install, even before the user has opened any menu. */
+/* Shell assets that must always be available offline. */
 const SHELL_URLS = [
   './',
   './index.html',
-  './manifest.json',
-  /* Universal icon set — v18 */
-  './icon.svg',
-  './favicon-16.png',
-  './favicon-32.png',
-  './favicon-48.png',
-  './apple-touch-icon.png',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png'
+  './manifest.json'
 ];
 
 /* Hosts we recognise. */
@@ -355,8 +355,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 4. Quran.com API v4 — the reader’s primary source for the
-        IndoPak text with the full Tajweed symbol set, and now the
+  /* 4. Quran.com API v4 — the reader's primary source for the
+        IndoPak text with the full Tajweed symbol set, and the
         primary source for the Yusuf Ali translation
         (numeric translation id 203).
         Network-first with cache fallback. */
@@ -365,8 +365,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  /* 5. alquran.cloud API — coach’s Uthmani text, the Yusuf Ali
-        translation (en.yusufali), and the reader’s fallback
+  /* 5. alquran.cloud API — coach's Uthmani text, the Yusuf Ali
+        translation (en.yusufali), and the reader's fallback
         edition.  Network-first. */
   if(url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
@@ -401,7 +401,10 @@ self.addEventListener('fetch', event => {
           • the BigDataCloud reverse-geocode API used by the GPS
             button (api.bigdatacloud.net),
           • the Athaan MP3 hosts used by the Prayer Times alarms
-            (cdn.islamic.network, islamcan.com).
+            (cdn.islamic.network, islamcan.com),
+          • the /api/feedback POST endpoint (never reaches here
+            because the GET guard at the top returns first, but
+            listed for completeness).
         These are left to the browser so location lookups stay
         fresh and <audio> Range requests are handled natively. */
 });
