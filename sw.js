@@ -1,47 +1,75 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v20 — Push Notification Support Added.
-         • Added `push` event listener to receive and display
-           notifications from the backend.
-         • Added `notificationclick` event listener to open or
-           focus the app when a notification is tapped.
-         • Bumped VERSION to v20 so clients pick up the new SW.
-         • PRAYER TIME SAFETY: As always, this version bump only
-           rotates Cache Storage. It does NOT touch `localStorage`,
-           so your prayer time adjustments are safe.
+   v21 — Update-safe caches.
+
+   WHAT CHANGED
+   ------------
+   • Offline surah audio is now stored in a PERSISTENT cache
+     called `qc-audio`. This cache is NEVER deleted by a version
+     update.
+   • The activate handler no longer wipes every unknown cache.
+     It only deletes caches that (a) belong to this app — i.e.
+     their name starts with qc-shell- / qc-text- / qc-fonts- /
+     qc-runtime- — AND (b) do not match the current VERSION.
+   • `qc-audio` is served back to the <audio> element when the
+     device is offline, so downloaded surahs really play.
+   • localStorage (prayer adjustments, progress, bookmarks,
+     settings) is never touched by a service worker — that
+     guarantee is unchanged and now documented below.
+
+   USER DATA THAT SURVIVES EVERY UPDATE
+   ------------------------------------
+   • qc.prayer            → prayer time adjustments / method
+   • qc.progress.follow   → saved Follow session
+   • qc.progress.tajweed  → saved Tajweed session
+   • qc.bookmarks         → bookmarks
+   • qc.*                 → theme, reciter, volume, etc.
+   • Cache "qc-audio"     → downloaded surah audio
    ============================================================ */
 
 'use strict';
 
-const VERSION        = 'v20';                    /* ← bumped from v19 */
-const SHELL_CACHE    = `qc-shell-${VERSION}`;
-const TEXT_CACHE     = `qc-text-${VERSION}`;
-const FONTS_CACHE    = `qc-fonts-${VERSION}`;
-const RUNTIME_CACHE  = `qc-runtime-${VERSION}`;
+/* ---------------- Version ---------------- */
+const VERSION = 'v21';
 
-const ALL_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
+/* ---------------- App-owned caches (rebuilt on release) ---------------- */
+const SHELL_CACHE   = `qc-shell-${VERSION}`;
+const TEXT_CACHE    = `qc-text-${VERSION}`;
+const FONTS_CACHE   = `qc-fonts-${VERSION}`;
+const RUNTIME_CACHE = `qc-runtime-${VERSION}`;
 
-/* Shell assets that must always be available offline. */
+const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
+
+/* ---------------- User-data caches (NEVER purged) ---------------- */
+const AUDIO_CACHE = 'qc-audio';
+const PERSISTENT_CACHES = [AUDIO_CACHE];
+
+/* ---------------- Prefixes this app owns ----------------
+   Only a cache whose name begins with one of these prefixes may
+   ever be deleted during an upgrade. Any cache we did not create
+   (including qc-audio) is left completely alone.                */
+const OWNED_PREFIXES = ['qc-shell-', 'qc-text-', 'qc-fonts-', 'qc-runtime-'];
+
+/* ---------------- Shell assets ---------------- */
 const SHELL_URLS = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-/* Hosts we recognise. */
+/* ---------------- Recognised hosts ---------------- */
 const HOST_ALQURAN              = 'api.alquran.cloud';
 const HOST_QURAN_COM            = 'api.quran.com';
 const HOST_EVERYAYAH            = 'everyayah.com';
 const HOST_GOOGLE_FONTS_CSS     = 'fonts.googleapis.com';
 const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 
-/* Budgets — keep the caches from growing without bound. */
-const TEXT_CACHE_MAX  = 400;
-const RUNTIME_MAX     = 120;
+/* ---------------- Cache budgets ---------------- */
+const TEXT_CACHE_MAX = 400;
+const RUNTIME_MAX    = 120;
 
-/* Manifest freshness window — how long the SW will tolerate
-   serving a cached manifest when the network is slow. */
+/* ---------------- Manifest freshness window ---------------- */
 const MANIFEST_TIMEOUT_MS = 2000;
 
 /* ------------------------------------------------------------
@@ -64,19 +92,36 @@ self.addEventListener('install', event => {
 });
 
 /* ------------------------------------------------------------
-   ACTIVATE  —  drop old cache versions and take control.
+   ACTIVATE  —  drop ONLY stale app-owned caches.
+
+   qc-audio (downloaded surahs) is explicitly protected, and any
+   cache whose name is not one of ours is never touched.
    ------------------------------------------------------------ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(
-      keys
-        .filter(k => !ALL_CACHES.includes(k))
-        .map(k => caches.delete(k))
-    );
+
+    const toDelete = keys.filter(name => {
+      /* 1. Current-version app caches — keep. */
+      if(VERSIONED_CACHES.includes(name)) return false;
+
+      /* 2. User-data caches — keep forever. */
+      if(PERSISTENT_CACHES.includes(name)) return false;
+
+      /* 3. Anything not created by this app — keep. */
+      const owned = OWNED_PREFIXES.some(p => name.startsWith(p));
+      if(!owned) return false;
+
+      /* 4. Old-version app cache — safe to delete. */
+      return true;
+    });
+
+    await Promise.all(toDelete.map(name => caches.delete(name)));
+
     if(self.registration && self.registration.navigationPreload){
       try{ await self.registration.navigationPreload.disable(); }catch(_){}
     }
+
     await self.clients.claim();
   })());
 });
@@ -86,10 +131,15 @@ self.addEventListener('activate', event => {
    ------------------------------------------------------------ */
 self.addEventListener('message', event => {
   const data = event.data || {};
+
   if(data.type === 'SKIP_WAITING'){
     self.skipWaiting();
     return;
   }
+
+  /* Full wipe — only used by the explicit "Reset app" button.
+     This DOES remove downloads, because the user asked for a
+     complete reset. A normal update never reaches this path. */
   if(data.type === 'CLEAR_CACHES'){
     event.waitUntil((async () => {
       const keys = await caches.keys();
@@ -100,6 +150,17 @@ self.addEventListener('message', event => {
     })());
     return;
   }
+
+  if(data.type === 'CLEAR_AUDIO_CACHE'){
+    event.waitUntil((async () => {
+      try{ await caches.delete(AUDIO_CACHE); }catch(_){}
+      if(event.source && event.source.postMessage){
+        event.source.postMessage({ type: 'AUDIO_CACHE_CLEARED' });
+      }
+    })());
+    return;
+  }
+
   if(data.type === 'REFRESH_MANIFEST'){
     event.waitUntil((async () => {
       try{
@@ -173,7 +234,9 @@ self.addEventListener('fetch', event => {
 
   if(url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
+  /* ---- Ayah audio: serve from the persistent download cache ---- */
   if(url.hostname === HOST_EVERYAYAH){
+    event.respondWith(audioFromDownloadCache(req));
     return;
   }
 
@@ -209,6 +272,33 @@ self.addEventListener('fetch', event => {
     return;
   }
 });
+
+/* ------------------------------------------------------------
+   AYAH AUDIO  —  cache-first from qc-audio, network otherwise.
+   ------------------------------------------------------------
+   Downloaded ayahs live under their everyayah.com URL. When the
+   device is offline the cached copy is returned; when it is
+   online but the ayah has not been downloaded, the request is
+   passed straight through to the network WITHOUT being stored
+   (so streaming never inflates the download cache).
+   ------------------------------------------------------------ */
+async function audioFromDownloadCache(req){
+  try{
+    const cache = await caches.open(AUDIO_CACHE);
+    const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
+    if(hit){
+      /* Range requests: hand back the full cached body so the
+         media element can still play it offline. */
+      return hit;
+    }
+  }catch(_){}
+
+  try{
+    return await fetch(req);
+  }catch(err){
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
 
 /* ------------------------------------------------------------
    STRATEGIES

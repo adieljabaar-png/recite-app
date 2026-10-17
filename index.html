@@ -23,13 +23,6 @@
 <style>
   /* ============================================================
      QURANIC ARABIC FONT
-     ============================================================
-     Amiri is the classical Naskh typeface from the Amiri Project.
-     It renders the shaddah above the letter and the kasrah clearly
-     below the base letter — they do not stack vertically.  Its
-     maddah is a clean wavy line drawn without a horizontal stroke.
-     Amiri Quran, Scheherazade New and Noto Naskh Arabic are kept
-     as fallbacks in case Amiri fails to load.
      ============================================================ */
 
   :root{
@@ -526,6 +519,45 @@ pointer-events:none;
 }
 .surah-row .playbtn:active{transform:scale(.9);filter:brightness(1.1)}
 
+/* ---- Offline audio download button (Play audio list) ---- */
+.surah-row .dlbtn{
+width:36px;height:36px;border-radius:50%;padding:0;flex-shrink:0;
+background:rgba(79,140,255,.10);
+border:1px solid rgba(79,140,255,.35);
+color:#9dc0ff;font-size:.82rem;font-weight:800;line-height:1;
+display:inline-flex;align-items:center;justify-content:center;
+cursor:pointer;-webkit-appearance:none;font-family:inherit;
+font-variant-numeric:tabular-nums;
+transition:transform .12s, background .2s, border-color .2s, color .2s;
+}
+.surah-row .dlbtn:active{transform:scale(.9)}
+.surah-row .dlbtn.downloading{
+background:rgba(255,176,32,.16);
+border-color:rgba(255,176,32,.60);
+color:#ffcf6b;font-size:.55rem;letter-spacing:0;
+}
+.surah-row .dlbtn.done{
+background:rgba(47,208,122,.16);
+border-color:rgba(47,208,122,.60);
+color:var(--good);
+}
+.surah-row .dlbtn.failed{
+background:rgba(255,90,106,.14);
+border-color:rgba(255,90,106,.55);
+color:var(--bad);
+}
+body.light-mode .surah-row .dlbtn{
+background:rgba(42,111,224,.08);
+border-color:rgba(42,111,224,.30);
+color:#2a6fe0;
+}
+body.light-mode .surah-row .dlbtn.downloading{
+background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.55);color:#8a6100;
+}
+body.light-mode .surah-row .dlbtn.done{
+background:rgba(31,154,90,.14);border-color:rgba(31,154,90,.55);color:#1f9a5a;
+}
+
 /* ============================================================
    RECITER DROPDOWN  (replaces the old chip bar)
    ============================================================ */
@@ -773,18 +805,12 @@ color:#2a4a7a;border-top-color:rgba(42,111,224,.20);
 
 /* ==================================================================
    INDO-PAK MUSHAF PAGE
-   ==================================================================
-   font-family: 'Amiri' is the primary renderer.
-   Amiri places the shaddah above the letter and the kasrah cleanly
-   below the base letter — they do not stack vertically — and its
-   maddah is a clean wavy line drawn without a horizontal stroke.
    ================================================================== */
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book{
 padding-top:calc(var(--safe-top) + 62px);
 padding-bottom:calc(var(--safe-bottom) + 96px);
 padding-left:calc(var(--safe-left) + 10px);
 padding-right:calc(var(--safe-right) + 10px);
-/* --- tuned for the 13-line IndoPak Mushaf density --- */
 font-size:clamp(1.4rem,5.8vw,2rem);
 line-height:2.15;
 letter-spacing:0;
@@ -819,7 +845,6 @@ padding:14px 18px 8px;
 box-shadow:0 18px 46px rgba(0,0,0,.55);
 min-height:calc(100vh - var(--safe-top) - var(--safe-bottom) - 170px);
 position:relative;
-/* ---- Amiri is the primary renderer ---- */
 font-family:
   'Amiri',
   'Amiri Quran',
@@ -863,19 +888,13 @@ flex:0 0 auto;font-weight:800;font-size:1em;text-align:center;
 
 .mushaf-book-content{
 text-align:justify;
-text-align-last:center;    /* short final lines (end of surah / end of page)
-                              sit centred with open space on both sides
-                              instead of being stretched word-by-word. */
+text-align-last:center;
 text-justify:inter-word;
 line-height:2.15;
 font-size:1em;
 padding:0 2px 2px;
 }
 
-/* ---- Waqf / pause marks (U+06D6–U+06DC) ----
-   Amiri places these marks correctly on its own. This rule is a
-   safety net for any fallback font that might render before Amiri
-   has finished loading.  */
 .mushaf-book-content .waqf-mark{
 position:relative;
 top:-0.08em;
@@ -1448,12 +1467,6 @@ font-family:-apple-system,sans-serif;
 
 /* ==================================================================
    COACH / AUDIO VIEW MUSHAF CONTAINER
-   ==================================================================
-   text-align:start (not justify) — Arabic lines flow with their own
-   natural word spacing, so short lines no longer stretch.
-   font-weight:400 — Amiri ships a clean weight 400 that renders
-   every harakah at its correct position, so no synthetic bold is
-   needed.
    ================================================================== */
 .mushaf{
 direction:rtl;text-align:start;
@@ -2342,6 +2355,8 @@ body.light-mode .qibla-compass{
   .surah-row .en{font-size:.85rem}
   .surah-row .sub{font-size:.6rem}
   .surah-row .ar{font-size:1.05rem}
+  .surah-row .dlbtn{width:30px;height:30px;font-size:.7rem}
+  .surah-row .dlbtn.downloading{font-size:.5rem}
   .reciter-trigger{padding:9px 12px;min-height:52px;gap:9px}
   .rt-icon{width:36px;height:36px;font-size:1rem;border-radius:10px}
   .rt-value{font-size:.85rem}
@@ -2794,23 +2809,12 @@ const READER_EDITION = 'text_indopak';
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 
-/* ---- Translation ---------------------------------------------------
-   The English translation shown throughout the app is Yusuf Ali.
-   • alquran.cloud identifier:  en.yusufali
-   • quran.com v4 identifier:   203  (numeric ID required; the v4 API
-     silently ignores string identifiers like "en.sahih" or
-     "en.yusufali", which is why the v4 calls were already falling
-     back to alquran.cloud — this restores proper v4 translations.)
-   ------------------------------------------------------------------- */
+/* ---- Translation --------------------------------------------------- */
 const TRANSLATION_ALQURAN = 'en.yusufali';
 const TRANSLATION_QURANCOM_ID = 203;
 const TRANSLATION_LABEL = 'Abdullah Yusuf Ali';
 
-/* ---- Push Notification Config --------------------------------------
-   VAPID public key generated at https://vapidkeys.com
-   Safe to expose — this key is designed to be public.
-   The matching private key lives ONLY in Vercel env vars.
-   ------------------------------------------------------------------- */
+/* ---- Push Notification Config -------------------------------------- */
 const VAPID_PUBLIC_KEY = 'BHpU2OJZjHoYab_-F8I369UTsJjx9ArleSiggsdQ2dcch4mTQFQLTEvanyto6J5f8xFh-tshGyGsJNiDj9xy1aE';
 
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
@@ -2901,27 +2905,14 @@ function normAr(s){
 }
 
 /* ============================================================
-   TRANSLATION CLEANING — strip footnote markers from the
-   Yusuf Ali translation.
-   ------------------------------------------------------------
-   Different sources deliver footnote references differently:
-     • quran.com v4:      <sup foot_note="12345">1</sup> inline
-     • alquran.cloud:     [1]  or  <sup>1</sup>  inline
-   We remove the markers, keep the entire translation text,
-   including Yusuf Ali's own explanatory parentheses — those are
-   part of the translation itself, not footnotes.
+   TRANSLATION CLEANING
    ============================================================ */
 function cleanTranslation(s){
   if(s === null || s === undefined) return '';
   let t = String(s);
-  // Remove <sup foot_note="…">N</sup> blocks entirely (marker + number)
   t = t.replace(/<sup\b[^>]*>[\s\S]*?<\/sup>/gi, '');
-  // Remove any remaining HTML tags, keeping their inner text
-  // (covers <i>…</i>, <em>…</em>, stray <br/> etc.)
   t = t.replace(/<[^>]*>/g, '');
-  // Remove bracket footnote references such as [1] or [ 12 ]
   t = t.replace(/\[\s*\d+\s*\]/g, '');
-  // Collapse the whitespace left behind
   t = t.replace(/\s+/g, ' ').trim();
   return t;
 }
@@ -3215,6 +3206,411 @@ function buildAyahUrl(folder, surah, ayah){
          String(surah).padStart(3,'0') +
          String(ayah).padStart(3,'0') +
          '.mp3';
+}
+
+/* ============================================================
+   OFFLINE SURAH AUDIO — download manager
+   ============================================================
+   • The ⬇ button sits in each Play-audio row, between the
+     “N ayahs · Meccan” line and the Arabic surah name.
+   • Every ayah is fetched from everyayah.com first. If that
+     source cannot be read (CORS / missing file), the same ayah
+     is fetched from the islamic.network CDN, and finally from
+     the default Qari. The best available recording is stored
+     in Cache Storage under `qc-audio` using the everyayah URL as
+     its key, so playback (and the service worker) finds it.
+   • Downloads are resumable: ayahs already cached are skipped,
+     so tapping ⬇ again continues where it stopped.
+   • The `qc-audio` cache is PERSISTENT — it survives every
+     service-worker version update.
+   ============================================================ */
+const AUDIO_CACHE_NAME = 'qc-audio';
+const DOWNLOADS_STORE_KEY = 'qc.downloads';
+const DOWNLOAD_CONCURRENCY = 3;
+const DOWNLOAD_TIMEOUT_MS = 30000;
+
+/* Ayah count of each surah — also used for global ayah numbers. */
+const SURAH_AYAH_COUNTS = [
+  7,286,200,176,120,165,206,75,129,109,
+  123,111,43,52,99,128,111,110,98,135,
+  112,78,118,64,77,227,93,88,69,60,
+  34,30,73,54,45,83,182,88,75,85,
+  54,53,89,59,37,35,38,29,18,45,
+  60,49,62,55,78,96,29,22,24,13,
+  14,11,11,18,12,12,30,52,52,44,
+  28,28,20,56,40,31,50,40,46,42,
+  29,19,36,25,22,17,19,26,30,20,
+  15,21,11,8,8,19,5,8,8,11,
+  11,8,3,9,5,4,7,3,6,3,
+  5,4,5,6
+];
+
+const SURAH_GLOBAL_START = (function(){
+  const out = new Array(SURAH_AYAH_COUNTS.length);
+  let acc = 0;
+  for(let i = 0; i < SURAH_AYAH_COUNTS.length; i++){
+    out[i] = acc;
+    acc += SURAH_AYAH_COUNTS[i];
+  }
+  return out;
+})();
+
+function globalAyahNumber(surah, ayah){
+  return (SURAH_GLOBAL_START[surah - 1] || 0) + ayah;
+}
+
+/* everyayah folder → alquran.cloud (islamic.network) edition id.
+   Used as a CORS-safe second source when everyayah cannot be read. */
+const ISLAMIC_NETWORK_EDITIONS = {
+  'Alafasy_128kbps':                'ar.alafasy',
+  'Abdul_Basit_Murattal_64kbps':    'ar.abdulbasitmurattal',
+  'Abdul_Basit_Mujawwad_128kbps':   'ar.abdulbasitmurattal',
+  'Husary_128kbps':                 'ar.husary',
+  'Husary_Mujawwad_64kbps':         'ar.husarymujawwad',
+  'Minshawy_Murattal_128kbps':      'ar.minshawi',
+  'Minshawy_Mujawwad_64kbps':       'ar.minshawimujawwad',
+  'Hudhaify_128kbps':               'ar.hudhaify',
+  'Abu_Bakr_Ash-Shaatree_128kbps':  'ar.shaatree',
+  'Maher_AlMuaiqly_128kbps':        'ar.mahermuaiqly',
+  'Abdurrahmaan_As-Sudais_192kbps': 'ar.abdurrahmaansudais',
+  'Hani_Rifai_192kbps':             'ar.hanirifai',
+  'Muhammad_Ayyoub_128kbps':        'ar.muhammadayyoub'
+};
+
+function islamicNetworkUrls(reciterId, surah, ayah){
+  const ed = ISLAMIC_NETWORK_EDITIONS[reciterId];
+  if(!ed) return [];
+  const g = globalAyahNumber(surah, ayah);
+  return [
+    'https://cdn.islamic.network/quran/audio/128/' + ed + '/' + g + '.mp3',
+    'https://cdn.islamic.network/quran/audio/64/' + ed + '/' + g + '.mp3'
+  ];
+}
+
+let downloads = (function(){
+  try{
+    const raw = localStorage.getItem(DOWNLOADS_STORE_KEY);
+    if(!raw) return {};
+    const d = JSON.parse(raw);
+    return (d && typeof d === 'object') ? d : {};
+  }catch(e){ return {}; }
+})();
+
+function saveDownloadsStore(){
+  try{ localStorage.setItem(DOWNLOADS_STORE_KEY, JSON.stringify(downloads)); }catch(e){}
+}
+function downloadKeyFor(reciterId, surah){ return reciterId + '|' + surah; }
+
+const dlState = new Map();
+
+function surahDisplayName(surahNumber){
+  if(chaptersCache){
+    const ch = chaptersCache.find(c => c.number === surahNumber);
+    if(ch && ch.englishName) return ch.englishName;
+  }
+  return 'Surah ' + surahNumber;
+}
+function surahAyahTotal(surahNumber){
+  if(chaptersCache){
+    const ch = chaptersCache.find(c => c.number === surahNumber);
+    if(ch && ch.numberOfAyahs) return ch.numberOfAyahs;
+  }
+  return SURAH_AYAH_COUNTS[surahNumber - 1] || 0;
+}
+
+function getAudioDownloadBtn(surahNumber){
+  if(!audioSurahList) return null;
+  return audioSurahList.querySelector('.dlbtn[data-surah="' + surahNumber + '"]');
+}
+
+function updateAudioDownloadBtn(btn, surahNumber){
+  if(!btn) return;
+  const key = downloadKeyFor(reciter, surahNumber);
+  const running = dlState.get(key);
+  btn.classList.remove('downloading','done','failed');
+
+  if(running){
+    btn.classList.add('downloading');
+    const finished = running.done + running.failed.length;
+    const pct = Math.min(100, Math.round((finished / Math.max(1, running.total)) * 100));
+    btn.textContent = pct + '%';
+    btn.title = 'Downloading — tap to cancel';
+    btn.setAttribute('aria-label', 'Cancel download');
+    return;
+  }
+  if(downloads[key]){
+    btn.classList.add('done');
+    btn.textContent = '✓';
+    btn.title = 'Saved offline · tap to remove';
+    btn.setAttribute('aria-label', 'Saved offline. Tap to remove');
+    return;
+  }
+  btn.textContent = '⬇';
+  btn.title = 'Download audio for offline listening';
+  btn.setAttribute('aria-label', 'Download audio');
+}
+
+function downloadAbortBridge(parentSignal, ms){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => { try{ ctrl.abort(); }catch(_){} }, ms);
+  const onParentAbort = () => { clearTimeout(timer); try{ ctrl.abort(); }catch(_){} };
+  if(parentSignal){
+    if(parentSignal.aborted) onParentAbort();
+    else parentSignal.addEventListener('abort', onParentAbort, { once: true });
+  }
+  return {
+    signal: ctrl.signal,
+    release(){
+      clearTimeout(timer);
+      if(parentSignal) parentSignal.removeEventListener('abort', onParentAbort);
+    }
+  };
+}
+
+async function requestPersistentStorage(){
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      const already = await navigator.storage.persisted();
+      if(already) return true;
+      return await navigator.storage.persist();
+    }
+  }catch(_){}
+  return false;
+}
+
+async function fetchAudioForOffline(url, parentSignal){
+  const bridge = downloadAbortBridge(parentSignal, DOWNLOAD_TIMEOUT_MS);
+  try{
+    /* 1) CORS request — lets us validate status and content type. */
+    try{
+      const res = await fetch(url, { mode: 'cors', cache: 'no-store', signal: bridge.signal });
+      if(res && res.ok){
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if(!ct || /audio|mpeg|mp3|octet-stream/.test(ct)) return res;
+      }
+    }catch(_){}
+
+    if(bridge.signal.aborted) return null;
+
+    /* 2) Opaque request — works even when the host sends no CORS
+          headers. The body is still storable and playable. */
+    try{
+      const res = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: bridge.signal });
+      if(res && (res.type === 'opaque' || res.ok)) return res;
+    }catch(_){}
+
+    return null;
+  } finally {
+    bridge.release();
+  }
+}
+
+async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, signal){
+  try{
+    const hit = await cache.match(primaryUrl, { ignoreSearch: true, ignoreVary: true });
+    if(hit) return 'cached';
+  }catch(_){}
+
+  const sources = [primaryUrl];
+  islamicNetworkUrls(reciterId, surah, ayah).forEach(u => sources.push(u));
+  if(reciterId !== FALLBACK_RECITER){
+    sources.push(buildAyahUrl(FALLBACK_RECITER, surah, ayah));
+    islamicNetworkUrls(FALLBACK_RECITER, surah, ayah).forEach(u => sources.push(u));
+  }
+
+  for(let i = 0; i < sources.length; i++){
+    if(signal.aborted) return 'aborted';
+    const res = await fetchAudioForOffline(sources[i], signal);
+    if(!res) continue;
+    try{
+      await cache.put(primaryUrl, res.clone());
+      try{ if(res.body) res.body.cancel(); }catch(_){}
+      return 'ok';
+    }catch(err){
+      if(err && err.name === 'QuotaExceededError') return 'quota';
+    }
+  }
+  return 'fail';
+}
+
+async function downloadSurahAudio(surahNumber){
+  const reciterId = reciter;
+  const key = downloadKeyFor(reciterId, surahNumber);
+  if(dlState.has(key)) return;
+
+  const totalAyahs = surahAyahTotal(surahNumber);
+  if(!totalAyahs) return;
+
+  await requestPersistentStorage();
+
+  let cache;
+  try{
+    cache = await caches.open(AUDIO_CACHE_NAME);
+  }catch(e){
+    showToast('⚠️ Offline storage is not available in this browser.', 4200);
+    return;
+  }
+
+  const controller = new AbortController();
+  const state = {
+    surah: surahNumber,
+    reciter: reciterId,
+    total: totalAyahs,
+    done: 0,
+    failed: [],
+    controller: controller
+  };
+  dlState.set(key, state);
+
+  const refreshBtn = () => updateAudioDownloadBtn(getAudioDownloadBtn(surahNumber), surahNumber);
+  refreshBtn();
+
+  let next = 1;
+  let quotaHit = false;
+
+  async function worker(){
+    while(!controller.signal.aborted){
+      const ayah = next++;
+      if(ayah > totalAyahs) return;
+      const primaryUrl = buildAyahUrl(reciterId, surahNumber, ayah);
+      const r = await fetchAndStoreAyah(cache, reciterId, surahNumber, ayah, primaryUrl, controller.signal);
+      if(r === 'quota'){ quotaHit = true; try{ controller.abort(); }catch(_){} return; }
+      if(r === 'aborted') return;
+      if(r === 'ok' || r === 'cached') state.done++;
+      else state.failed.push(ayah);
+      refreshBtn();
+    }
+  }
+
+  try{
+    const workers = [];
+    for(let w = 0; w < DOWNLOAD_CONCURRENCY; w++) workers.push(worker());
+    await Promise.all(workers);
+  }catch(err){
+    console.warn('[Download] failed:', err);
+  }
+
+  const wasAborted = controller.signal.aborted;
+  dlState.delete(key);
+
+  if(quotaHit){
+    showToast('⚠️ Storage is full. Free up space, then tap ⬇ to resume.', 4600);
+  } else if(wasAborted){
+    showToast('⏹ Download cancelled — tap ⬇ to resume later.', 3600);
+  } else if(state.failed.length === 0){
+    downloads[key] = {
+      surah: surahNumber,
+      reciter: reciterId,
+      total: totalAyahs,
+      ts: Date.now()
+    };
+    saveDownloadsStore();
+    showToast('✅ <b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> saved for offline listening.', 4000);
+  } else if(state.done > 0){
+    showToast('⚠️ ' + state.failed.length + ' ayah(s) could not be downloaded. Tap ⬇ to retry.', 4600);
+  } else {
+    showToast('⚠️ Download failed. Check your connection and try again.', 4200);
+  }
+
+  refreshAudioRowStates();
+}
+
+function confirmSurahDownload(surahNumber){
+  return new Promise(resolve => {
+    const total = surahAyahTotal(surahNumber);
+    const estMb = Math.max(1, Math.round(total * 0.13));
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal">' +
+      '<div class="grabber"></div>' +
+      '<h2>Download surah audio</h2>' +
+      '<p style="margin-bottom:12px"><b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> · ' +
+        total + ' ayahs</p>' +
+      '<div class="okbox">' +
+        'Qari: <b>' + escapeHtml(reciterLabel()) + '</b><br>' +
+        'Estimated size: <b>~' + estMb + ' MB</b><br>' +
+        'Saved on this device for offline playback.<br>' +
+        '<span style="opacity:.85">If an ayah is unavailable from this Qari, a backup recording is used.</span>' +
+      '</div>' +
+      '<button class="primary" id="dlConfirmYes" type="button">Download</button>' +
+      '<div style="height:8px"></div>' +
+      '<button class="ghost" id="dlConfirmNo" type="button">Cancel</button>' +
+    '</div>';
+    document.body.appendChild(bg);
+    const close = v => { bg.remove(); resolve(v); };
+    bg.addEventListener('click', e => { if(e.target === bg) close(false); });
+    bg.querySelector('#dlConfirmYes').addEventListener('click', () => close(true));
+    bg.querySelector('#dlConfirmNo').addEventListener('click', () => close(false));
+  });
+}
+
+function confirmRemoveDownload(surahNumber){
+  return new Promise(resolve => {
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal">' +
+      '<div class="grabber"></div>' +
+      '<h2>Remove download?</h2>' +
+      '<p><b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> with <b>' +
+        escapeHtml(reciterLabel()) + '</b> is saved on this device.</p>' +
+      '<div class="errbox">Deleting frees the storage space. ' +
+        'The surah will still play online afterwards.</div>' +
+      '<button class="danger" id="dlRemoveYes" type="button" style="width:100%">Delete download</button>' +
+      '<div style="height:8px"></div>' +
+      '<button class="ghost" id="dlRemoveNo" type="button" style="width:100%">Keep</button>' +
+    '</div>';
+    document.body.appendChild(bg);
+    const close = v => { bg.remove(); resolve(v); };
+    bg.addEventListener('click', e => { if(e.target === bg) close(false); });
+    bg.querySelector('#dlRemoveYes').addEventListener('click', () => close(true));
+    bg.querySelector('#dlRemoveNo').addEventListener('click', () => close(false));
+  });
+}
+
+async function removeSurahDownload(surahNumber){
+  const reciterId = reciter;
+  const entry = downloads[downloadKeyFor(reciterId, surahNumber)];
+  const totalAyahs = (entry && entry.total) || surahAyahTotal(surahNumber);
+  let removed = 0;
+  try{
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    for(let a = 1; a <= totalAyahs; a++){
+      const url = buildAyahUrl(reciterId, surahNumber, a);
+      try{
+        const ok = await cache.delete(url);
+        if(ok) removed++;
+      }catch(_){}
+    }
+  }catch(_){}
+  delete downloads[downloadKeyFor(reciterId, surahNumber)];
+  saveDownloadsStore();
+  refreshAudioRowStates();
+  showToast('🗑️ Removed ' + removed + ' saved file' + (removed === 1 ? '' : 's') + '.');
+}
+
+async function handleAudioDownloadTap(surahNumber){
+  const key = downloadKeyFor(reciter, surahNumber);
+  const running = dlState.get(key);
+  if(running){
+    try{ running.controller.abort(); }catch(_){}
+    return;
+  }
+  if(downloads[key]){
+    const yes = await confirmRemoveDownload(surahNumber);
+    if(yes) await removeSurahDownload(surahNumber);
+    return;
+  }
+  if(!navigator.onLine){
+    showToast('📶 Connect to the internet to download audio.', 3800);
+    return;
+  }
+  if(!('caches' in window)){
+    showToast('⚠️ This browser cannot store audio offline.', 4200);
+    return;
+  }
+  const yes = await confirmSurahDownload(surahNumber);
+  if(!yes) return;
+  downloadSurahAudio(surahNumber);
 }
 
 /* ============================================================
@@ -3707,7 +4103,6 @@ async function enableNotifications(){
     return;
   }
 
-  // On iOS, PushManager only exists after the user has added the app to Home Screen.
   if(IS_IOS && !IS_STANDALONE){
     showToast('📲 To enable notifications on iPhone, first add this app to your Home Screen from the Share menu.', 5200);
     return;
@@ -4156,7 +4551,7 @@ function notifySpeechServiceUnreachable(){
     '<div class="okbox">' +
       '<b>What still works right now:</b><br>' +
       '• Reading the Quran, translations and book-form pages.<br>' +
-      '• Listening to ayah-by-ayah audio.<br>' +
+      '• Listening to ayah-by-ayah audio (including downloads).<br>' +
       '• Bookmarks, surah index and juz index.' +
     '</div>' +
     '<p style="font-size:.8rem">Check your internet connection, then tap <b>Start reciting</b> again. ' +
@@ -4316,16 +4711,6 @@ function createSpeechRecognition(){
 
 /* ============================================================
    SPEECH KEEPALIVE  —  silent mic restart every 40 s
-   ============================================================
-   Chrome's Web Speech API silently stops delivering results after
-   roughly 60 s of continuous recognition. While a session is active
-   we silently call recognizer.stop() every 40 s; the existing onend
-   handler restarts it 180 ms later. Nothing is shown to the user,
-   no status changes, no audio cue.
-
-   When the session ends — silence timeout, user Stop, tab hidden,
-   app close, fatal error, or completion — disarmSpeechKeepalive()
-   is called and the mic is switched off exactly as before.
    ============================================================ */
 function armSpeechKeepalive(){
   clearTimeout(speechKeepaliveTimer);
@@ -4337,7 +4722,6 @@ function armSpeechKeepalive(){
     if(!wantMic || fsPaused || speechFatalError) return;
     if(!speechRecognition) return;
 
-    // Silent mic off. onend auto-restarts it 180 ms later.
     if(!speechStarting){
       try{ speechRecognition.stop(); }catch(e){}
     }
@@ -4638,6 +5022,8 @@ function changeReciter(id){
     }
     playCurrentViewerAyah();
   }
+
+  refreshAudioRowStates();
 }
 
 async function renderAudioSurahList(){
@@ -4658,6 +5044,7 @@ async function renderAudioSurahList(){
           '<span class="en">' + escapeHtml(s.englishName) + '</span>' +
           '<span class="sub">' + s.numberOfAyahs + ' ayahs · ' + escapeHtml(s.revelationType) + '</span>' +
         '</span>' +
+        '<button class="dlbtn" type="button" data-surah="' + s.number + '" aria-label="Download audio">⬇</button>' +
         '<span class="ar">' + escapeHtml(s.name) + '</span>' +
         '<button class="playbtn" type="button" tabindex="-1" aria-hidden="true"><span class="pb-ico">▶</span></button>';
       const activate = (ev) => {
@@ -4666,8 +5053,17 @@ async function renderAudioSurahList(){
       };
       row.addEventListener('click', activate);
       row.addEventListener('keydown', (ev) => {
+        if(ev.target !== row) return;
         if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); activate(ev); }
       });
+      const dlBtn = row.querySelector('.dlbtn');
+      if(dlBtn){
+        dlBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          handleAudioDownloadTap(s.number);
+        });
+      }
       audioSurahList.appendChild(row);
     });
     audioListRendered = true;
@@ -4683,11 +5079,14 @@ function refreshAudioRowStates(){
   audioSurahList.querySelectorAll('.surah-row').forEach(row => {
     const s = parseInt(row.dataset.surah, 10);
     const btn = row.querySelector('.playbtn');
-    if(!btn) return;
-    const ico = btn.querySelector('.pb-ico');
-    const isActive = viewerOpen && viewerAudio.active && viewerAudio.surah === s;
-    btn.classList.toggle('playing', isActive);
-    if(ico) ico.textContent = isActive && !viewerAudio.paused ? '⏸' : '▶';
+    if(btn){
+      const ico = btn.querySelector('.pb-ico');
+      const isActive = viewerOpen && viewerAudio.active && viewerAudio.surah === s;
+      btn.classList.toggle('playing', isActive);
+      if(ico) ico.textContent = isActive && !viewerAudio.paused ? '⏸' : '▶';
+    }
+    const dl = row.querySelector('.dlbtn');
+    if(dl) updateAudioDownloadBtn(dl, s);
   });
 }
 
@@ -4755,7 +5154,6 @@ async function getJuzStartPage(juzNumber){
 }
 
 async function fetchSurahIndopak(surahNumber){
-  /* Yusuf Ali translation via quran.com v4 — numeric translation ID 203. */
   const url = QURAN_API_V4 + '/verses/by_chapter/' + surahNumber +
               '?fields=' + READER_EDITION +
               '&per_page=300' +
@@ -4799,7 +5197,6 @@ async function fetchSurahIndopak(surahNumber){
 }
 
 async function fetchPageIndopak(pageNumber){
-  /* Yusuf Ali translation via quran.com v4 — numeric translation ID 203. */
   const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber +
               '?fields=' + READER_EDITION +
               '&per_page=300' +
@@ -4883,7 +5280,6 @@ async function fetchPageData(pageNumber){
 
   const hasTranslations = data.ayahs.some(a => a.translation && a.translation.length);
   if(!hasTranslations){
-    /* alquran.cloud — Yusuf Ali edition (footnote markers stripped). */
     try{
       const enRes = await fetchWithTimeout(
         ALQURAN_API + '/page/' + pageNumber + '/' + TRANSLATION_ALQURAN,
@@ -5633,7 +6029,6 @@ async function loadViewerAudioSurah(surahNumber){
   );
 
   try{
-    /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/quran-uthmani', FETCH_TIMEOUT_MS),
       fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/' + TRANSLATION_ALQURAN, FETCH_TIMEOUT_MS)
@@ -6986,7 +7381,6 @@ async function loadPage(n, keepFeedback){
   ensureMushafFsBtn();
   setStatus('Loading page ' + pageNum + '…', 'loading');
   const arUrl = ALQURAN_API + '/page/' + pageNum + '/' + EDITION_COACH;
-  /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
   const enUrl = ALQURAN_API + '/page/' + pageNum + '/' + TRANSLATION_ALQURAN;
   try{
     const [arSettled, enSettled] = await Promise.allSettled([
@@ -7031,7 +7425,6 @@ async function loadSurah(n, keepFeedback){
   ensureMushafFsBtn();
   setStatus('Downloading Surah ' + surahNum + '…', 'loading');
   const arUrl = ALQURAN_API + '/surah/' + surahNum + '/' + EDITION_COACH;
-  /* Yusuf Ali translation via alquran.cloud — footnote markers stripped. */
   const enUrl = ALQURAN_API + '/surah/' + surahNum + '/' + TRANSLATION_ALQURAN;
   try{
     const [arSettled, enSettled] = await Promise.allSettled([
@@ -8091,8 +8484,8 @@ function showInstallInstructions(){
     '<div class="okbox"><b>What you get:</b><br>' +
       '• A real icon on your Home Screen / desktop.<br>' +
       '• Runs <b>full screen</b> like a native app — no browser bars.<br>' +
-      '• Works <b>offline</b> for surahs and pages you have already opened.<br>' +
-      '• Your bookmarks and progress stay on your device.' +
+      '• Works <b>offline</b> for surahs, pages and downloaded audio.<br>' +
+      '• Your bookmarks, progress and downloads stay on your device.' +
     '</div>' +
     (note ? '<div class="errbox">' + note + '</div>' : '') +
     '<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">' +
@@ -8346,6 +8739,7 @@ document.addEventListener('visibilitychange',()=>{
     if(wantMic && !finished && !fsPaused) resumeMic();
     if((wantMic||playing||viewerAudio.active) && !wakeLock) requestWakeLock();
     schedulePositionAudioOverlay();
+    if(audioListRendered) refreshAudioRowStates();
   } else {
     if(recRunning) pauseMic();
     if(wantMic) saveProgressNow();
@@ -8355,7 +8749,7 @@ document.addEventListener('visibilitychange',()=>{
 let lastTouch=0;
 document.addEventListener('touchend',e=>{
   const now=Date.now();
-  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step')){
+  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step, .dlbtn')){
     e.preventDefault();
   }
   lastTouch=now;
@@ -8536,7 +8930,7 @@ function openCoachInfoModal(){
     '<ul>' +
       '<li>Whichever mode you are in, the coach automatically remembers the <b>last surah, ayah and word</b> you reached.</li>' +
       '<li>Tap <b>Progress</b> on the Home screen, then choose <b>Follow</b> or <b>Tajweed</b>. The Quran screen opens with that mode switched on and the pointer waiting on your last word.</li>' +
-      '<li>Progress is stored only on your device.</li>' +
+      '<li>Progress is stored only on your device, and it survives every app update.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="footer-note">All learning progress stays on your device.</div>' +
@@ -8555,8 +8949,6 @@ function openCoachInfoModal(){
    ABOUT APP MODAL
    ============================================================ */
 function openInfoModal(){
-  /* Build the reciter list from the single source of truth so the
-     About dialog always matches the dropdown. */
   const reciterListHtml = RECITER_ORDER.map((id, i) => {
     const label = RECITER_LABELS[id] || id;
     return '<li>' + (i + 1) + '. <b>' + escapeHtml(label) + '</b></li>';
@@ -8632,13 +9024,15 @@ function openInfoModal(){
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">7</span> Play audio with translation</h3>' +
+    '<h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3>' +
     '<ul>' +
       '<li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li>' +
       '<li>Plays ayah by ayah with the <b>' + escapeHtml(TRANSLATION_LABEL) + ' English translation</b> shown below each ayah.</li>' +
       '<li>The highlighted ayah follows the <b>actual audio</b> — it lights up the moment the sound starts.</li>' +
+      '<li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name. The whole surah is saved with the Qari you have selected. If one ayah cannot be fetched from that Qari, a backup recording is used so the surah is always complete.</li>' +
+      '<li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>. Tap a downloading button to cancel, or a green ✓ to delete the download.</li>' +
+      '<li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li>' +
       '<li>If playback does not start on its own, tap the ▶ button once — the browser sometimes needs one extra tap.</li>' +
-      '<li>Holding a word in the audio player does nothing — the microphone is only for the recitation coach.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
@@ -8648,7 +9042,7 @@ function openInfoModal(){
       '<li>The screen shows your city, the Hijri and Gregorian dates and the live clock on one row, then the five daily prayers (with Sunrise listed for reference) as a row-by-row list exactly as in a printed prayer timetable.</li>' +
       '<li>Tap the bell next to any prayer to turn its alarm on or off. The bell turns green when on and red when off.</li>' +
       '<li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b> (full call), <b>Beep</b> (offline chime) or <b>Mute</b> (visual + notification only).</li>' +
-      '<li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid.</li>' +
+      '<li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid. <b>Your adjustments are saved on the device and survive every app update.</b></li>' +
       '<li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location. Tap <b>Start live compass</b> on a phone and hold it flat.</li>' +
       '<li>Times are computed <b>astronomically on your device</b> — you can switch the calculation method (Egypt, MWL, ISNA, Umm al-Qura, Karachi, and more) and the Asr school (Standard or Hanafi) at any time.</li>' +
       '<li>Prayer alarms fire while the app is open. Browsers cannot ring an alarm when a web page is fully closed.</li>' +
@@ -8675,7 +9069,7 @@ function openInfoModal(){
       '<li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works. Chrome on iOS also works because Apple requires every iOS browser to use Safari\'s engine.</li>' +
       '<li><b>Desktop — Chrome, Edge or Safari</b>: everything works.</li>' +
       '<li><b>Firefox</b>, and most <b>in-app browsers</b> (Facebook, Instagram, TikTok, Telegram, WhatsApp), do <b>not</b> implement the Web Speech API, so the live coach is unavailable there.</li>' +
-      '<li>Reading the Quran, translations, bookmarks and audio playback work in <b>every</b> modern browser — only the coach needs the extra speech API.</li>' +
+      '<li>Reading the Quran, translations, bookmarks, prayer times, audio playback and <b>offline downloads</b> work in <b>every</b> modern browser — only the coach needs the extra speech API.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
@@ -8684,12 +9078,12 @@ function openInfoModal(){
       '<li>Most Chinese-market phones — <b>Huawei, Honor, Xiaomi, Redmi, OPPO, vivo, realme, OnePlus CN</b> — ship <b>without Google Play Services</b> and without Google Chrome.</li>' +
       '<li>Their built-in browsers (<b>Huawei Browser, Mi Browser, UC Browser, QQ Browser</b>) do <b>not</b> implement the Web Speech API. Because of that, the <b>Recitation Coach cannot work</b> in them — the app will tell you speech recognition is unavailable.</li>' +
       '<li>Speech recognition is not built into the browser itself: it is a service provided by Google (on Chromium browsers) or Apple (on Safari). If that service is absent from the device, no web page can do live recitation.</li>' +
-      '<li>Everything else works fine on these phones: the <b>Surah index, Juz index, Quran text, book-form pages, English translation (' + escapeHtml(TRANSLATION_LABEL) + '), Prayer Times, Qibla, bookmarks and ayah-by-ayah audio</b> only need an internet connection.</li>' +
+      '<li>Everything else works fine on these phones: the <b>Surah index, Juz index, Quran text, book-form pages, English translation (' + escapeHtml(TRANSLATION_LABEL) + '), Prayer Times, Qibla, bookmarks, ayah-by-ayah audio and offline downloads</b> only need an internet connection the first time.</li>' +
       '<li><b>To get the coach:</b> install <b>Google Chrome</b> — Huawei users can get it from the <b>AppGallery</b>, others from the Play Store — and open this page in Chrome.</li>' +
       '<li>If Chrome cannot be installed and the built-in browser has no speech service, there is unfortunately no workaround on that device.</li>' +
     '</ul>' +
   '</div>' +
-  '<div class="footer-note">All learning progress stays on your device.</div>' +
+  '<div class="footer-note">All learning progress, prayer adjustments and downloads stay on your device.</div>' +
   '<div class="btn-group">' +
     '<button class="primary" id="infoClose">Got it</button>' +
     '<button class="danger" id="infoReset">Reset app</button>' +
@@ -8887,7 +9281,7 @@ window.addEventListener('error', e => {
     supportBox.innerHTML =
       '⚠️ <b>Live recitation is not available in this browser.</b><br>' +
       'Your browser does not expose the Web Speech API. ' +
-      'Page text, English translation, Prayer Times and audio still work everywhere. ' +
+      'Page text, English translation, Prayer Times, audio playback and offline downloads still work everywhere. ' +
       'For live recitation, please use <b>Chrome</b> on Android or desktop, or <b>Safari 14.5+</b> on iPhone. ' +
       'Chinese-market phones (Huawei, Honor, Xiaomi, OPPO, vivo) often ship browsers without this API — ' +
       'install <b>Google Chrome</b> and open the page there.';
@@ -9110,7 +9504,6 @@ function computePrayerTimes(dateObj, lat, lng, methodKey, asrSchool){
   let maghrib = (P.maghrib > 0) ? sunAngleTime(P.maghrib, T.sunset, false) : sunset;
   let isha    = (P.isha > 0) ? sunAngleTime(P.isha, T.isha, false) : NaN;
 
-  /* --- high latitude safety net (NightMiddle) --- */
   if(isFinite(sunrise) && isFinite(sunset)){
     const dayLen = sunset - sunrise;
     if(dayLen > 0 && dayLen < 24){
@@ -9404,7 +9797,6 @@ function firePrayerAlarm(p){
   if(prayerState.sound === 'mute') return;
   if(prayerState.sound === 'beep'){ playPrayerBeep(); return; }
 
-  /* athaan with graceful fallback */
   if(!athaanAudio){
     athaanAudio = new Audio();
     athaanAudio.preload = 'auto';
@@ -9946,7 +10338,6 @@ async function openPrayerScreen(){
   if(prayerState.lat === null){
     const ok = await useMyLocation();
     if(!ok && prayerState.lat === null){
-      /* Fallback: Makkah so the screen is never blank */
       setPrayerLocation('Makkah, SA', 21.4225, 39.8262, true);
       showToast('📍 Showing Makkah times — tap ⚙️ to set your own location.', 4600);
     }
@@ -9968,7 +10359,6 @@ if(prayerQiblaBtn){
   prayerQiblaBtn.addEventListener('click', () => openPrayerSettings('qibla'));
 }
 
-/* Re-check date / alarms when app returns to foreground */
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible'){
     if(prayerState.timesDateKey !== currentDateKey()){
