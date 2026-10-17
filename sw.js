@@ -1,12 +1,41 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v21 — Update-safe caches.
+   v22 — First-visit install prompt + viewer page-bookmark.
 
-   WHAT CHANGED
-   ------------
-   • Offline surah audio is now stored in a PERSISTENT cache
-     called `qc-audio`. This cache is NEVER deleted by a version
+   WHAT CHANGED IN v22
+   -------------------
+   • index.html now shows a first-visit install prompt with
+     "Install now", "Install later" and a permanent
+     "Don't show this again" checkbox. The dismissal flag is
+     stored in localStorage under `qc.installPromptDismissed`.
+
+   • The fullscreen Quran viewer now has a bookmark button next
+     to the dark-mode toggle. Bookmarks continue to live in
+     `localStorage['qc.bookmarks']` and work exactly as before
+     — the button just adds a page-level shortcut.
+
+   • The service worker does NOT need any routing or caching
+     changes for either feature. Both are pure page-level
+     state. This version exists solely to bump VERSION so the
+     new index.html is fetched and cached under a fresh shell
+     cache.
+
+   • NOTE about `beforeinstallprompt`: for the native one-tap
+     install UI to fire (so "Install now" can hand the whole
+     thing to the browser), `manifest.json` must be valid —
+     it needs `name`, `short_name`, `start_url`, `display`
+     and at least 192×192 and 512×512 icons. If any of these
+     are missing the event will not fire and the prompt
+     gracefully falls back to `showInstallInstructions()`,
+     which still walks the user through the correct steps on
+     iOS Safari, Android Chrome, desktop Chrome/Edge and
+     macOS Safari 17+.
+
+   WHAT CHANGED IN v21
+   -------------------
+   • Offline surah audio is stored in a PERSISTENT cache called
+     `qc-audio`. This cache is NEVER deleted by a version
      update.
    • The activate handler no longer wipes every unknown cache.
      It only deletes caches that (a) belong to this app — i.e.
@@ -20,18 +49,23 @@
 
    USER DATA THAT SURVIVES EVERY UPDATE
    ------------------------------------
-   • qc.prayer            → prayer time adjustments / method
-   • qc.progress.follow   → saved Follow session
-   • qc.progress.tajweed  → saved Tajweed session
-   • qc.bookmarks         → bookmarks
-   • qc.*                 → theme, reciter, volume, etc.
-   • Cache "qc-audio"     → downloaded surah audio
+   • qc.prayer                 → prayer time adjustments / method
+   • qc.progress.follow        → saved Follow session
+   • qc.progress.tajweed       → saved Tajweed session
+   • qc.bookmarks              → bookmarks (incl. viewer page button)
+   • qc.installPromptDismissed → "Don't show this again" choice
+   • qc.installTabDone         → app successfully installed
+   • qc.*                      → theme, reciter, volume, etc.
+   • Cache "qc-audio"          → downloaded surah audio
+
+   Only the explicit "Reset app" button clears any of the
+   above. A normal version upgrade never touches user data.
    ============================================================ */
 
 'use strict';
 
 /* ---------------- Version ---------------- */
-const VERSION = 'v21';
+const VERSION = 'v22';
 
 /* ---------------- App-owned caches (rebuilt on release) ---------------- */
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
@@ -95,7 +129,10 @@ self.addEventListener('install', event => {
    ACTIVATE  —  drop ONLY stale app-owned caches.
 
    qc-audio (downloaded surahs) is explicitly protected, and any
-   cache whose name is not one of ours is never touched.
+   cache whose name is not one of ours is never touched. This
+   also means the "Don't show this again" and bookmark state,
+   which lives in localStorage, is unaffected — the SW never
+   touches localStorage in the first place.
    ------------------------------------------------------------ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
@@ -139,7 +176,10 @@ self.addEventListener('message', event => {
 
   /* Full wipe — only used by the explicit "Reset app" button.
      This DOES remove downloads, because the user asked for a
-     complete reset. A normal update never reaches this path. */
+     complete reset. It also wipes every localStorage key from
+     the page side (including `qc.installPromptDismissed` and
+     `qc.bookmarks`), so the app returns to a truly virgin
+     state. A normal update never reaches this path. */
   if(data.type === 'CLEAR_CACHES'){
     event.waitUntil((async () => {
       const keys = await caches.keys();

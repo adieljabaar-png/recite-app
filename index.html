@@ -2312,6 +2312,81 @@ body.light-mode .qibla-compass{
   font-weight:600;margin-top:5px;line-height:1.5;
 }
 
+/* ============================================================
+   VIEWER BOOKMARK BUTTON  (new — next to dark-mode toggle)
+   ============================================================ */
+.qv-btn.qv-bookmark{
+  font-size:1rem;padding:0;
+}
+.qv-btn.qv-bookmark.bookmarked{
+  background:rgba(47,208,122,.18);
+  border-color:rgba(47,208,122,.6);
+  color:var(--good);
+  box-shadow:0 4px 14px rgba(47,208,122,.28);
+}
+body.light-mode .qv-btn.qv-bookmark.bookmarked{
+  background:rgba(31,154,90,.14);
+  border-color:rgba(31,154,90,.6);
+  color:#1f9a5a;
+}
+.qv-btn.qv-bookmark.flash{
+  animation:bmFlash .65s ease;
+}
+@keyframes bmFlash{
+  0%  { transform:scale(1); }
+  45% { transform:scale(1.25);
+        background:rgba(47,208,122,.42);
+        border-color:var(--good); color:var(--good); }
+  100%{ transform:scale(1); }
+}
+body.viewer-audio-mode .qv-btn.qv-bookmark{ display:none; }
+
+/* ============================================================
+   FIRST-VISIT INSTALL PROMPT MODAL
+   ============================================================ */
+.install-prompt-modal{max-width:440px;}
+.install-prompt-modal h2{
+  font-size:1.1rem;margin:0 0 8px;
+  display:flex;align-items:center;gap:8px;
+}
+.install-prompt-modal p{
+  margin:0 0 14px;font-size:.86rem;line-height:1.55;color:var(--muted);
+}
+.install-steps-mini{
+  display:flex;flex-direction:column;gap:8px;margin:0 0 16px;
+}
+.install-step-mini{
+  display:flex;align-items:center;gap:9px;
+  font-size:.82rem;color:var(--text);line-height:1.45;
+}
+.install-step-mini > span:first-child{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  background:rgba(47,208,122,.16);color:var(--good);
+  font-weight:800;font-size:.72rem;
+  border:1px solid rgba(47,208,122,.4);
+}
+.ip-checkbox{
+  display:flex;align-items:center;gap:9px;
+  margin-top:12px;padding:10px 12px;
+  background:rgba(79,140,255,.06);
+  border:1px solid rgba(79,140,255,.18);
+  border-radius:11px;
+  cursor:pointer;font-size:.82rem;color:var(--muted);
+  font-weight:600;
+  -webkit-user-select:none;user-select:none;
+  transition:background .15s, border-color .15s;
+}
+.ip-checkbox:hover{background:rgba(79,140,255,.10);border-color:rgba(79,140,255,.32);}
+.ip-checkbox input{
+  width:18px;height:18px;accent-color:var(--accent);
+  margin:0;flex-shrink:0;cursor:pointer;
+}
+.ip-checkbox span{flex:1;min-width:0;}
+body.light-mode .ip-checkbox{
+  background:rgba(42,111,224,.05);border-color:rgba(42,111,224,.18);
+}
+
 /* ==================================================================
    RESPONSIVE TWEAKS FOR NARROW PHONES
    ================================================================== */
@@ -2617,6 +2692,8 @@ body.light-mode .qibla-compass{
     <div class="qv-top">
       <button class="qv-btn qv-back" id="qvBack" aria-label="Back">Back</button>
       <span class="qv-title" id="qvTitle">Quran</span>
+      <button class="qv-btn qv-bookmark" id="qvBookmark" type="button"
+              aria-label="Bookmark this page" title="Bookmark this page">🔖</button>
       <button class="qv-btn" id="qvDark" aria-label="Toggle theme">🌙</button>
     </div>
     <div class="qv-bottom">
@@ -2787,6 +2864,7 @@ const viewerMushafSlot   = document.getElementById('viewerMushafSlot');
 const qvBack             = document.getElementById('qvBack');
 const qvTitle            = document.getElementById('qvTitle');
 const qvDark             = document.getElementById('qvDark');
+const qvBookmark         = document.getElementById('qvBookmark');   /* NEW */
 const qvPlay             = document.getElementById('qvPlay');
 const qvVolIcon          = document.getElementById('qvVolIcon');
 const qvVolSlider        = document.getElementById('qvVolSlider');
@@ -4877,12 +4955,14 @@ function addBookmark(surah, ayah, pageNumber){
   });
   saveBookmarks();
   renderBookmarksScreen();
+  updateBookmarkButton();       /* NEW */
   return true;
 }
 function removeBookmark(key){
   bookmarks = bookmarks.filter(b => b.key !== key);
   saveBookmarks();
   renderBookmarksScreen();
+  updateBookmarkButton();       /* NEW */
 }
 
 function renderBookmarksScreen(){
@@ -4928,6 +5008,62 @@ function openBookmark(b){
   readerState.highlightVerse = b.key;
   openViewer('read');
   loadReaderPage(pg);
+}
+
+/* ============================================================
+   VIEWER PAGE-BOOKMARK BUTTON  (NEW)
+   ============================================================ */
+async function bookmarkCurrentPage(){
+  if(!viewerOpen || viewerMode !== 'read'){
+    showToast('🔖 Bookmarks work in reading mode.');
+    return;
+  }
+  if(readerState.loading){
+    showToast('⚠️ Page is still loading — please wait.');
+    return;
+  }
+  const pageNum = readerState.currentPage;
+  const page = readerState.pages.get(pageNum);
+  if(!page || !page.ayahs || !page.ayahs.length){
+    showToast('⚠️ Page data not available yet.');
+    return;
+  }
+  try{ await ensureChapters(); }catch(_){}
+  const first = page.ayahs[0];
+  const ok = addBookmark(first.surah, first.numberInSurah, pageNum);
+  if(ok){
+    showToast('🔖 Page ' + pageNum + ' bookmarked.');
+    if(qvBookmark){
+      qvBookmark.classList.remove('flash');
+      void qvBookmark.offsetWidth;
+      qvBookmark.classList.add('flash');
+      setTimeout(() => qvBookmark.classList.remove('flash'), 720);
+    }
+  }
+}
+
+function updateBookmarkButton(){
+  if(!qvBookmark) return;
+  if(!viewerOpen || viewerMode !== 'read'){
+    qvBookmark.classList.remove('bookmarked');
+    return;
+  }
+  const page = readerState.pages.get(readerState.currentPage);
+  if(!page || !page.ayahs || !page.ayahs.length){
+    qvBookmark.classList.remove('bookmarked');
+    return;
+  }
+  const first = page.ayahs[0];
+  const key = first.surah + ':' + first.numberInSurah;
+  const isBookmarked = bookmarks.some(b => b.key === key);
+  qvBookmark.classList.toggle('bookmarked', isBookmarked);
+}
+
+if(qvBookmark){
+  qvBookmark.addEventListener('click', () => {
+    bookmarkCurrentPage();
+    showViewerChrome();
+  });
 }
 
 /* ============================================================
@@ -5097,7 +5233,8 @@ const readerState = {
   pages: new Map(),
   currentPage: 0,
   token: 0,
-  highlightVerse: null
+  highlightVerse: null,
+  loading: false               /* NEW */
 };
 
 const _surahStartPageCache = new Map();
@@ -5313,6 +5450,8 @@ async function loadReaderPage(pageNumber){
   const n = Math.max(1, Math.min(604, Math.round(pageNumber) || 1));
   const token = ++readerState.token;
 
+  readerState.loading = true;      /* NEW */
+
   words = [];
   ptr = 0;
   lastCurrentEl = null;
@@ -5320,6 +5459,7 @@ async function loadReaderPage(pageNumber){
   mushafDirtyForViewer = true;
 
   if(readerState.pages.has(n)){
+    readerState.loading = false;
     renderReaderPage(n, token);
     return;
   }
@@ -5332,9 +5472,11 @@ async function loadReaderPage(pageNumber){
     const data = await fetchPageData(n);
     if(token !== readerState.token) return;
     readerState.pages.set(n, data);
+    readerState.loading = false;
     renderReaderPage(n, token);
   }catch(e){
     if(token !== readerState.token) return;
+    readerState.loading = false;
     pageEl.innerHTML = '<div class="mushaf-inner"><div class="loading">' +
       '<span class="err">⚠️ Could not load page ' + n + '.</span>' +
       'Check your connection and try again.</div></div>';
@@ -5422,6 +5564,7 @@ function renderReaderPage(pageNumber, token){
   const page = readerState.pages.get(pageNumber);
   if(!page) return;
   readerState.currentPage = pageNumber;
+  updateBookmarkButton();       /* NEW */
 
   STORE.mode = 'page';
   STORE.page = pageNumber;
@@ -5752,6 +5895,7 @@ function openViewer(mode, opts){
     applyViewerFullscreenVisibility();
     updateViewerPlayIcon();
     updateViewerFullscreenIcon();
+    updateBookmarkButton();
     showViewerChrome();
     return;
   }
@@ -5779,6 +5923,7 @@ function openViewer(mode, opts){
   updateQvVolIcon();
   applyViewerTranslateUI();
   applyPageColor();
+  updateBookmarkButton();       /* NEW */
   showViewerChrome();
   setTimeout(() => { pageEl.scrollTop = 0; }, 30);
 }
@@ -5803,6 +5948,7 @@ function closeViewer(){
   applyViewerFullscreenVisibility();
   clearTimeout(viewerChromeTimer);
   viewerChromeTimer = null;
+  updateBookmarkButton();       /* NEW */
   if(isBrowserFullscreen()){
     try{
       if(document.exitFullscreen) document.exitFullscreen();
@@ -8559,6 +8705,87 @@ try{
 }catch(e){}
 
 /* ============================================================
+   FIRST-VISIT INSTALL PROMPT  (NEW)
+   ============================================================ */
+const INSTALL_PROMPT_DISMISSED_KEY = 'qc.installPromptDismissed';
+let _installPromptShownThisSession = false;
+
+function maybeShowInstallPrompt(){
+  if(_installPromptShownThisSession) return;
+  if(isAppInstalled()) return;
+  try{
+    if(localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY) === '1') return;
+  }catch(e){}
+  _installPromptShownThisSession = true;
+  setTimeout(() => {
+    if(isAppInstalled()) return;
+    if(document.getElementById('installPromptBg')) return;
+    showInstallPromptModal();
+  }, 1500);
+}
+
+function showInstallPromptModal(){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.id = 'installPromptBg';
+  bg.innerHTML =
+    '<div class="modal install-prompt-modal">' +
+      '<div class="grabber"></div>' +
+      '<div class="install-device"><span>📲</span><span>Add to device</span></div>' +
+      '<h2>Install Quran Recitation Coach</h2>' +
+      '<p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p>' +
+      '<div class="install-steps-mini">' +
+        '<div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div>' +
+        '<div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div>' +
+        '<div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div>' +
+      '</div>' +
+      '<button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button>' +
+      '<div style="height:8px"></div>' +
+      '<button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button>' +
+      '<label class="ip-checkbox">' +
+        '<input type="checkbox" id="ipDontShow">' +
+        '<span>Don\u2019t show this again</span>' +
+      '</label>' +
+    '</div>';
+  document.body.appendChild(bg);
+
+  const close = (installed) => {
+    const chk = document.getElementById('ipDontShow');
+    if((chk && chk.checked) || installed){
+      try{ localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1'); }catch(e){}
+    }
+    bg.remove();
+  };
+
+  bg.addEventListener('click', e => { if(e.target === bg) close(false); });
+
+  bg.querySelector('#ipInstallLater').addEventListener('click', () => close(false));
+
+  bg.querySelector('#ipInstallNow').addEventListener('click', async () => {
+    if(deferredPrompt){
+      const accepted = await runNativeInstallPrompt();
+      if(accepted){
+        setInstallRecorded();
+        updateInstallMenuItem();
+        close(true);
+        showToast(
+          (IS_ANDROID || IS_IOS)
+            ? '📲 Installing — look for the new icon on your Home Screen.'
+            : '📲 Installing — look for the new icon on your desktop / taskbar.',
+          4200
+        );
+      } else {
+        close(false);
+        showToast('Install cancelled — you can try again from the ☰ menu.');
+      }
+    } else {
+      close(false);
+      showInstallInstructions();
+    }
+  });
+}
+
+/* ============================================================
    WIRING
    ============================================================ */
 
@@ -8880,6 +9107,7 @@ if(qrFullscreen){
   refreshProgressMenu();
 
   updateInstallMenuItem();
+  maybeShowInstallPrompt();     /* NEW — first-visit install prompt */
 
   showScreen('home');
 })();
