@@ -804,6 +804,39 @@ color:#2a4a7a;border-top-color:rgba(42,111,224,.20);
 }
 
 /* ==================================================================
+   AUDIO MODE — centre ayahs and translations on every screen size
+   ==================================================================
+   Keeps the current ayah highlighted and auto-scrolled while the
+   Arabic text and the English translation sit centred as one block.
+   Applied only when body has .viewer-audio-mode, so the Indo-Pak
+   book layout in read mode is untouched. */
+body.viewer-audio-mode .qv-slot .mushaf{
+  text-align:center;
+}
+body.viewer-audio-mode .qv-slot .mushaf-inner{
+  max-width:820px;
+  margin:0 auto;
+  padding:0 clamp(14px, 5vw, 48px);
+  text-align:center;
+}
+body.viewer-audio-mode .qv-slot .mushaf-inner .ayah{
+  text-align:center;
+  max-width:700px;
+  margin:0 auto 10px;
+  padding:6px 10px;
+  border-radius:12px;
+}
+body.viewer-audio-mode .qv-slot .mushaf-inner .ayah .translation{
+  text-align:center;
+  margin-left:auto;
+  margin-right:auto;
+  max-width:620px;
+}
+body.viewer-audio-mode .qv-slot .mushaf-inner .ayah.playing{
+  border-radius:12px;
+}
+
+/* ==================================================================
    INDO-PAK MUSHAF PAGE
    ================================================================== */
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book{
@@ -4068,6 +4101,7 @@ let silenceTimer = null;
 let readerFullscreen = false;
 let fsControlsTimer = null;
 let fsPaused = false;
+let micPaused = false;                 /* NEW: prevents rec.onend auto-restart after pause */
 let longPressTriggered = false;
 let micWatchdogTimer = null;
 let micAudioConfirmed = false;
@@ -4768,9 +4802,11 @@ function createSpeechRecognition(){
 
   rec.onend = () => {
     recRunning = false;
-    if(!wantMic || fsPaused || speechFatalError) return;
+    /* Do NOT auto-restart when the user paused (fsPaused) or when a
+       background pause is in effect (micPaused). */
+    if(!wantMic || fsPaused || speechFatalError || micPaused) return;
     setTimeout(() => {
-      if(!wantMic || fsPaused || speechFatalError) return;
+      if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
       try{
         speechStarting = true;
@@ -4793,11 +4829,11 @@ function createSpeechRecognition(){
 function armSpeechKeepalive(){
   clearTimeout(speechKeepaliveTimer);
   speechKeepaliveTimer = null;
-  if(!wantMic || fsPaused || speechFatalError) return;
+  if(!wantMic || fsPaused || speechFatalError || micPaused) return;
 
   speechKeepaliveTimer = setTimeout(() => {
     speechKeepaliveTimer = null;
-    if(!wantMic || fsPaused || speechFatalError) return;
+    if(!wantMic || fsPaused || speechFatalError || micPaused) return;
     if(!speechRecognition) return;
 
     if(!speechStarting){
@@ -7785,17 +7821,25 @@ function renderVerses(ayahs, translations){
     let text = String(a.text || '').trim();
 
     if(isSurahStart && ayahNum === 1 && shouldShowBismillah(surahId)){
-      let bisTokens;
+      let bisTokens = null;
       const r = splitBismillah(text);
       if(r){ bisTokens = r.bismillah; text = r.rest; }
-      else { bisTokens = BISMILLAH_TEXT.split(/\s+/); }
+      else {
+        const nt = normAr(text);
+        const nb = normAr(BISMILLAH_TEXT);
+        if(nt !== nb && !nt.startsWith(nb)){
+          bisTokens = BISMILLAH_TEXT.split(/\s+/);
+        }
+      }
 
-      const bl = document.createElement('div');
-      bl.className = 'ayah bismillah-line';
-      bl.dataset.surah = surahId;
-      bl.dataset.ayah = '1';
-      bisTokens.forEach(tok => pushWord(tok, surahId, 1, bl));
-      inner.appendChild(bl);
+      if(bisTokens){
+        const bl = document.createElement('div');
+        bl.className = 'ayah bismillah-line';
+        bl.dataset.surah = surahId;
+        bl.dataset.ayah = '1';
+        bisTokens.forEach(tok => pushWord(tok, surahId, 1, bl));
+        inner.appendChild(bl);
+      }
     }
 
     const line=document.createElement('div');
@@ -7822,7 +7866,8 @@ function renderVerses(ayahs, translations){
   pageEl.appendChild(inner);
   ensureMushafFsBtn();
   pageEl.scrollTop = 0;
-  resetProgress();
+  /* Full reset so mistakes from a previous surah/page never leak into this one */
+  resetProgress(true);
 }
 
 /* ============================================================
@@ -8229,8 +8274,9 @@ async function startReciting(){
     if(!ok) return;
   }
 
-  if(finished) resetProgress();
+  if(finished) resetProgress(true);
   fsPaused = false;
+  micPaused = false;
   wantMic = true;
   speechFatalError = false;
   speechServiceNotified = false;
@@ -8291,6 +8337,7 @@ async function startReciting(){
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false;
+  micPaused = false;
   disarmSpeechKeepalive();
   pendingJumpTarget = -1;
   setMicButton();
@@ -8310,6 +8357,7 @@ function stopReciting(silent){
 }
 
 function pauseMic(){
+  micPaused = true;
   recRunning = false;
   disarmSpeechKeepalive();
   stopMicWatchdog();
@@ -8319,6 +8367,7 @@ function pauseMic(){
 }
 function resumeMic(){
   if(wantMic && !finished && !fsPaused){
+    micPaused = false;
     recRunning = true;
     speechFatalError = false;
     micWarningShown = false;

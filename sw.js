@@ -1,36 +1,53 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v22 — First-visit install prompt + viewer page-bookmark.
+   v23 — Audio-mode centering + coach-state hardening.
+
+   WHAT CHANGED IN v23
+   -------------------
+   • Play-audio screen: ayahs and English translations are now
+     horizontally centred on every screen size. The current
+     ayah continues to receive the .playing highlight, and
+     auto-scroll continues to follow the highlighted ayah
+     exactly as before. This is a pure CSS + inner-container
+     change — no routing or caching behaviour changed.
+
+   • Coach: renderVerses() now calls resetProgress(true) so
+     mistakes from a previous surah / page can no longer leak
+     into a newly opened one. The mistake badge, the mistakes
+     list, the pace engine and the accuracy figures are all
+     cleared together the moment a new mushaf is rendered.
+
+   • Coach: startReciting() now calls resetProgress(true) when
+     the previous session had already finished, so the first
+     ayah of a fresh run starts from a clean state (no stale
+     error count, no stale mistake rows).
+
+   • Speech recognition: a new `micPaused` flag prevents
+     `rec.onend` from silently restarting the recognizer when
+     the user backgrounds the tab (pauseMic) and then returns
+     (resumeMic). fsPaused (the full-screen Pause button) keeps
+     working exactly as before. This eliminates a race where
+     a hidden tab could keep the mic alive in the background.
+
+   • Bismillah: renderVerses() now guards against a duplicate
+     Bismillah line. If the ayah-1 text already normalises to
+     the Bismillah (or contains it at the start), the fallback
+     Bismillah line is no longer injected.
+
+   • No service-worker logic changes were required for any of
+     these. This version exists solely to bump VERSION so the
+     new index.html is fetched and cached under a fresh shell
+     cache. `qc-audio`, localStorage keys, bookmarks, prayer
+     settings and saved Follow/Tajweed progress are all
+     untouched by the upgrade.
 
    WHAT CHANGED IN v22
    -------------------
-   • index.html now shows a first-visit install prompt with
-     "Install now", "Install later" and a permanent
-     "Don't show this again" checkbox. The dismissal flag is
-     stored in localStorage under `qc.installPromptDismissed`.
-
-   • The fullscreen Quran viewer now has a bookmark button next
-     to the dark-mode toggle. Bookmarks continue to live in
-     `localStorage['qc.bookmarks']` and work exactly as before
-     — the button just adds a page-level shortcut.
-
-   • The service worker does NOT need any routing or caching
-     changes for either feature. Both are pure page-level
-     state. This version exists solely to bump VERSION so the
-     new index.html is fetched and cached under a fresh shell
-     cache.
-
-   • NOTE about `beforeinstallprompt`: for the native one-tap
-     install UI to fire (so "Install now" can hand the whole
-     thing to the browser), `manifest.json` must be valid —
-     it needs `name`, `short_name`, `start_url`, `display`
-     and at least 192×192 and 512×512 icons. If any of these
-     are missing the event will not fire and the prompt
-     gracefully falls back to `showInstallInstructions()`,
-     which still walks the user through the correct steps on
-     iOS Safari, Android Chrome, desktop Chrome/Edge and
-     macOS Safari 17+.
+   • First-visit install prompt + viewer page-bookmark button.
+     Both are page-level only. `qc.installPromptDismissed` and
+     `qc.bookmarks` live in localStorage; the SW never touches
+     localStorage.
 
    WHAT CHANGED IN v21
    -------------------
@@ -65,7 +82,7 @@
 'use strict';
 
 /* ---------------- Version ---------------- */
-const VERSION = 'v22';
+const VERSION = 'v23';
 
 /* ---------------- App-owned caches (rebuilt on release) ---------------- */
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
@@ -378,12 +395,12 @@ async function networkFirst(req, cacheName, maxEntries){
     if(hit) return hit;
     return new Response(
       JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
+      function { status: 503, headers: { 'Content-Type manifest': 'application/json' } }
     );
   }
 }
 
-async function manifestFresh(req){
+asyncFresh(req){
   const cache = await caches.open(SHELL_CACHE);
   try{
     const controller = new AbortController();
