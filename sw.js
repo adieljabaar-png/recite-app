@@ -1,12 +1,12 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v24 — Audio centring + Follow+Strict unified grading + 3D tabs.
+   v25 — Updated prayer bell size, long beep alarm, and Athaan note.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v24';
+const VERSION = 'v25';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

@@ -1294,10 +1294,10 @@ body.light-mode .feedback-status.err{color:#8a2033;}
 .prayer-row .pr-name{flex:1;min-width:0;font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:baseline;gap:8px;}
 .prayer-row .pr-countdown{font-size:.66rem;font-weight:600;color:var(--accent);white-space:nowrap;}
 .prayer-row .pr-time{font-size:1.02rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.02em;}
-.prayer-row .pr-bell{width:38px;height:38px;border-radius:50%;padding:0;flex-shrink:0;background:transparent;border:2px solid var(--line);color:var(--muted);font-size:.95rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;transition:transform .12s, background .2s, border-color .2s, color .2s;}
-.prayer-row .pr-bell:active{transform:scale(.9)}
-.prayer-row .pr-bell.on{background:rgba(47,208,122,.14);border-color:var(--good);color:var(--good);}
-.prayer-row .pr-bell.off{background:rgba(255,90,106,.10);border-color:var(--bad);color:var(--bad);}
+.pr-bell{width:32px;height:32px;border-radius:50%;padding:0;flex-shrink:0;background:transparent;border:2px solid var(--line);color:var(--muted);font-size:.85rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;transition:transform .12s, background .2s, border-color .2s, color .2s;}
+.pr-bell:active{transform:scale(.9)}
+.pr-bell.on{background:rgba(47,208,122,.14);border-color:var(--good);color:var(--good);}
+.pr-bell.off{background:rgba(255,90,106,.10);border-color:var(--bad);color:var(--bad);}
 .prayer-note{text-align:center;font-size:.68rem;color:var(--muted);padding:12px 8px 4px;line-height:1.55;}
 .prayer-note a{color:var(--accent);text-decoration:none;font-weight:700;}
 
@@ -1719,7 +1719,7 @@ body.light-mode .coach-bar {
   </div>
   <ul class="prayer-list" id="prayerList"></ul>
   <div class="prayer-note" id="prayerNote">
-    Tap the bell next to any prayer to toggle its alarm on / off.
+    Tap the bell next to any prayer to toggle its alarm on / off.<br><br>Please note, for the Athaan alarm to sound, do not fully close the app.
   </div>
 </div><div class="app screen" id="screenCoach" hidden>
   <header>
@@ -6175,17 +6175,16 @@ function playPrayerBeep(){
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
     const t0 = audioCtx.currentTime;
-    for(let i = 0; i < 3; i++){
-      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-      o.type = 'sine'; o.frequency.value = 880;
-      const st = t0 + i * 0.5;
-      g.gain.setValueAtTime(0.0001, st);
-      g.gain.exponentialRampToValueAtTime(0.28, st + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, st + 0.38);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(st); o.stop(st + 0.42);
-    }
-    if(navigator.vibrate) navigator.vibrate([120,80,120,80,120]);
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    const duration = 2.5;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.28, t0 + 0.05);
+    g.gain.setValueAtTime(0.28, t0 + duration - 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + duration + 0.1);
+    if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
   }catch(e){}
 }
 
