@@ -1,27 +1,21 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v27 — Bumps the shell cache so the new index.html replaces
-         the v26 shell on the next install event.
+   v28 — Bumps the shell cache so the new index.html replaces
+         the v27 shell on the next install event.
          Changes delivered in this version:
-           • Tajweed fullscreen now shows a floating minimise
-             button (⤡) in the top-right corner so the user can
-             always exit fullscreen.
-           • Hifz "Reveal on Mistake" mode now ignores pure
-             pause / waqf marks (they are shown immediately and
-             never used as speech match targets), which stops the
-             recognizer from stalling between words / ayahs.
-           • Home tiles (Surah index, Juz index, Play audio,
-             Bookmarks) are reduced in height so the rest of the
-             page sits higher on the screen.
-           • Golden borders are applied around every tab / card /
-             list row across all screens.
-         All existing v26 functionality is kept.
+           • Analytics, API, and SW paths are now explicitly
+             excluded from the fetch handler. Vercel Web
+             Analytics (/my-analytics/*, /_vercel/*), serverless
+             endpoints (/api/*) and the service worker itself
+             (/sw.js) now always go straight to the network and
+             are never served from a cache.
+         All existing v27 functionality is kept.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v27';
+const VERSION = 'v28';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -127,13 +121,25 @@ self.addEventListener('notificationclick', event => {
 
 self.addEventListener('fetch', event => {
   const req = event.request;
+
+  // Only intercept GET. POST / PUT / DELETE — including Vercel Analytics
+  // view events, /api/feedback and /api/subscribe — must go straight to
+  // the network untouched.
   if(req.method !== 'GET') return;
+
   let url;
   try{ url = new URL(req.url); }catch(_){ return; }
   if(url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
+  // Same-origin paths that must NEVER be intercepted by the SW.
+  if(url.origin === self.location.origin){
+    if(url.pathname.startsWith('/my-analytics/')) return;   // proxied Vercel Web Analytics
+    if(url.pathname.startsWith('/_vercel/'))       return;   // native Vercel Analytics / Speed Insights
+    if(url.pathname.startsWith('/api/'))           return;   // serverless functions
+    if(url.pathname === '/sw.js')                  return;   // the service worker itself
+  }
+
   if(url.hostname === HOST_EVERYAYAH){ event.respondWith(audioFromDownloadCache(req)); return; }
-  if(url.origin === self.location.origin && url.pathname.startsWith('/my-analytics/')) return;
   if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){ event.respondWith(cacheFirst(req, FONTS_CACHE)); return; }
   if(url.hostname === HOST_QURAN_COM){ event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX)); return; }
   if(url.hostname === HOST_ALQURAN){ event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX)); return; }
