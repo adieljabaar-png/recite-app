@@ -1,12 +1,15 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v25 — Updated prayer bell size, long beep alarm, and Athaan note.
+   v26 — Bumps the shell cache so the new index.html (unified
+         Hijri-date calculation on Home, Calendar, Prayer Times
+         and Important Dates) replaces the v25 shell on the next
+         install event. All existing v25 functionality is kept.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v25';
+const VERSION = 'v26';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

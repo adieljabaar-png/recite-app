@@ -5868,21 +5868,28 @@ window.addEventListener('error', e => { console.error('[QuranCoach] runtime erro
   }
 })();
 
+/* ============================================================
+   HOME HIJRI CARD — MUST MATCH THE CALENDAR MODAL EXACTLY
+   ============================================================
+   The Home-screen Hijri date, the calendar modal's "today" cell,
+   the Important Islamic Dates list and the Prayer Times screen
+   all derive from the SAME deterministic arithmetic conversion
+   (gregorianToJDN → jdnToHijri → gregorianToHijri).  The old
+   implementation used Intl.DateTimeFormat with the
+   'islamic-umalqura' calendar, which is supplied by the
+   browser/OS and can differ by a day between devices (and
+   between OS builds on the same device).  It has been removed
+   everywhere, so the Home card can never disagree with the
+   calendar, with the prayer-times screen, or with another
+   device. */
 function updateHijriDate(){
   const now = new Date();
   let en = ''; let ar = '';
-  try{ en = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(now); }
-  catch(e1){ try{ en = new Intl.DateTimeFormat('en-u-ca-islamic', { day: 'numeric', month: 'long', year: 'numeric' }).format(now); }catch(e2){ en = ''; } }
-  try{ ar = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(now); }
-  catch(e){ try{ ar = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { day: 'numeric', month: 'long', year: 'numeric' }).format(now); }catch(_){ ar = ''; } }
-  if(!en || !ar){
-    try{
-      const h = gregorianToHijri(now);
-      if(!en) en = h.day + ' ' + HIJRI_MONTHS_EN[h.month - 1] + ' ' + h.year + ' AH';
-      if(!ar) ar = h.day + ' ' + HIJRI_MONTHS_AR[h.month - 1] + ' ' + h.year + ' هـ';
-    }catch(e){}
-  }
-  if(en && !/\bAH\b/.test(en) && /^\d/.test(en)) en = en + ' AH';
+  try{
+    const h = gregorianToHijri(now);
+    en = h.day + ' ' + HIJRI_MONTHS_EN[h.month - 1] + ' ' + h.year + ' AH';
+    ar = h.day + ' ' + HIJRI_MONTHS_AR[h.month - 1] + ' ' + h.year + ' هـ';
+  }catch(e){}
   if(hijriEn) hijriEn.textContent = en || '—';
   if(hijriAr) hijriAr.textContent = ar || '';
 }
@@ -6028,9 +6035,14 @@ function recomputePrayerTimes(){
   return out;
 }
 
+/* Same deterministic algorithm as the Home card and calendar — no
+   Intl.DateTimeFormat so the prayer screen can never disagree with
+   them on any device. */
 function fmtPrayerHijri(date){
-  try{ let s = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day:'numeric', month:'long', year:'numeric' }).format(date); if(!/\bAH\b/.test(s)) s += ' AH'; return s; }
-  catch(e){ try{ const h = gregorianToHijri(date); return h.day + ' ' + HIJRI_MONTHS_EN[h.month-1] + ' ' + h.year + ' AH'; }catch(_){ return ''; } }
+  try{
+    const h = gregorianToHijri(date);
+    return h.day + ' ' + HIJRI_MONTHS_EN[h.month - 1] + ' ' + h.year + ' AH';
+  }catch(_){ return ''; }
 }
 function fmtPrayerGreg(date){
   try{ return new Intl.DateTimeFormat('en-GB', { day:'numeric', month:'long', year:'numeric' }).format(date); }
