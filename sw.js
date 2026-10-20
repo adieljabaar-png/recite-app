@@ -1,15 +1,27 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v26 — Bumps the shell cache so the new index.html (unified
-         Hijri-date calculation on Home, Calendar, Prayer Times
-         and Important Dates) replaces the v25 shell on the next
-         install event. All existing v25 functionality is kept.
+   v27 — Bumps the shell cache so the new index.html replaces
+         the v26 shell on the next install event.
+         Changes delivered in this version:
+           • Tajweed fullscreen now shows a floating minimise
+             button (⤡) in the top-right corner so the user can
+             always exit fullscreen.
+           • Hifz "Reveal on Mistake" mode now ignores pure
+             pause / waqf marks (they are shown immediately and
+             never used as speech match targets), which stops the
+             recognizer from stalling between words / ayahs.
+           • Home tiles (Surah index, Juz index, Play audio,
+             Bookmarks) are reduced in height so the rest of the
+             page sits higher on the screen.
+           • Golden borders are applied around every tab / card /
+             list row across all screens.
+         All existing v26 functionality is kept.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v26';
+const VERSION = 'v27';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

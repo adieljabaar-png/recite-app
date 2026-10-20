@@ -611,13 +611,6 @@ body.viewer-audio-mode .ayah.done{ opacity:.72; }
 body.light-mode.viewer-audio-mode .ayah.playing{background:rgba(42,111,224,.10);box-shadow:inset 0 0 0 1px rgba(42,111,224,.32);}
 body.light-mode.viewer-audio-mode .ayah.playing .translation{color:#2a4a7a;border-top-color:rgba(42,111,224,.20);}
 
-/* ==================================================================
-   AUDIO MODE — vertically + horizontally centred ayahs
-   ==================================================================
-   The Arabic ayah and the English translation sit centred as one
-   block in the viewport (both axes) on every screen size. When
-   the list overflows the viewport, the block flows normally and
-   the auto-scroll continues to follow the highlighted ayah. */
 body.viewer-audio-mode .qv-slot .mushaf{
   display: flex;
   flex-direction: column;
@@ -1376,182 +1369,397 @@ body.viewer-audio-mode .qv-btn.qv-bookmark{ display:none; }
 body.light-mode .ip-checkbox{background:rgba(42,111,224,.05);border-color:rgba(42,111,224,.18);}
 
 /* ============================================================
-   THIN 3D FRAME ON ALL TAB-LIKE CONTROLS
-   ============================================================
-   Every tab, pill, chip, row and control gets a subtle thin
-   3D bevel: a lighter rim on the top / left, a darker rim on
-   the bottom / right. Existing depth shadows and glows are
-   preserved — only border colours change. */
+   NEW: STREAK BAR + FEATURE TABS + HIFZ + TAJWEED
+   ============================================================ */
 
-/* Elements that already have a 1px border — recolour it. */
-.mode-pill,
-.toggle,
-.ps-btn,
-.ps-radio,
-.back-pill,
-.iconbtn,
-.tile,
-.progress-trigger,
-.surah-row,
-.qv-btn,
-.cal-nav,
-.stat,
-.mushaf-fs-btn,
-.prayer-settings-btn,
-.dlbtn,
-.install-step,
-.ps-city-result {
-  border-top-color:    rgba(255,255,255,.16);
-  border-right-color:  rgba(0,0,0,.22);
-  border-bottom-color: rgba(0,0,0,.42);
-  border-left-color:   rgba(255,255,255,.06);
+.streak-bar{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;height:auto;
+  background:linear-gradient(135deg, rgba(255,176,32,.14), rgba(20,28,46,.72));
+  border:1px solid rgba(255,176,32,.35);
+  border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.24);
+  cursor:pointer;font-family:inherit;color:inherit;
+  transition:transform .15s,border-color .2s;
+  width:100%;text-align:left;-webkit-appearance:none;
+}
+.streak-bar:hover{border-color:rgba(255,176,32,.65)}
+.streak-bar:active{transform:scale(.99)}
+.streak-fire{font-size:1.5rem;line-height:1;flex-shrink:0}
+.streak-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.streak-count{font-size:1.15rem;font-weight:800;color:var(--text);line-height:1.1}
+.streak-label{font-size:.64rem;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.streak-best{margin-left:auto;font-size:.7rem;color:var(--muted);font-weight:700;white-space:nowrap}
+.streak-best b{color:var(--warn)}
+.streak-badges{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.streak-badge{font-size:1.15rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+
+.home-feature-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.feature-tab{
+  display:flex;align-items:center;gap:10px;width:100%;height:auto;min-height:64px;
+  padding:12px 14px;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);border-radius:16px;cursor:pointer;
+  color:var(--text);text-align:left;font-family:inherit;-webkit-appearance:none;
+  box-shadow:0 6px 18px rgba(0,0,0,.24);
+  transition:transform .12s,border-color .2s,background .2s;
+}
+.feature-tab:hover{border-color:rgba(79,140,255,.5)}
+.feature-tab:active{transform:scale(.97)}
+.feature-tab:nth-child(1):hover{border-color:rgba(155,110,255,.55)}
+.feature-tab:nth-child(2):hover{border-color:rgba(255,176,32,.55)}
+.ft-icon{
+  font-size:1.5rem;width:44px;height:44px;flex-shrink:0;border-radius:12px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(155,110,255,.14);border:1px solid rgba(155,110,255,.35);
+}
+.feature-tab:nth-child(2) .ft-icon{background:rgba(255,176,32,.14);border-color:rgba(255,176,32,.35)}
+.ft-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ft-text strong{font-size:.86rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ft-text small{font-size:.64rem;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.light-mode .streak-bar{background:linear-gradient(135deg, rgba(198,138,0,.12), rgba(238,242,248,.95));border-color:rgba(198,138,0,.35)}
+body.light-mode .feature-tab{background:linear-gradient(180deg,#ffffff,#eef2f8)}
+
+.hifz-config{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+.hifz-field{display:flex;flex-direction:column;gap:6px}
+.hifz-field label{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.hifz-range-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hifz-modes{display:flex;flex-direction:column;gap:8px}
+.hifz-mode{
+  display:flex;align-items:center;gap:12px;width:100%;height:auto;
+  padding:12px 14px;background:rgba(79,140,255,.06);
+  border:1px solid rgba(79,140,255,.20);border-radius:13px;
+  cursor:pointer;color:var(--text);text-align:left;font-family:inherit;-webkit-appearance:none;
+  transition:background .15s,border-color .15s,transform .12s;
+}
+.hifz-mode:active{transform:scale(.98)}
+.hifz-mode:hover{background:rgba(79,140,255,.10);border-color:rgba(79,140,255,.35)}
+.hifz-mode.active{background:rgba(155,110,255,.16);border-color:rgba(155,110,255,.65);box-shadow:0 4px 14px rgba(155,110,255,.22)}
+.hifz-mode .hm-icon{font-size:1.5rem;flex-shrink:0;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.18);border-radius:11px}
+.hifz-mode strong{font-size:.86rem;font-weight:800;display:block;line-height:1.25}
+.hifz-mode small{font-size:.68rem;color:var(--muted);font-weight:600;margin-top:2px;display:block}
+
+.hifz-test{display:flex;flex-direction:column;gap:10px}
+.hifz-stats-bar{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  background:#111827;border:1px solid var(--line);border-radius:13px;padding:10px 8px;
+}
+.hifz-stat{text-align:center}
+.hifz-stat span{display:block;font-size:1rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.2}
+.hifz-stat small{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.hifz-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hifz-results{margin:14px 0 4px;padding:12px 14px;background:rgba(79,140,255,.06);border:1px solid rgba(79,140,255,.22);border-radius:13px}
+.hifz-result-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:.88rem}
+.hifz-result-row:last-child{border-bottom:none}
+.hifz-result-row span{color:var(--muted);font-weight:600}
+.hifz-result-row b{color:var(--text);font-weight:800;font-size:1rem}
+
+.hifz-word{
+  display:inline-block;padding:1px 4px;margin:0 1px;border-radius:6px;
+  transition:color .15s,background .15s;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.hifz-word.hifz-hidden{
+  color:transparent !important;background:rgba(155,110,255,.18) !important;
+  box-shadow:inset 0 -1px 0 rgba(155,110,255,.35);
+  border-radius:6px;position:relative;
+}
+.hifz-word.hifz-hidden::before{
+  content:'···';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  color:rgba(155,110,255,.55);font-size:.55em;letter-spacing:.06em;font-weight:800;
+  pointer-events:none;
+}
+.hifz-word.hifz-revealed{color:var(--good) !important;background:rgba(47,208,122,.10) !important}
+.hifz-word.hifz-visible{color:var(--text) !important}
+
+.achievements-modal{max-width:520px}
+.achievements-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ach-card{
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;
+  padding:12px 8px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.03);
+}
+.ach-card.unlocked{background:rgba(47,208,122,.10);border-color:rgba(47,208,122,.45)}
+.ach-card.locked{opacity:.45}
+.ach-icon{font-size:1.7rem;line-height:1;margin-bottom:4px}
+.ach-name{font-size:.74rem;font-weight:800;color:var(--text);line-height:1.2}
+.ach-desc{font-size:.6rem;color:var(--muted);font-weight:600;line-height:1.3;margin-top:2px}
+body.light-mode .ach-card{background:rgba(0,0,0,.03)}
+body.light-mode .ach-card.unlocked{background:rgba(31,154,90,.10)}
+
+/* ============================================================
+   AUTHORITATIVE TAJWEED READER STYLES
+   ============================================================ */
+.tajweed-toolbar {
+  display:flex; gap:8px; align-items:center; margin-bottom:8px;
+}
+.tajweed-toolbar .ps-input {
+  height:44px; padding:0 12px; font-size:.9rem; border-radius:12px;
+}
+.tajweed-toolbar .back-pill {
+  width:44px; height:44px; padding:0; font-size:1.15rem;
+  display:inline-flex; align-items:center; justify-content:center;
 }
 
-/* Elements that previously had no full border — add a 1px bevel. */
-.ps-tab,
-.coach-bar,
-.home-menu-item,
-.reciter-trigger,
-.reciter-item,
-.progress-item,
-.juz-row,
-.bookmark-row,
-.qv-play,
-.playbtn,
-.qr-close,
-.bm-del {
-  border: 1px solid;
-  border-color:
-    rgba(255,255,255,.16)
-    rgba(0,0,0,.22)
-    rgba(0,0,0,.42)
-    rgba(255,255,255,.06);
+.tajweed-legend {
+  display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;
+}
+.tj-chip {
+  display:inline-flex; align-items:center; gap:5px; padding:5px 10px; height:auto;
+  background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px;
+  color:var(--muted); font-size:.68rem; font-weight:700; cursor:pointer;
+  font-family:inherit; -webkit-appearance:none;
+  transition:background .15s,border-color .15s,color .15s;
+  opacity:.45;
+}
+.tj-chip.active{opacity:1;background:rgba(255,255,255,.08);border-color:var(--line);color:var(--text)}
+.tj-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+.tajweed-note {
+  font-size:.66rem; color:var(--muted); text-align:center;
+  margin:10px 4px 2px; line-height:1.5; font-style:italic;
 }
 
-/* Hero CTAs keep their own depth/glow — give them a bevel that
-   matches their design. */
-.coach-bar {
-  border-color:
-    rgba(255,255,255,.32)
-    rgba(0,0,0,.10)
-    rgba(0,0,0,.28)
-    rgba(255,255,255,.14);
+/* Base mushaf container for Tajweed */
+.tajweed-mushaf {
+  font-size: clamp(1.8rem, 7vw, 2.6rem) !important;
+  line-height: 2.4 !important;
+  max-height: none !important;
+  padding-bottom: 4rem;
+  background: linear-gradient(180deg, #121a29, #0f1623);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow-y: auto;
 }
-.hijri-card {
-  border-color:
-    rgba(79,140,255,.45)
-    rgba(0,0,0,.18)
-    rgba(0,0,0,.35)
-    rgba(79,140,255,.22);
+body.light-mode .tajweed-mushaf {
+  background: linear-gradient(180deg, #ffffff, #f0f4fb);
 }
 
-/* The prayer bell has a 2px border — keep the width, recolour. */
-.pr-bell {
-  border-color:
-    rgba(255,255,255,.16)
-    rgba(0,0,0,.22)
-    rgba(0,0,0,.42)
-    rgba(255,255,255,.06);
+.tj-ayah {
+  display:block; padding:4px 2px; line-height:2.4;
+  transition:background .2s;
+}
+.tj-ayah:hover { background:rgba(79,140,255,.05); border-radius:8px; }
+body.light-mode .tj-ayah:hover { background:rgba(42,111,224,.06); }
+
+/* Ayah number badge */
+.tajweed-mushaf .ayah-num-tj {
+  display:inline-block;
+  font-family:-apple-system,sans-serif;
+  font-size:0.55em;
+  vertical-align:middle;
+  color:#cbd6ea;
+  background:#1c2740;
+  border:1px solid #2b3a55;
+  border-radius:999px;
+  padding:2px 9px;
+  margin:0 8px;
+  direction:ltr;
+}
+body.light-mode .tajweed-mushaf .ayah-num-tj {
+  background:#e6ecf7; border-color:#c8d3e6; color:#4a5878;
 }
 
-/* Light mode — soft embossed look. */
-body.light-mode .mode-pill,
-body.light-mode .toggle,
-body.light-mode .ps-tab,
-body.light-mode .ps-btn,
-body.light-mode .ps-radio,
-body.light-mode .back-pill,
-body.light-mode .iconbtn,
-body.light-mode .tile,
-body.light-mode .coach-bar,
-body.light-mode .progress-trigger,
-body.light-mode .home-menu-item,
-body.light-mode .reciter-trigger,
-body.light-mode .reciter-item,
-body.light-mode .progress-item,
-body.light-mode .surah-row,
-body.light-mode .juz-row,
-body.light-mode .bookmark-row,
-body.light-mode .qv-btn,
-body.light-mode .qv-play,
-body.light-mode .cal-nav,
-body.light-mode .stat,
-body.light-mode .mushaf-fs-btn,
-body.light-mode .prayer-settings-btn,
-body.light-mode .pr-bell,
-body.light-mode .dlbtn,
-body.light-mode .playbtn,
-body.light-mode .qr-close,
-body.light-mode .bm-del,
-body.light-mode .hijri-card,
-body.light-mode .install-step,
-body.light-mode .ps-city-result {
-  border-top-color:    rgba(255,255,255,.95);
-  border-right-color:  rgba(0,0,0,.10);
-  border-bottom-color: rgba(0,0,0,.22);
-  border-left-color:   rgba(255,255,255,.40);
+/* Surah header inside Tajweed mushaf */
+.mushaf-surah-header {
+  text-align:center;
+  font-family:'Amiri','Amiri Quran',serif;
+  font-size:1.4rem;
+  font-weight:700;
+  color:#9dc0ff;
+  margin:6px 0 16px;
+  padding:6px 0;
+  border-bottom:1px dashed rgba(79,140,255,.3);
 }
-body.light-mode .coach-bar {
-  border-top-color:    rgba(255,255,255,.55);
-  border-right-color:  rgba(0,0,0,.12);
-  border-bottom-color: rgba(0,0,0,.22);
-  border-left-color:   rgba(255,255,255,.35);
+body.light-mode .mushaf-surah-header { color:#2a6fe0; border-bottom-color:rgba(42,111,224,.3); }
+
+/* ---- Authoritative Tajweed colours (Quran.com classes) ---- */
+.tj-ham_wasl           { color:#9b59b6 !important; font-weight:600 }
+.tj-laam_shamsiyah     { color:#e67e22 !important; font-weight:600 }
+.tj-madda_normal       { color:#e74c3c !important; font-weight:700 }
+.tj-madda_permissible  { color:#c0392b !important; font-weight:700 }
+.tj-madda_necessary    { color:#8e1a1a !important; font-weight:700 }
+.tj-qalqalah           { color:#2980b9 !important; font-weight:700 }
+.tj-ghunnah            { color:#27ae60 !important; font-weight:700 }
+.tj-ikhfa              { color:#f39c12 !important; font-weight:700 }
+.tj-idghaam_ghunnah    { color:#16a085 !important; font-weight:700 }
+.tj-idghaam_no_ghunnah { color:#1abc9c !important; font-weight:700 }
+.tj-iqlab              { color:#8e44ad !important; font-weight:700 }
+.tj-silent             { color:#7f8c8d !important; font-weight:400 }
+
+/* Fullscreen mode for the Tajweed mushaf */
+.tajweed-mushaf.tj-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 250 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background: var(--bg) !important;
+  padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px)
+           calc(var(--safe-bottom) + 40px) calc(var(--safe-left) + 12px) !important;
+  overflow-y: auto;
 }
+body.light-mode .tajweed-mushaf.tj-fullscreen {
+  background: var(--bg) !important;
+}
+.tajweed-mushaf.tj-fullscreen .mushaf-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+body.tj-fs-open { overflow: hidden; }
+
+/* Light-mode colour tweaks */
+body.light-mode .tj-ham_wasl           { color:#7d3c98 !important }
+body.light-mode .tj-laam_shamsiyah     { color:#b9651a !important }
+body.light-mode .tj-madda_normal       { color:#c0392b !important }
+body.light-mode .tj-madda_permissible  { color:#922b21 !important }
+body.light-mode .tj-madda_necessary    { color:#641e16 !important }
+body.light-mode .tj-qalqalah           { color:#1f618d !important }
+body.light-mode .tj-ghunnah            { color:#1e8449 !important }
+body.light-mode .tj-ikhfa              { color:#b9770e !important }
+body.light-mode .tj-idghaam_ghunnah    { color:#0e6655 !important }
+body.light-mode .tj-idghaam_no_ghunnah { color:#117a65 !important }
+body.light-mode .tj-iqlab              { color:#6c3483 !important }
+body.light-mode .tj-silent             { color:#5d6d7e !important }
 
 @media (max-width:380px){
-  body{padding-left:calc(var(--safe-left) + 8px);padding-right:calc(var(--safe-right) + 8px);}
-  .app{gap:9px}
-  #screenHome{gap:11px}
-  .home-topbar{gap:8px}
-  .iconbtn{width:36px;height:36px;border-radius:10px;font-size:.95rem}
-  #homeMenuBtn{width:46px;height:46px;border-radius:14px;font-size:1.5rem}
-  .hijri-card{padding:12px 14px 13px;border-radius:16px}
-  .hijri-sub{font-size:.55rem;letter-spacing:.15em}
-  .hijri-main{font-size:.95rem}
-  .hijri-alt{font-size:.95rem}
-  .home-menu{min-width:220px}
-  .home-tiles{gap:9px}
-  .tile{padding:14px 12px;min-height:118px;border-radius:16px;gap:7px}
-  .tile-icon{width:44px;height:44px;font-size:1.4rem;border-radius:11px}
-  .tile-title{font-size:.9rem}
-  .tile-sub{font-size:.64rem}
-  .coach-bar{padding:14px 14px;gap:12px;border-radius:16px}
-  .coach-icon{width:44px;height:44px;font-size:1.25rem;border-radius:13px}
-  .coach-text strong{font-size:.95rem}
-  .coach-text small{font-size:.68rem}
-  .progress-trigger{padding:11px 14px;gap:10px}
-  .pt-icon{width:42px;height:42px;font-size:1.15rem}
-  .pt-text strong{font-size:.95rem}
-  .pt-text small{font-size:.68rem}
-  .islamic-dates-header{padding:10px 14px;font-size:.62rem}
-  .islamic-dates-list li{padding:8px 13px;gap:9px}
-  .islamic-dates-list .name{font-size:.78rem}
-  .islamic-dates-list .hijri{font-size:.62rem}
-  .islamic-dates-list .greg{font-size:.68rem}
-  .islamic-dates-list .greg small{font-size:.56rem}
-  .surah-row{padding:10px 10px;gap:10px}
-  .surah-row .num{width:36px;height:36px;font-size:.72rem}
-  .surah-row .en{font-size:.85rem}
-  .surah-row .sub{font-size:.6rem}
-  .surah-row .ar{font-size:1.05rem}
-  .surah-row .dlbtn{width:30px;height:30px;font-size:.7rem}
-  .surah-row .dlbtn.downloading{font-size:.5rem}
-  .reciter-trigger{padding:9px 12px;min-height:52px;gap:9px}
-  .rt-icon{width:36px;height:36px;font-size:1rem;border-radius:10px}
-  .rt-value{font-size:.85rem}
-  .reciter-item{padding:9px 10px;font-size:.82rem}
+  .hifz-stats-bar{padding:8px 4px}
+  .hifz-stat span{font-size:.86rem}
+  .hifz-stat small{font-size:.52rem}
+  .feature-tab{min-height:56px;padding:10px 12px;gap:8px}
+  .ft-icon{width:36px;height:36px;font-size:1.25rem;border-radius:10px}
+  .ft-text strong{font-size:.78rem}
+  .ft-text small{font-size:.58rem}
+  .achievements-grid{grid-template-columns:1fr 1fr}
 }
-@media (max-width:320px){
-  .home-tiles{grid-template-columns:1fr}
-  .tile{min-height:auto;flex-direction:row;align-items:center;gap:12px;padding:12px 14px}
-  .tile-icon{width:44px;height:44px;font-size:1.4rem}
-  .tile-title{font-size:.95rem}
-  .tile-sub{font-size:.68rem;margin-top:2px}
+
+/* ============================================================
+   GOLDEN THEME VARIABLES
+   ============================================================ */
+:root{
+  --gold: #d4af37;
+  --gold-soft: rgba(212,175,55,.65);
+}
+body.light-mode{
+  --gold: #a67c00;
+  --gold-soft: rgba(166,124,0,.65);
+}
+
+/* ============================================================
+   FIX 3 — SMALLER HOME TILES (Surah, Juz, Audio, Bookmarks)
+   ============================================================ */
+.tile{
+  min-height: 104px !important;
+  padding: 13px 14px !important;
+  gap: 6px !important;
+}
+.tile-icon{
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 1.45rem !important;
+  border-radius: 11px !important;
+}
+.tile-title{ font-size: .92rem !important; }
+.tile-sub{ font-size: .64rem !important; }
+#tilePrayerTimes{
+  min-height: 82px !important;
+  padding: 12px 14px !important;
+}
+
+/* ============================================================
+   FIX 1 — TAJWEED FULLSCREEN MINIMISE BUTTON
+   ============================================================ */
+.tj-fs-close{
+  position: fixed;
+  top: calc(var(--safe-top) + 14px);
+  right: calc(var(--safe-right) + 14px);
+  z-index: 260;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(17,24,39,.92);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 2px solid var(--gold);
+  color: #fff;
+  font-size: 1.2rem; font-weight: 700; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+  transition: transform .12s, filter .15s;
+  font-family: inherit;
+}
+.tj-fs-close:active{ transform: scale(.92); filter: brightness(1.15); }
+.tj-fs-close:hover{ filter: brightness(1.1); }
+body.light-mode .tj-fs-close{
+  background: rgba(255,255,255,.96);
+  color: #111827;
+  box-shadow: 0 8px 28px rgba(0,0,0,.18);
+}
+
+/* ============================================================
+   FIX 4 — GOLDEN BORDERS AROUND ALL TABS
+   ============================================================ */
+
+/* Home screen cards & tabs */
+.tile,
+.feature-tab,
+.streak-bar,
+.hijri-card,
+.progress-trigger,
+.coach-bar{
+  border-color: var(--gold) !important;
+}
+.coach-bar{
+  border: 1px solid var(--gold) !important;
+}
+
+/* List rows / nav pills */
+.surah-row,
+.reciter-trigger,
+.back-pill,
+.prayer-settings-btn{
+  border-color: var(--gold) !important;
+}
+
+/* Mode pills & hifz mode tabs */
+.toggle.mode-pill,
+.hifz-mode{
+  border-color: var(--gold) !important;
+}
+/* Preserve active-state visual feedback (background + glow only) */
+.toggle.mode-pill[data-mode="follow"].active{
+  border-color: rgba(79,140,255,.75) !important;
+}
+.toggle.mode-pill[data-mode="tajweed"].active{
+  border-color: rgba(155,110,255,.75) !important;
+}
+body.light-mode .toggle.mode-pill[data-mode="follow"].active{
+  border-color: rgba(42,111,224,.70) !important;
+}
+body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
+  border-color: rgba(120,80,220,.70) !important;
+}
+.hifz-mode.active{
+  border-color: rgba(155,110,255,.65) !important;
+}
+
+/* Prayer screen cards */
+.prayer-top,
+.prayer-date-row,
+.prayer-list{
+  border-color: var(--gold) !important;
+}
+
+/* Islamic dates card */
+.islamic-dates{
+  border-color: var(--gold) !important;
 }
 </style>
-
 </head>
-<body><div class="app screen" id="screenHome"><div class="home-topbar">
+<body>
+
+<!-- ================= HOME SCREEN ================= -->
+<div class="app screen" id="screenHome">
+  <div class="home-topbar">
     <div class="home-menu-wrap" id="homeMenuWrap">
       <button id="homeMenuBtn" class="iconbtn" aria-label="Open menu" aria-haspopup="menu" aria-expanded="false">☰</button>
       <div class="home-menu" id="homeMenu" role="menu" hidden>
@@ -1586,7 +1794,9 @@ body.light-mode .coach-bar {
       <span class="hijri-alt" id="hijriAr"></span>
     </button>
     <button id="homeThemeBtn" class="iconbtn" aria-label="Toggle dark / light theme">🌙</button>
-  </div><div class="home-tiles">
+  </div>
+
+  <div class="home-tiles">
     <button class="tile" id="tileSurahIndex" type="button">
       <span class="tile-icon">📖</span>
       <span class="tile-title">Surah index</span>
@@ -1612,14 +1822,45 @@ body.light-mode .coach-bar {
       <span class="tile-title">Prayer Times</span>
       <span class="tile-sub">Five daily prayers · Qibla direction · Alarms</span>
     </button>
-  </div><button class="coach-bar" id="openCoachBtn" type="button">
+  </div>
+
+  <div class="streak-bar" id="streakBar" role="button" tabindex="0" aria-label="View your streak and achievements">
+    <span class="streak-fire">🔥</span>
+    <div class="streak-info">
+      <span class="streak-count" id="streakCount">0</span>
+      <span class="streak-label">day streak</span>
+    </div>
+    <div class="streak-badges" id="streakBadges"></div>
+    <span class="streak-best">Best: <b id="streakBest">0</b></span>
+  </div>
+
+  <div class="home-feature-tabs">
+    <button class="feature-tab" id="tileHifz" type="button">
+      <span class="ft-icon">🧠</span>
+      <div class="ft-text">
+        <strong>Hifz Test</strong>
+        <small>Memorize &amp; test</small>
+      </div>
+    </button>
+    <button class="feature-tab" id="tileTajweed" type="button">
+      <span class="ft-icon">🎨</span>
+      <div class="ft-text">
+        <strong>Tajweed Colors</strong>
+        <small>Authoritative · any surah</small>
+      </div>
+    </button>
+  </div>
+
+  <button class="coach-bar" id="openCoachBtn" type="button">
     <span class="coach-icon">🎙️</span>
     <span class="coach-text">
       <strong>Quran Recitation Coach</strong>
       <small>Live word-by-word feedback</small>
     </span>
     <span class="coach-chev">›</span>
-  </button><div class="progress-section" id="progressSection">
+  </button>
+
+  <div class="progress-section" id="progressSection">
     <button class="progress-trigger" id="progressTrigger" type="button" aria-expanded="false" aria-haspopup="menu">
       <span class="pt-icon">📊</span>
       <span class="pt-text">
@@ -1631,72 +1872,74 @@ body.light-mode .coach-bar {
     <div class="progress-menu" id="progressMenu" role="menu" hidden>
       <button class="progress-item" id="progressFollow" type="button" role="menuitem">
         <span class="pi-icon">👂</span>
-        <span class="pi-text">
-          <strong>Follow</strong>
-          <small id="progressFollowSub">No saved session</small>
-        </span>
+        <span class="pi-text"><strong>Follow</strong><small id="progressFollowSub">No saved session</small></span>
       </button>
       <button class="progress-item" id="progressTajweed" type="button" role="menuitem">
         <span class="pi-icon">🎵</span>
-        <span class="pi-text">
-          <strong>Tajweed</strong>
-          <small id="progressTajweedSub">No saved session</small>
-        </span>
+        <span class="pi-text"><strong>Tajweed</strong><small id="progressTajweedSub">No saved session</small></span>
       </button>
     </div>
-  </div><section class="islamic-dates" id="islamicDates" aria-label="Important Islamic dates">
+  </div>
+
+  <section class="islamic-dates" id="islamicDates" aria-label="Important Islamic dates">
     <div class="islamic-dates-header">
       <span class="ico">🕌</span>
       <span>Important Islamic Dates</span>
     </div>
     <ul class="islamic-dates-list" id="islamicDatesList"></ul>
   </section>
-</div><div class="app screen" id="screenSurahIndex" hidden>
+</div>
+
+<!-- ================= SURAH INDEX ================= -->
+<div class="app screen" id="screenSurahIndex" hidden>
   <div class="sub-header">
     <button id="backFromIndex" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Surah index</h1>
     <span class="sub-note">Tap to open</span>
   </div>
-  <div class="surah-list" id="surahIndexList">
-    <div class="loading">Loading…</div>
-  </div>
-</div><div class="app screen" id="screenJuzIndex" hidden>
+  <div class="surah-list" id="surahIndexList"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- ================= JUZ INDEX ================= -->
+<div class="app screen" id="screenJuzIndex" hidden>
   <div class="sub-header">
     <button id="backFromJuz" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Juz index</h1>
     <span class="sub-note">Tap to open</span>
   </div>
   <div class="surah-list" id="juzIndexList"></div>
-</div><div class="app screen" id="screenBookmarks" hidden>
+</div>
+
+<!-- ================= BOOKMARKS ================= -->
+<div class="app screen" id="screenBookmarks" hidden>
   <div class="sub-header">
     <button id="backFromBookmarks" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Bookmarks</h1>
     <span class="sub-note">Hold a verse to add</span>
   </div>
   <div class="surah-list" id="bookmarksScreenList"></div>
-</div><div class="app screen" id="screenAudio" hidden>
+</div>
+
+<!-- ================= AUDIO ================= -->
+<div class="app screen" id="screenAudio" hidden>
   <div class="sub-header">
     <button id="backFromAudio" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Play audio</h1>
     <span class="sub-note">English translation by Yusuf Ali</span>
   </div>
   <div class="reciter-dropdown" id="reciterDropdown">
-    <button class="reciter-trigger" id="reciterTrigger" type="button"
-            aria-haspopup="listbox" aria-expanded="false" aria-label="Select reciter">
+    <button class="reciter-trigger" id="reciterTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Select reciter">
       <span class="rt-icon">🎙️</span>
-      <span class="rt-meta">
-        <span class="rt-label">Reciter</span>
-        <span class="rt-value" id="reciterValue">—</span>
-      </span>
+      <span class="rt-meta"><span class="rt-label">Reciter</span><span class="rt-value" id="reciterValue">—</span></span>
       <span class="rt-chev">▾</span>
     </button>
-    <div class="reciter-menu" id="reciterMenu" role="listbox"
-         aria-label="Available Qaris" hidden></div>
+    <div class="reciter-menu" id="reciterMenu" role="listbox" aria-label="Available Qaris" hidden></div>
   </div>
-  <div class="surah-list" id="audioSurahList">
-    <div class="loading">Loading…</div>
-  </div>
-</div><div class="app screen" id="screenPrayer" hidden>
+  <div class="surah-list" id="audioSurahList"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- ================= PRAYER ================= -->
+<div class="app screen" id="screenPrayer" hidden>
   <div class="sub-header">
     <button id="backFromPrayer" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Prayer Times</h1>
@@ -1721,17 +1964,23 @@ body.light-mode .coach-bar {
   <div class="prayer-note" id="prayerNote">
     Tap the bell next to any prayer to toggle its alarm on / off.<br><br>Please note, for the Athaan alarm to sound, do not fully close the app.
   </div>
-</div><div class="app screen" id="screenCoach" hidden>
+</div>
+
+<!-- ================= COACH ================= -->
+<div class="app screen" id="screenCoach" hidden>
   <header>
     <button id="btnBackHome" class="back-pill" aria-label="Back to home">Back</button>
     <span class="coach-title">Quran Recitation Coach</span>
     <button id="btnInfo" class="back-pill" aria-label="About the Recitation Coach">Info</button>
     <button id="btnTheme" class="iconbtn" aria-label="Toggle theme">🌙</button>
-  </header><div id="support" class="warnbox" hidden></div><div class="statusbar idle" id="statusbar" role="status" aria-live="polite">
+  </header>
+  <div id="support" class="warnbox" hidden></div>
+  <div class="statusbar idle" id="statusbar" role="status" aria-live="polite">
     <span class="dot"></span>
     <span class="label" id="statusLabel">Loading…</span>
     <span class="hint" id="statusHint"></span>
-  </div><section class="panel hide-immersive">
+  </div>
+  <section class="panel hide-immersive">
     <div class="row" id="surahNavRow" hidden>
       <button id="btnPrevSurah" class="ghost icon" aria-label="Previous surah">◀</button>
       <div class="surah-info">
@@ -1742,11 +1991,13 @@ body.light-mode .coach-bar {
       <button id="btnNextSurah" class="ghost icon" aria-label="Next surah">▶</button>
       <button id="btnSurah" class="ghost" style="padding:0 12px">📖 Surah</button>
     </div>
-  </section><div class="btn-row three">
+  </section>
+  <div class="btn-row three">
     <button id="btnStop" class="ghost">⏹ Stop</button>
     <button id="btnReset" class="ghost">↺ Restart</button>
     <button id="btnJump" class="ghost">⤒ Current</button>
-  </div><div class="toggles hide-immersive">
+  </div>
+  <div class="toggles hide-immersive">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
     <label class="toggle match-select" id="matchChip">
@@ -1760,39 +2011,148 @@ body.light-mode .coach-bar {
     <label class="toggle hide-text" id="hideTextChip" hidden>
       <input type="checkbox" id="chkHideText"> 🙈 Hide text
     </label>
-  </div><div class="barwrap"><div class="bar" id="bar"></div></div><section class="hud">
+  </div>
+  <div class="barwrap"><div class="bar" id="bar"></div></div>
+  <section class="hud">
     <div class="stat"><span id="statProgress">0%</span><small>Progress</small></div>
     <div class="stat"><span id="statErrors">—</span><small>Mistakes</small></div>
     <div class="stat"><span id="statAcc">—</span><small>Accuracy</small></div>
-  </section><section class="mistakes-panel hide-immersive" id="mistakesPanel" hidden>
+  </section>
+  <section class="mistakes-panel hide-immersive" id="mistakesPanel" hidden>
     <div class="mistakes-header">
       <span>📋 Mistakes</span>
       <span class="count" id="mistakeCountBadge">0</span>
       <button class="ghost clear-btn" id="btnClearMistakes" type="button">Clear</button>
     </div>
     <ol class="mistakes-list" id="mistakesList"></ol>
-  </section><div class="btn-row">
-    <button id="btnMic" class="primary">🎤 Start reciting</button>
-  </div><section class="mushaf" id="pageEl" aria-label="Quran text">
+  </section>
+  <div class="btn-row"><button id="btnMic" class="primary">🎤 Start reciting</button></div>
+  <section class="mushaf" id="pageEl" aria-label="Quran text">
     <div class="mushaf-inner"><div class="loading">Loading…</div></div>
-  </section><div class="legend hide-immersive">
+  </section>
+  <div class="legend hide-immersive">
     <span><i style="background:#4f8cff"></i>current</span>
     <span><i style="background:#2fd07a"></i>correct</span>
     <span><i style="background:#ff5a6a"></i>misread</span>
     <span>· Scrolls automatically as you recite</span>
     <span>· Hold a word 3 s to start from there</span>
-  </div><section class="feedback hide-immersive" id="feedback">
+  </div>
+  <section class="feedback hide-immersive" id="feedback">
     <div class="line">Loading…</div>
   </section>
-</div><div class="quran-viewer" id="quranViewer" hidden>
-  <div class="qv-stage">
-    <div class="qv-slot" id="viewerMushafSlot"></div>
-  </div><div class="qv-chrome" id="qvChrome">
+</div>
+
+<!-- ================= HIFZ TEST ================= -->
+<div class="app screen" id="screenHifz" hidden>
+  <div class="sub-header">
+    <button id="backFromHifz" class="back-pill" type="button">Back</button>
+    <h1>Hifz Test</h1>
+    <span class="sub-note">Memorization mode</span>
+  </div>
+
+  <div class="hifz-config" id="hifzConfig">
+    <div class="hifz-field">
+      <label>Surah</label>
+      <select id="hifzSurahSelect" class="ps-input"></select>
+    </div>
+    <div class="hifz-range-row">
+      <div class="hifz-field">
+        <label>From Ayah</label>
+        <input type="number" id="hifzFromAyah" class="ps-input" min="1" value="1">
+      </div>
+      <div class="hifz-field">
+        <label>To Ayah</label>
+        <input type="number" id="hifzToAyah" class="ps-input" min="1" value="7">
+      </div>
+    </div>
+    <div class="hifz-field">
+      <label>Test Mode</label>
+      <div class="hifz-modes" id="hifzModes">
+        <button class="hifz-mode active" data-mode="silent" type="button">
+          <span class="hm-icon">🤐</span>
+          <strong>Silent Recall</strong>
+          <small>Text hidden · tap to reveal</small>
+        </button>
+        <button class="hifz-mode" data-mode="mistake" type="button">
+          <span class="hm-icon">🎤</span>
+          <strong>Reveal on Mistake</strong>
+          <small>Speak · words reveal as you go</small>
+        </button>
+        <button class="hifz-mode" data-mode="blank" type="button">
+          <span class="hm-icon">📄</span>
+          <strong>Blank Last Line</strong>
+          <small>End of each ayah hidden</small>
+        </button>
+      </div>
+    </div>
+    <button class="primary" id="hifzStartBtn" type="button" style="width:100%">Start Test</button>
+  </div>
+
+  <div class="hifz-test" id="hifzTestArea" hidden>
+    <div class="hifz-stats-bar">
+      <div class="hifz-stat"><span id="hifzAyahProg">0/0</span><small>Ayahs</small></div>
+      <div class="hifz-stat"><span id="hifzHintCount">0</span><small>Hints</small></div>
+      <div class="hifz-stat"><span id="hifzScore">100%</span><small>Score</small></div>
+      <div class="hifz-stat"><span id="hifzTime">0:00</span><small>Time</small></div>
+    </div>
+    <div class="mushaf" id="hifzMushaf">
+      <div class="mushaf-inner"><div class="loading">Ready when you are…</div></div>
+    </div>
+    <div class="hifz-controls">
+      <button class="ghost" id="hifzStopBtn" type="button">⏹ Stop</button>
+      <button class="primary" id="hifzFinishBtn" type="button">✓ Finish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TAJWEED (authoritative) ================= -->
+<div class="app screen" id="screenTajweed" hidden>
+  <div class="sub-header">
+    <button id="backFromTajweed" class="back-pill" type="button">Back</button>
+    <h1>Tajweed Colors</h1>
+    <span class="sub-note">Authoritative Hafs annotations</span>
+  </div>
+
+  <div class="tajweed-toolbar">
+    <select id="tajweedSurahSelect" class="ps-input" style="flex:1;min-width:0" aria-label="Choose a surah">
+      <option value="">Loading surahs…</option>
+    </select>
+    <button id="tajweedFullscreenBtn" class="back-pill" type="button"
+            aria-label="Toggle fullscreen">⛶</button>
+  </div>
+
+  <div class="tajweed-legend" id="tjLegend">
+    <button class="tj-chip active" data-rule="ham_wasl"       type="button"><span class="tj-dot" style="background:#9b59b6"></span>Hamzat al‑Wasl</button>
+    <button class="tj-chip active" data-rule="laam_shamsiyah" type="button"><span class="tj-dot" style="background:#e67e22"></span>Laam Shamsiyyah</button>
+    <button class="tj-chip active" data-rule="madda_normal"   type="button"><span class="tj-dot" style="background:#e74c3c"></span>Madd (normal)</button>
+    <button class="tj-chip active" data-rule="madda_permissible" type="button"><span class="tj-dot" style="background:#c0392b"></span>Madd (permissible)</button>
+    <button class="tj-chip active" data-rule="madda_necessary"  type="button"><span class="tj-dot" style="background:#8e1a1a"></span>Madd (necessary)</button>
+    <button class="tj-chip active" data-rule="qalqalah"        type="button"><span class="tj-dot" style="background:#2980b9"></span>Qalqalah</button>
+    <button class="tj-chip active" data-rule="ghunnah"         type="button"><span class="tj-dot" style="background:#27ae60"></span>Ghunnah</button>
+    <button class="tj-chip active" data-rule="ikhfa"           type="button"><span class="tj-dot" style="background:#f39c12"></span>Ikhfa</button>
+    <button class="tj-chip active" data-rule="idghaam_ghunnah" type="button"><span class="tj-dot" style="background:#16a085"></span>Idghaam (with ghunnah)</button>
+    <button class="tj-chip active" data-rule="idghaam_no_ghunnah" type="button"><span class="tj-dot" style="background:#1abc9c"></span>Idghaam (no ghunnah)</button>
+    <button class="tj-chip active" data-rule="iqlab"           type="button"><span class="tj-dot" style="background:#8e44ad"></span>Iqlab</button>
+    <button class="tj-chip active" data-rule="silent"          type="button"><span class="tj-dot" style="background:#7f8c8d"></span>Silent</button>
+  </div>
+
+  <div class="mushaf tajweed-mushaf" id="tajweedMushaf">
+    <div class="mushaf-inner"><div class="loading">Choose a surah above…</div></div>
+  </div>
+
+  <div class="tajweed-note">
+    Rules and colours come from the <strong>Quran.com Uthmani Tajweed</strong> annotations (Hafs ʿan ʿAsim) — authoritative, not heuristic.
+  </div>
+</div>
+
+<!-- ================= QURAN VIEWER ================= -->
+<div class="quran-viewer" id="quranViewer" hidden>
+  <div class="qv-stage"><div class="qv-slot" id="viewerMushafSlot"></div></div>
+  <div class="qv-chrome" id="qvChrome">
     <div class="qv-top">
       <button class="qv-btn qv-back" id="qvBack" aria-label="Back">Back</button>
       <span class="qv-title" id="qvTitle">Quran</span>
-      <button class="qv-btn qv-bookmark" id="qvBookmark" type="button"
-              aria-label="Bookmark this page" title="Bookmark this page">🔖</button>
+      <button class="qv-btn qv-bookmark" id="qvBookmark" type="button" aria-label="Bookmark this page" title="Bookmark this page">🔖</button>
       <button class="qv-btn" id="qvDark" aria-label="Toggle theme">🌙</button>
     </div>
     <div class="qv-bottom">
@@ -1808,7 +2168,10 @@ body.light-mode .coach-bar {
       <button class="qv-btn" id="qvSurahBtn" aria-label="Surah picker">📖</button>
     </div>
   </div>
-</div><div class="fs-badge" id="fsBadge"><span class="dot"></span><span id="fsBadgeText">Ready</span></div><div class="fs-controls" id="fsControls" role="toolbar" aria-label="Fullscreen controls">
+</div>
+
+<div class="fs-badge" id="fsBadge"><span class="dot"></span><span id="fsBadgeText">Ready</span></div>
+<div class="fs-controls" id="fsControls" role="toolbar" aria-label="Fullscreen controls">
   <button id="fsMic" aria-label="Toggle microphone">🎤</button>
   <span class="fs-sep"></span>
   <button id="fsPause" aria-label="Pause">⏸</button>
@@ -1816,13 +2179,17 @@ body.light-mode .coach-bar {
   <button id="fsStop" aria-label="Stop">⏹</button>
   <span class="fs-sep"></span>
   <button id="fsMinimize" aria-label="Minimise fullscreen">⤡</button>
-</div><div class="audio-overlay" id="audioOverlay" role="group" aria-label="Audio controls">
+</div>
+
+<div class="audio-overlay" id="audioOverlay" role="group" aria-label="Audio controls">
   <button id="audioPlayPause" class="audio-pp-btn" type="button" aria-label="Pause">⏸</button>
   <div class="volume-wrap">
     <span id="volIcon" class="vol-icon" role="button" tabindex="0" aria-label="Mute or unmute">🔊</span>
     <input id="volumeSlider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
   </div>
-</div><div class="qr-fullscreen" id="qrFullscreen" hidden>
+</div>
+
+<div class="qr-fullscreen" id="qrFullscreen" hidden>
   <div class="qr-card">
     <div class="qr-title">Scan to open</div>
     <div class="qr-code" id="qrCodeHost"></div>
@@ -1830,7 +2197,9 @@ body.light-mode .coach-bar {
     <div class="qr-hint">Point your camera at the code</div>
     <button class="qr-close" id="qrCloseBtn" type="button">Close</button>
   </div>
-</div><script>
+</div>
+
+<script>
 /* ============================================================
    SERVICE WORKER REGISTRATION
    ============================================================ */
@@ -1898,6 +2267,8 @@ const screenBookmarks    = document.getElementById('screenBookmarks');
 const screenAudio        = document.getElementById('screenAudio');
 const screenCoach        = document.getElementById('screenCoach');
 const screenPrayer       = document.getElementById('screenPrayer');
+const screenHifz         = document.getElementById('screenHifz');
+const screenTajweed      = document.getElementById('screenTajweed');
 
 const homeThemeBtn   = document.getElementById('homeThemeBtn');
 const homeMenuWrap   = document.getElementById('homeMenuWrap');
@@ -2561,6 +2932,7 @@ async function downloadSurahAudio(surahNumber){
     downloads[key] = { surah: surahNumber, reciter: reciterId, total: totalAyahs, ts: Date.now() };
     saveDownloadsStore();
     showToast('✅ <b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> saved for offline listening.', 4000);
+    try{ bumpStreak(); checkAchievements(); }catch(_){}
   } else if(state.done > 0){
     showToast('⚠️ ' + state.failed.length + ' ayah(s) could not be downloaded. Tap ⬇ to retry.', 4600);
   } else {
@@ -2951,7 +3323,7 @@ function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; interimPr
 
 function showScreen(name){
   currentScreenName = name;
-  const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer };
+  const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed };
   Object.entries(map).forEach(([k, el]) => { if(!el) return; el.hidden = (k !== name); });
   if(name !== 'coach' && readerFullscreen) exitReaderFullscreen();
   if(name === 'home') refreshProgressMenu();
@@ -2967,6 +3339,677 @@ async function openCoachScreen(){
   try{ await loadSurah(STORE.surah, true); coachLoaded = true; }
   finally{ coachLoading = false; }
 }
+
+/* -------- Streak + Achievements -------- */
+const STREAK_KEY        = 'qc.streak';
+const ACHIEVEMENTS_KEY  = 'qc.achievements';
+const HIFZ_HISTORY_KEY  = 'qc.hifzHistory';
+
+const ACHIEVEMENT_DEFS = [
+  { id:'first_day',      icon:'🌱', name:'First Step',     desc:'Recite on the first day' },
+  { id:'streak_3',       icon:'🔥', name:'On Fire',        desc:'3-day streak' },
+  { id:'streak_7',       icon:'🔥', name:'Week Warrior',   desc:'7-day streak' },
+  { id:'streak_30',      icon:'🏆', name:'Month Master',   desc:'30-day streak' },
+  { id:'streak_100',     icon:'👑', name:'Centurion',      desc:'100-day streak' },
+  { id:'hifz_first',     icon:'🧠', name:'First Hifz Test',desc:'Complete a Hifz test' },
+  { id:'hifz_3',         icon:'📚', name:'Hifz Student',   desc:'Complete 3 Hifz tests' },
+  { id:'hifz_perfect',   icon:'⭐', name:'Perfect Recall', desc:'Score 100% on a Hifz test' },
+  { id:'first_bookmark', icon:'🔖', name:'Bookmarked',     desc:'Save your first bookmark' },
+  { id:'first_download', icon:'📥', name:'Offline Ready',  desc:'Download your first surah' }
+];
+
+function loadStreak(){
+  try{ return JSON.parse(localStorage.getItem(STREAK_KEY)) || { current:0, best:0, lastDate:'', totalDays:0 }; }
+  catch(e){ return { current:0, best:0, lastDate:'', totalDays:0 }; }
+}
+function saveStreak(s){ try{ localStorage.setItem(STREAK_KEY, JSON.stringify(s)); }catch(e){} }
+function todayKey(){ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function yesterdayKey(){ const d = new Date(Date.now()-86400000); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+function bumpStreak(){
+  const s = loadStreak();
+  const today = todayKey();
+  if(s.lastDate === today) return s;
+  if(s.lastDate === yesterdayKey()) s.current++;
+  else s.current = 1;
+  s.lastDate = today;
+  s.totalDays = (s.totalDays||0) + 1;
+  s.best = Math.max(s.best||0, s.current);
+  saveStreak(s);
+  updateStreakUI();
+  checkAchievements();
+  return s;
+}
+
+function updateStreakUI(){
+  const s = loadStreak();
+  const countEl = document.getElementById('streakCount');
+  const bestEl  = document.getElementById('streakBest');
+  if(countEl) countEl.textContent = s.current || 0;
+  if(bestEl)  bestEl.textContent  = s.best    || 0;
+  renderStreakBadges();
+}
+
+function loadAchievements(){
+  try{ return JSON.parse(localStorage.getItem(ACHIEVEMENTS_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveAchievements(a){ try{ localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(a)); }catch(e){} }
+
+function unlockAchievement(id){
+  const a = loadAchievements();
+  if(a[id]) return false;
+  a[id] = Date.now();
+  saveAchievements(a);
+  const def = ACHIEVEMENT_DEFS.find(x => x.id === id);
+  if(def){ showToast(def.icon + ' <b>Achievement unlocked:</b> ' + def.name, 4200); }
+  return true;
+}
+
+function checkAchievements(){
+  const s = loadStreak();
+  if(s.current >= 1)   unlockAchievement('first_day');
+  if(s.current >= 3)   unlockAchievement('streak_3');
+  if(s.current >= 7)   unlockAchievement('streak_7');
+  if(s.current >= 30)  unlockAchievement('streak_30');
+  if(s.current >= 100) unlockAchievement('streak_100');
+
+  const hist = loadHifzHistory();
+  if(hist.length >= 1) unlockAchievement('hifz_first');
+  if(hist.length >= 3) unlockAchievement('hifz_3');
+  if(hist.some(h => h.score >= 100)) unlockAchievement('hifz_perfect');
+
+  try{ if(bookmarks.length >= 1) unlockAchievement('first_bookmark'); }catch(e){}
+  try{ if(Object.keys(downloads||{}).length >= 1) unlockAchievement('first_download'); }catch(e){}
+}
+
+function renderStreakBadges(){
+  const el = document.getElementById('streakBadges');
+  if(!el) return;
+  const a = loadAchievements();
+  const ids = Object.keys(a).slice(-5);
+  el.innerHTML = ids.map(id => {
+    const def = ACHIEVEMENT_DEFS.find(x => x.id === id);
+    return def ? '<span class="streak-badge" title="' + def.name + '">' + def.icon + '</span>' : '';
+  }).join('');
+}
+
+function loadHifzHistory(){
+  try{ return JSON.parse(localStorage.getItem(HIFZ_HISTORY_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveHifzHistory(h){
+  try{ localStorage.setItem(HIFZ_HISTORY_KEY, JSON.stringify(h.slice(-50))); }catch(e){}
+}
+
+function openAchievementsModal(){
+  const a = loadAchievements();
+  const unlocked = Object.keys(a).length;
+  const total = ACHIEVEMENT_DEFS.length;
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = '<div class="modal achievements-modal"><div class="grabber"></div>' +
+    '<h2>🏅 Achievements</h2>' +
+    '<p style="font-size:.85rem;color:var(--muted);margin-bottom:14px"><b>' + unlocked + ' of ' + total + '</b> unlocked</p>' +
+    '<div class="achievements-grid">' +
+      ACHIEVEMENT_DEFS.map(def => {
+        const on = !!a[def.id];
+        return '<div class="ach-card ' + (on?'unlocked':'locked') + '">' +
+          '<span class="ach-icon">' + def.icon + '</span>' +
+          '<span class="ach-name">' + def.name + '</span>' +
+          '<small class="ach-desc">' + def.desc + '</small></div>';
+      }).join('') +
+    '</div><button class="primary" id="achClose" style="width:100%;margin-top:14px">Close</button></div>';
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.addEventListener('click', e => { if(e.target === bg) close(); });
+  bg.querySelector('#achClose').addEventListener('click', close);
+}
+
+/* -------- Hifz Test -------- */
+const hifzState = {
+  active:false, mode:'silent', surah:1, ayahs:[], words:[],
+  hints:0, completedAyahs:0, totalAyahs:0,
+  startTime:0, timer:null, recognizer:null, speechActive:false
+};
+
+async function openHifzScreen(){
+  showScreen('hifz');
+  await populateHifzSurahs();
+  refreshHifzAyahMax();
+}
+
+async function populateHifzSurahs(){
+  const sel = document.getElementById('hifzSurahSelect');
+  if(!sel || sel.options.length > 0) return;
+  try{
+    const chapters = await ensureChapters();
+    sel.innerHTML = chapters.map(c =>
+      '<option value="' + c.number + '">' + c.number + '. ' + escapeHtml(c.englishName) + ' (' + c.numberOfAyahs + ' ayahs)</option>'
+    ).join('');
+  }catch(e){ /* ignore */ }
+}
+
+function refreshHifzAyahMax(){
+  const sel = document.getElementById('hifzSurahSelect');
+  const fromEl = document.getElementById('hifzFromAyah');
+  const toEl   = document.getElementById('hifzToAyah');
+  if(!sel || !fromEl || !toEl) return;
+  const surah = parseInt(sel.value, 10) || 1;
+  const total = surahAyahTotal(surah) || 7;
+  fromEl.max = total; toEl.max = total;
+  fromEl.value = Math.min(parseInt(fromEl.value, 10) || 1, total);
+  toEl.value   = Math.min(parseInt(toEl.value, 10) || Math.min(7, total), total);
+}
+
+function selectHifzMode(mode){
+  hifzState.mode = mode;
+  document.querySelectorAll('.hifz-mode').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode)
+  );
+}
+
+async function startHifzTest(){
+  const sel   = document.getElementById('hifzSurahSelect');
+  const fromEl= document.getElementById('hifzFromAyah');
+  const toEl  = document.getElementById('hifzToAyah');
+  const surah = parseInt(sel.value, 10) || 1;
+  const from  = Math.max(1, parseInt(fromEl.value, 10) || 1);
+  const to    = Math.max(from, parseInt(toEl.value, 10) || from);
+
+  hifzState.surah   = surah;
+  hifzState.mode    = (document.querySelector('.hifz-mode.active')||{}).dataset?.mode || 'silent';
+  hifzState.hints   = 0;
+  hifzState.completedAyahs = 0;
+  hifzState.totalAyahs = to - from + 1;
+  hifzState.words   = [];
+  hifzState.startTime = Date.now();
+  hifzState.active  = true;
+
+  document.getElementById('hifzConfig').hidden  = true;
+  document.getElementById('hifzTestArea').hidden = false;
+  document.getElementById('hifzMushaf').innerHTML =
+    '<div class="mushaf-inner"><div class="loading">Loading ayahs…</div></div>';
+
+  try{
+    const res = await fetchWithTimeout(ALQURAN_API + '/surah/' + surah + '/' + EDITION_COACH, FETCH_TIMEOUT_MS);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if(!json || json.code !== 200 || !json.data) throw new Error('Bad response');
+    hifzState.ayahs = (json.data.ayahs||[]).filter(a => a.numberInSurah >= from && a.numberInSurah <= to);
+    renderHifzMushaf();
+    startHifzTimer();
+    if(hifzState.mode === 'mistake') startHifzSpeech();
+  }catch(e){
+    document.getElementById('hifzMushaf').innerHTML =
+      '<div class="mushaf-inner"><div class="loading"><span class="err">⚠️ Could not load ayahs.</span>Check your connection.</div></div>';
+  }
+}
+
+function renderHifzMushaf(){
+  const mushaf = document.getElementById('hifzMushaf');
+  mushaf.innerHTML = '';
+  const inner = document.createElement('div');
+  inner.className = 'mushaf-inner';
+  hifzState.words = [];
+
+  hifzState.ayahs.forEach((a, aIdx) => {
+    const line = document.createElement('div');
+    line.className = 'ayah hifz-ayah';
+    const toks = String(a.text || '').split(/\s+/).filter(Boolean);
+    const mode = hifzState.mode;
+
+    toks.forEach((tok, wIdx) => {
+      const span = document.createElement('span');
+      span.className = 'hifz-word';
+      span.textContent = tok;
+
+      // Pure pause/diacritic marks (waqf symbols etc.) contain no Arabic letters
+      // after normalisation. Render them visibly and never add them as match
+      // targets — otherwise the "Reveal on Mistake" recognizer would stall.
+      if(!normArCached(tok)){
+        span.classList.add('hifz-visible');
+        line.appendChild(span);
+        return;
+      }
+
+      const info = { el: span, raw: tok, aIdx, wIdx, revealed: false };
+      hifzState.words.push(info);
+
+      if(mode === 'silent'){ span.classList.add('hifz-hidden'); }
+      else if(mode === 'blank'){
+        if(wIdx >= toks.length - 3) span.classList.add('hifz-hidden');
+        else span.classList.add('hifz-visible');
+      } else { span.classList.add('hifz-hidden'); }
+
+      span.addEventListener('click', () => {
+        if(!hifzState.active) return;
+        if(span.classList.contains('hifz-hidden')) revealHifzWord(info, true);
+      });
+
+      line.appendChild(span);
+    });
+
+    const num = document.createElement('span');
+    num.className = 'ayah-num';
+    num.textContent = toAr(a.numberInSurah);
+    line.appendChild(num);
+
+    inner.appendChild(line);
+  });
+
+  mushaf.appendChild(inner);
+  updateHifzStats();
+}
+
+function revealHifzWord(info, isHint){
+  if(info.revealed) return;
+  info.revealed = true;
+  info.el.classList.remove('hifz-hidden');
+  info.el.classList.add('hifz-revealed');
+  if(isHint){ hifzState.hints++; }
+  updateHifzStats();
+  checkAyahComplete(info.aIdx);
+}
+
+function updateHifzStats(){
+  const total = hifzState.words.length || 1;
+  const score = Math.max(0, Math.round(((total - hifzState.hints) / total) * 100));
+  const aEl = document.getElementById('hifzAyahProg');
+  const hEl = document.getElementById('hifzHintCount');
+  const sEl = document.getElementById('hifzScore');
+  if(aEl) aEl.textContent = hifzState.completedAyahs + '/' + hifzState.totalAyahs;
+  if(hEl) hEl.textContent = hifzState.hints;
+  if(sEl) sEl.textContent = score + '%';
+}
+
+function startHifzTimer(){
+  stopHifzTimer();
+  hifzState.timer = setInterval(() => {
+    const el = Math.floor((Date.now() - hifzState.startTime) / 1000);
+    const m = Math.floor(el/60), s = el%60;
+    const tEl = document.getElementById('hifzTime');
+    if(tEl) tEl.textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+function stopHifzTimer(){ if(hifzState.timer){ clearInterval(hifzState.timer); hifzState.timer = null; } }
+
+function startHifzSpeech(){
+  if(!SPEECH_SUPPORTED){ showToast('⚠️ Speech recognition not available. Using Silent Recall instead.', 4200); hifzState.mode = 'silent'; return; }
+  stopHifzSpeech();
+  try{
+    const rec = new SpeechRecognitionCtor();
+    rec.lang = 'ar-SA';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    rec.onresult = (event) => {
+      if(!hifzState.active) return;
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        const tr = (event.results[i][0].transcript || '').trim();
+        if(!tr) continue;
+        tr.split(/\s+/).forEach(tok => {
+          const heard = normArCached(tok);
+          if(!heard) return;
+          const nextWord = hifzState.words.find(w => !w.revealed);
+          if(!nextWord) return;
+          const tNorm = normArCached(nextWord.raw);
+          const tPhon = phonArCached(nextWord.raw);
+          if(heard === tNorm || isMatchWord(heard, phonArCached(tok), null, { norm:tNorm, phon:tPhon })){
+            revealHifzWord(nextWord, false);
+          }
+        });
+      }
+    };
+    rec.onerror = (e) => { if(e && e.error === 'not-allowed') showToast('⚠️ Microphone access denied.'); };
+    rec.onend = () => {
+      if(hifzState.active && hifzState.mode === 'mistake'){
+        try{ rec.start(); }catch(_){}
+      }
+    };
+    rec.start();
+    hifzState.recognizer = rec;
+    hifzState.speechActive = true;
+  }catch(e){
+    console.warn('[Hifz] speech failed:', e);
+    showToast('⚠️ Could not start microphone. Using Silent Recall instead.');
+    hifzState.mode = 'silent';
+  }
+}
+function stopHifzSpeech(){
+  hifzState.speechActive = false;
+  if(hifzState.recognizer){
+    try{ hifzState.recognizer.stop(); }catch(_){}
+    try{ hifzState.recognizer.abort(); }catch(_){}
+    hifzState.recognizer = null;
+  }
+}
+
+function checkAyahComplete(aIdx){
+  const words = hifzState.words.filter(w => w.aIdx === aIdx);
+  if(!words.length) return;
+  if(words.every(w => w.revealed) && !words[0]._counted){
+    words.forEach(w => w._counted = true);
+    hifzState.completedAyahs++;
+    updateHifzStats();
+  }
+}
+
+function stopHifzTest(silent){
+  hifzState.active = false;
+  stopHifzSpeech();
+  stopHifzTimer();
+  if(!silent){
+    document.getElementById('hifzConfig').hidden  = false;
+    document.getElementById('hifzTestArea').hidden = true;
+  }
+}
+
+function finishHifzTest(){
+  if(!hifzState.active) return;
+  const total = hifzState.words.length || 1;
+  const hints = hifzState.hints;
+  const score = Math.max(0, Math.round(((total - hints) / total) * 100));
+  const elapsed = Math.floor((Date.now() - hifzState.startTime) / 1000);
+
+  stopHifzTest(true);
+
+  const hist = loadHifzHistory();
+  hist.push({
+    surah: hifzState.surah, mode: hifzState.mode,
+    from: (hifzState.ayahs[0]||{}).numberInSurah || 1,
+    to:   (hifzState.ayahs[hifzState.ayahs.length-1]||{}).numberInSurah || 1,
+    totalWords: total, hints, score, elapsed, ts: Date.now()
+  });
+  saveHifzHistory(hist);
+
+  bumpStreak();
+  checkAchievements();
+
+  const emoji = score >= 100 ? '⭐' : score >= 80 ? '🎉' : score >= 60 ? '👍' : '📚';
+  const msg = score >= 100 ? 'Perfect recall — MashaAllah!' :
+              score >= 80  ? 'Excellent work!' :
+              score >= 60  ? 'Good progress — keep practicing.' :
+                             'Keep going — practice makes perfect.';
+  const color = score >= 80 ? 'var(--good)' : score >= 60 ? 'var(--warn)' : 'var(--bad)';
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = '<div class="modal"><div class="grabber"></div>' +
+    '<h2 style="text-align:center;font-size:1.7rem">' + emoji + '</h2>' +
+    '<h2 style="text-align:center;margin-bottom:2px">Test Complete!</h2>' +
+    '<p style="text-align:center;color:var(--muted)">' + msg + '</p>' +
+    '<div class="hifz-results">' +
+      '<div class="hifz-result-row"><span>Score</span><b style="color:' + color + '">' + score + '%</b></div>' +
+      '<div class="hifz-result-row"><span>Hints used</span><b>' + hints + '</b></div>' +
+      '<div class="hifz-result-row"><span>Words recited</span><b>' + total + '</b></div>' +
+      '<div class="hifz-result-row"><span>Time</span><b>' + Math.floor(elapsed/60) + 'm ' + (elapsed%60) + 's</b></div>' +
+    '</div>' +
+    '<button class="primary" id="hifzResultClose" style="width:100%;margin-top:14px">Done</button></div>';
+  document.body.appendChild(bg);
+  const close = () => {
+    bg.remove();
+    document.getElementById('hifzConfig').hidden  = false;
+    document.getElementById('hifzTestArea').hidden = true;
+  };
+  bg.addEventListener('click', e => { if(e.target === bg) close(); });
+  bg.querySelector('#hifzResultClose').addEventListener('click', close);
+}
+
+/* ============================================================
+   AUTHORITATIVE TAJWEED READER (Quran.com text_uthmani_tajweed)
+   ============================================================ */
+const TJ_API_BASE = 'https://api.quran.com/api/v4';
+
+const TJ_ALL_RULES = [
+  'ham_wasl','laam_shamsiyah',
+  'madda_normal','madda_permissible','madda_necessary',
+  'qalqalah','ghunnah','ikhfa',
+  'idghaam_ghunnah','idghaam_no_ghunnah',
+  'iqlab','silent'
+];
+
+const tjState = {
+  surah: null,
+  ayahs: [],
+  loading: false,
+  enabledRules: new Set(TJ_ALL_RULES.slice())
+};
+
+/* Fetch all verses of a surah with the authoritative tajweed HTML field.
+   Uses pagination so even Al-Baqarah (286 ayahs) loads fully. */
+async function fetchTajweedSurah(surahNumber){
+  const allVerses = [];
+  const perPage = 50;
+  let page = 1;
+  for(let safety = 0; safety < 10; safety++){
+    const url = TJ_API_BASE + '/verses/by_chapter/' + surahNumber +
+                '?fields=text_uthmani_tajweed&per_page=' + perPage + '&page=' + page;
+    const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if(!json.verses || !json.verses.length) break;
+    allVerses.push.apply(allVerses, json.verses);
+    if(json.verses.length < perPage) break;
+    const meta = json.pagination;
+    if(meta && typeof meta.total_pages === 'number' && page >= meta.total_pages) break;
+    page++;
+  }
+  if(!allVerses.length) throw new Error('No verses returned');
+  return allVerses;
+}
+
+/* Convert API HTML to our colour class spans */
+function decorateTajweedHtml(html){
+  let out = String(html || '');
+  out = out.replace(/<tajweed\s+class=["']?([^"'\s>]+)["']?\s*>/g,
+                    '<span class="tj-$1">');
+  out = out.replace(/<\/tajweed\s*>/g, '</span>');
+  out = out.replace(/<span[^>]*class=["']?end["']?[^>]*>([\s\S]*?)<\/span>/g,
+                    '<span class="ayah-num-tj">$1</span>');
+  return out;
+}
+
+/* Remove any colour classes for rules the user has toggled off. */
+function stripDisabledRules(line){
+  const selector = TJ_ALL_RULES.map(r => '.tj-' + r).join(',');
+  line.querySelectorAll(selector).forEach(sp => {
+    TJ_ALL_RULES.forEach(rule => {
+      if(!tjState.enabledRules.has(rule)) sp.classList.remove('tj-' + rule);
+    });
+  });
+}
+
+async function populateTajweedSurahs(){
+  const sel = document.getElementById('tajweedSurahSelect');
+  if(!sel) return;
+  if(sel.options.length > 1) return;
+  try{
+    const chapters = await ensureChapters();
+    sel.innerHTML = chapters.map(c =>
+      '<option value="' + c.number + '">' + c.number + '. ' + escapeHtml(c.englishName) +
+      ' (' + c.numberOfAyahs + ' ayahs)</option>'
+    ).join('');
+    sel.value = '1';
+    tjState.surah = 1;
+    await loadTajweedSurah(1);
+  }catch(e){
+    sel.innerHTML = '<option value="">Could not load surahs</option>';
+  }
+}
+
+async function loadTajweedSurah(surahNumber){
+  if(tjState.loading) return;
+  tjState.loading = true;
+  tjState.surah = surahNumber;
+  const mushaf = document.getElementById('tajweedMushaf');
+  if(!mushaf){ tjState.loading = false; return; }
+  mushaf.innerHTML = '<div class="mushaf-inner"><div class="loading">Loading Tajweed surah…</div></div>';
+  try{
+    const verses = await fetchTajweedSurah(surahNumber);
+    tjState.ayahs = verses;
+    renderTajweedSurah();
+  }catch(e){
+    console.warn('[Tajweed] load failed:', e);
+    mushaf.innerHTML =
+      '<div class="mushaf-inner"><div class="loading">' +
+      '<span class="err">⚠️ Could not load Tajweed data.</span>' +
+      'Check your connection and try again.</div></div>';
+  }finally{
+    tjState.loading = false;
+  }
+}
+
+function renderTajweedSurah(){
+  const mushaf = document.getElementById('tajweedMushaf');
+  if(!mushaf) return;
+  mushaf.innerHTML = '';
+  const inner = document.createElement('div');
+  inner.className = 'mushaf-inner';
+
+  const chapter = (chaptersCache || []).find(c => c.number === tjState.surah);
+  if(chapter){
+    const h = document.createElement('div');
+    h.className = 'mushaf-surah-header';
+    h.textContent = chapter.name + ' — ' + chapter.englishName;
+    inner.appendChild(h);
+  }
+
+  tjState.ayahs.forEach(v => {
+    const line = document.createElement('div');
+    line.className = 'ayah tj-ayah';
+    line.innerHTML = decorateTajweedHtml(v.text_uthmani_tajweed || '');
+    stripDisabledRules(line);
+    inner.appendChild(line);
+  });
+
+  mushaf.appendChild(inner);
+  mushaf.scrollTop = 0;
+}
+
+function toggleTajweedRule(rule, chip){
+  if(tjState.enabledRules.has(rule)){
+    tjState.enabledRules.delete(rule);
+    chip.classList.remove('active');
+    document.querySelectorAll('.tj-' + rule).forEach(el => el.classList.remove('tj-' + rule));
+  }else{
+    tjState.enabledRules.add(rule);
+    chip.classList.add('active');
+    renderTajweedSurah();
+  }
+}
+
+function toggleTajweedFullscreen(){
+  const mushaf = document.getElementById('tajweedMushaf');
+  const btn    = document.getElementById('tajweedFullscreenBtn');
+  if(!mushaf) return;
+  const isFs = mushaf.classList.toggle('tj-fullscreen');
+  document.body.classList.toggle('tj-fs-open', isFs);
+  if(btn){
+    btn.textContent = isFs ? '⤡' : '⛶';
+    btn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Fullscreen');
+  }
+  // In fullscreen mode the toolbar is hidden behind the fixed mushaf, so we
+  // add a floating minimize button (higher z-index) to guarantee the user
+  // can always exit fullscreen.
+  let closeBtn = document.getElementById('tjFsCloseBtn');
+  if(isFs){
+    if(!closeBtn){
+      closeBtn = document.createElement('button');
+      closeBtn.id = 'tjFsCloseBtn';
+      closeBtn.type = 'button';
+      closeBtn.className = 'tj-fs-close';
+      closeBtn.setAttribute('aria-label', 'Exit fullscreen');
+      closeBtn.title = 'Exit fullscreen';
+      closeBtn.textContent = '⤡';
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        toggleTajweedFullscreen();
+      });
+      document.body.appendChild(closeBtn);
+    }
+    closeBtn.hidden = false;
+    mushaf.scrollTop = 0;
+  } else if(closeBtn){
+    closeBtn.hidden = true;
+  }
+}
+
+async function openTajweedScreen(){
+  showScreen('tajweed');
+  await populateTajweedSurahs();
+}
+
+/* -------- Wire new feature screens -------- */
+(function wireNewHomeFeatures(){
+  const tileHifz    = document.getElementById('tileHifz');
+  const tileTajweed = document.getElementById('tileTajweed');
+  const streakBar   = document.getElementById('streakBar');
+  if(tileHifz)    tileHifz.addEventListener('click', () => openHifzScreen());
+  if(tileTajweed) tileTajweed.addEventListener('click', () => openTajweedScreen());
+  if(streakBar){
+    const handler = () => openAchievementsModal();
+    streakBar.addEventListener('click', handler);
+    streakBar.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); handler(); } });
+  }
+})();
+
+(function wireHifzScreen(){
+  const back     = document.getElementById('backFromHifz');
+  const sel      = document.getElementById('hifzSurahSelect');
+  const fromEl   = document.getElementById('hifzFromAyah');
+  const toEl     = document.getElementById('hifzToAyah');
+  const startBtn = document.getElementById('hifzStartBtn');
+  const stopBtn  = document.getElementById('hifzStopBtn');
+  const finishBtn = document.getElementById('hifzFinishBtn');
+
+  if(back) back.addEventListener('click', () => { stopHifzTest(true); showScreen('home'); });
+  if(sel)  sel.addEventListener('change', refreshHifzAyahMax);
+  if(fromEl) fromEl.addEventListener('change', refreshHifzAyahMax);
+  if(toEl)   toEl.addEventListener('change', refreshHifzAyahMax);
+  if(startBtn) startBtn.addEventListener('click', startHifzTest);
+  if(stopBtn)  stopBtn.addEventListener('click', () => stopHifzTest());
+  if(finishBtn) finishBtn.addEventListener('click', () => finishHifzTest());
+
+  document.querySelectorAll('.hifz-mode').forEach(btn => {
+    btn.addEventListener('click', () => selectHifzMode(btn.dataset.mode));
+  });
+
+  if(sel) sel.addEventListener('change', () => {
+    try{ localStorage.setItem('qc.hifz.lastSurah', sel.value); }catch(_){}
+  });
+})();
+
+(function wireTajweedScreen(){
+  const back  = document.getElementById('backFromTajweed');
+  const sel   = document.getElementById('tajweedSurahSelect');
+  const fsBtn = document.getElementById('tajweedFullscreenBtn');
+  const chips = document.querySelectorAll('.tj-chip');
+
+  if(back) back.addEventListener('click', () => {
+    if(document.body.classList.contains('tj-fs-open')) toggleTajweedFullscreen();
+    showScreen('home');
+  });
+  if(fsBtn) fsBtn.addEventListener('click', toggleTajweedFullscreen);
+
+  if(sel) sel.addEventListener('change', () => {
+    const n = parseInt(sel.value, 10);
+    if(Number.isFinite(n) && n >= 1 && n <= 114) loadTajweedSurah(n);
+  });
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => toggleTajweedRule(chip.dataset.rule, chip));
+  });
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && document.body.classList.contains('tj-fs-open')){
+      toggleTajweedFullscreen();
+    }
+  });
+})();
+
+/* -------- The rest of the original script (unchanged behavior) -------- */
 
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -3458,6 +4501,7 @@ function addBookmark(surah, ayah, pageNumber){
   if(chaptersCache){ const ch = chaptersCache.find(c => c.number === surah); if(ch){ surahName = ch.name; surahEnglishName = ch.englishName; } }
   bookmarks.unshift({ key, surah, ayah, page: pageNumber || 1, surahName, surahEnglishName, ts: Date.now() });
   saveBookmarks(); renderBookmarksScreen(); updateBookmarkButton();
+  try{ bumpStreak(); checkAchievements(); }catch(_){}
   return true;
 }
 function removeBookmark(key){
@@ -5151,10 +6195,6 @@ function recordMistake(i, kind, heardRaw){
   if(beepOn && kind === 'misread') beepThrottled('error');
 }
 
-/* GRADING — Follow+Strict now routes through gradeFull() with a tight
-   2-word lookahead. recordMistake() is a no-op in Follow mode, so
-   nothing is marked, beeped or counted. Follow+Balanced/Lenient keep
-   gradeFollowOnly(). Tajweed uses gradeFull() with adaptive lookahead. */
 function grade(tokens, isFinal, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
@@ -5201,8 +6241,6 @@ const FULL_LOOKAHEAD = 5;
 function gradeFull(tokens, isFinal, startIdx){
   const start = startIdx || 0;
   let used = 0;
-  /* Follow+Strict caps lookahead at 2 so the highlight tracks tightly.
-     Tajweed keeps the original adaptive lookahead (3–8 final, 2–3 interim). */
   const LOOKAHEAD = followOnly
     ? 2
     : (isFinal
@@ -5268,6 +6306,7 @@ async function startReciting(){
   recReset(); pendingJumpTarget = -1;
   setMicButton(); setStatus('Starting…', 'loading');
   requestWakeLock(); resetSilenceTimer(true); scheduleSaveProgress();
+  try{ bumpStreak(); }catch(_){}
 
   try{
     if(!speechRecognition || speechRecognition.__dead) speechRecognition = createSpeechRecognition();
@@ -5607,7 +6646,7 @@ document.addEventListener('visibilitychange',()=>{
 let lastTouch=0;
 document.addEventListener('touchend',e=>{
   const now=Date.now();
-  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step, .dlbtn')){
+  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step, .dlbtn, .streak-bar, .feature-tab, .hifz-mode, .hifz-word, .tj-chip, .tajweed-toolbar, .tj-ayah')){
     e.preventDefault();
   }
   lastTouch=now;
@@ -5684,6 +6723,12 @@ if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target ==
   updateVolIcon(); updateReciterTrigger(); refreshPermissionState();
   loadBookmarks(); renderBookmarksScreen(); renderJuzIndex(); refreshProgressMenu();
   updateInstallMenuItem(); maybeShowInstallPrompt();
+  updateStreakUI(); renderStreakBadges();
+  const hifzSel = document.getElementById('hifzSurahSelect');
+  if(hifzSel){
+    const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);
+    if(lastSurah) hifzSel.value = String(lastSurah);
+  }
   showScreen('home');
 })();
 
@@ -5747,18 +6792,18 @@ function openInfoModal(){
   '<div class="grabber"></div>' +
   '<h2>ℹ️ About this app</h2>' +
   '<div class="coach-note"><b>Looking for the Quran Recitation Coach rules?</b><br>The Recitation Coach has its own Info tab on the <b>Quran Recitation Coach</b> page — it explains Follow &amp; Tajweed modes, matching rules and progress memory. Everything else in the app is explained below.</div>' +
-  '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>The Home screen shows today\'s <b>Hijri date</b> (Umm al-Qura) in English and Arabic.</li><li>Tap the card to open a <b>month view</b> of the Hijri and Gregorian calendars together.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li>Open any surah from the index or pick a <b>Juz</b> — pages turn by swiping.</li><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li><li>Tap <b>EN</b> to show or hide the English translation.</li><li>The mushaf page follows the <b>light / dark theme</b> — a white page with black script in light mode, a black page with white script in dark mode.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>: a framed page, a top row with the surah name · page number · juz name, then the <b>Bismillah on its own centred line</b>, followed by the ayahs flowing as one continuous justified words text.</li><li>Ayah numbers appear as small <b>medallions</b> inside the text, exactly as in a printed mushaf.</li><li>The bottom of every page shows the current <b>manzil</b>.</li><li>The <b>first line of each of the 30 juz</b> is drawn in the <b>inverted colours</b> so the start of a juz is instantly recognisable.</li><li>Each <b>ruku</b> (subsection) ends with a small <b>ع</b> placed just outside the page frame, on the same line as the closing ayah.</li><li>Verses of <b>Sajdah</b> are marked with a <b>۩</b> and a pop-up notice appears when you open a page containing one.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">4</span> 📖 Translation — ' + escapeHtml(TRANSLATION_LABEL) + '</h3><ul><li>Every English translation shown in the reader, the audio player and the recitation coach is the <b>Holy Qur\'an translation by ' + escapeHtml(TRANSLATION_LABEL) + '</b> (1872–1953), one of the most widely read English renderings of the Qur\'an.</li><li><b>Translator:</b> ' + escapeHtml(TRANSLATION_LABEL) + '.<br><b>Edition ID:</b> <code>en.yusufali</code> (alquran.cloud) · <code>' + TRANSLATION_QURANCOM_ID + '</code> (quran.com v4).</li><li>The Arabic mushaf text is the classical <b>IndoPak</b> orthography (13-line South-Asian script), independent of the translation.</li><li><b>Footnotes are omitted.</b> Only the translation text itself is shown — numbered footnote markers and reference brackets are stripped so the verse reads as a single clean passage.</li><li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li>On the <b>Play audio</b> screen, tap the <b>Reciter</b> dropdown to open a scrollable list of all ' + RECITER_ORDER.length + ' Qaris. Tap any name to select it.</li><li>Your choice is remembered and used everywhere ayah audio is played (audio player and the recitation coach fallback).</li><li><b>Default reciter:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><div style="font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:6px">Available Qaris (' + RECITER_ORDER.length + ')</div><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
+  '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>The Home screen shows today\'s <b>Hijri date</b> in English and Arabic, computed from the same arithmetic algorithm used by the calendar.</li><li>Tap the card to open a <b>month view</b> of the Hijri and Gregorian calendars together.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li>Open any surah from the index or pick a <b>Juz</b> — pages turn by swiping.</li><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li><li>Tap <b>EN</b> to show or hide the English translation.</li><li>The mushaf page follows the <b>light / dark theme</b>.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>: a framed page, a top row with the surah name · page number · juz name, then the <b>Bismillah on its own centred line</b>, followed by the ayahs flowing as one continuous justified words text.</li><li>Ayah numbers appear as small <b>medallions</b> inside the text.</li><li>Verses of <b>Sajdah</b> are marked with a <b>۩</b> and a pop-up notice appears when you open a page containing one.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">4</span> 📖 Translation — ' + escapeHtml(TRANSLATION_LABEL) + '</h3><ul><li>Every English translation shown in the reader, the audio player and the recitation coach is the <b>Holy Qur\'an translation by ' + escapeHtml(TRANSLATION_LABEL) + '</b>.</li><li><b>Footnotes are omitted.</b> Only the translation text itself is shown.</li><li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li>On the <b>Play audio</b> screen, tap the <b>Reciter</b> dropdown to open a scrollable list of all ' + RECITER_ORDER.length + ' Qaris.</li><li>Your choice is remembered and used everywhere ayah audio is played.</li><li><b>Default reciter:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><div style="font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:6px">Available Qaris (' + RECITER_ORDER.length + ')</div><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
   '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> in the reader to bookmark it.</li><li>Tap a bookmark to jump back to that page.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li>Plays ayah by ayah with the <b>' + escapeHtml(TRANSLATION_LABEL) + ' English translation</b> shown below each ayah.</li><li>Ayahs and translation are <b>centred vertically and horizontally</b> on every screen size, and the highlighted ayah continues to auto-scroll as it plays.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name. The whole surah is saved with the Qari you have selected. If one ayah cannot be fetched from that Qari, a backup recording is used so the surah is always complete.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>. Tap a downloading button to cancel, or a green ✓ to delete the download.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li><li>If playback does not start on its own, tap the ▶ button once — the browser sometimes needs one extra tap.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Tap <b>Prayer Times</b> on the Home screen. If your location is not set, the app asks for it once — you can also tap the <b>⚙️</b> icon and search for a city by name.</li><li>The screen shows your city, the Hijri and Gregorian dates and the live clock on one row, then the five daily prayers (with Sunrise listed for reference) as a row-by-row list exactly as in a printed prayer timetable.</li><li>Tap the bell next to any prayer to turn its alarm on or off. The bell turns green when on and red when off.</li><li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b> (full call), <b>Beep</b> (offline chime) or <b>Mute</b> (visual + notification only).</li><li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid. <b>Your adjustments are saved on the device and survive every app update.</b></li><li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location. Tap <b>Start live compass</b> on a phone and hold it flat.</li><li>Times are computed <b>astronomically on your device</b> — you can switch the calculation method and the Asr school (Standard or Hanafi) at any time.</li><li>Prayer alarms fire while the app is open. Browsers cannot ring an alarm when a web page is fully closed.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">9</span> Share with a QR code</h3><ul><li>On the Home screen, open the <b>☰</b> menu and tap <b>Scan barcode</b>.</li><li>A full-screen <b>QR code</b> appears that opens <b>recite-hazel.vercel.app</b>.</li><li>Point any phone camera at it to open the app on another device.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">10</span> Light / dark theme</h3><ul><li>Top-right on Home, or from the coach screen\'s top bar.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">11</span> 🌐 Which browser should I use?</h3><ul><li><b>Android — Google Chrome</b> or <b>Microsoft Edge</b>: everything works, including the live recitation coach.</li><li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works.</li><li><b>Desktop — Chrome, Edge or Safari</b>: everything works.</li><li><b>Firefox</b> and most <b>in-app browsers</b> do <b>not</b> implement the Web Speech API, so the live coach is unavailable there.</li><li>Reading the Quran, translations, bookmarks, prayer times, audio playback and <b>offline downloads</b> work in <b>every</b> modern browser — only the coach needs the extra speech API.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">12</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3><ul><li>Most Chinese-market phones ship <b>without Google Play Services</b> and without Google Chrome.</li><li>Their built-in browsers do <b>not</b> implement the Web Speech API — the <b>Recitation Coach cannot work</b> in them.</li><li>Everything else works fine: the <b>Surah index, Juz index, Quran text, book-form pages, English translation (' + escapeHtml(TRANSLATION_LABEL) + '), Prayer Times, Qibla, bookmarks, ayah-by-ayah audio and offline downloads</b>.</li><li><b>To get the coach:</b> install <b>Google Chrome</b> and open this page in Chrome.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Tap <b>Prayer Times</b> on the Home screen.</li><li>Tap the bell next to any prayer to turn its alarm on or off.</li><li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b>, <b>Beep</b> or <b>Mute</b>.</li><li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid.</li><li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Tap <b>Hifz Test</b> on the Home screen for a memorization test with 3 modes: Silent Recall, Reveal-on-Mistake, Blank Last Line.</li><li>Tap <b>Tajweed Colors</b> on the Home screen for an authoritative, surah-by-surah colored mushaf sourced from <b>Quran.com\'s Uthmani Tajweed</b> annotations (Hafs ʿan ʿAsim).</li><li>Choose any of the <b>114 surahs</b> from the dropdown, toggle 12 tajweed rules on/off, and tap <b>⛶</b> to read in full screen with a large font.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>Recite, bookmark, or download something each day to grow your <b>daily streak</b>.</li><li>Tap the streak bar to see all 10 achievements you can unlock.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">11</span> 🌐 Which browser should I use?</h3><ul><li><b>Android — Google Chrome</b> or <b>Microsoft Edge</b>: everything works, including the live recitation coach.</li><li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works.</li><li><b>Desktop — Chrome, Edge or Safari</b>: everything works.</li><li><b>Firefox</b> and most <b>in-app browsers</b> do <b>not</b> implement the Web Speech API, so the live coach is unavailable there.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">12</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3><ul><li>Most Chinese-market phones ship <b>without Google Play Services</b> and without Google Chrome.</li><li>Their built-in browsers do <b>not</b> implement the Web Speech API — the <b>Recitation Coach cannot work</b> in them.</li><li>Everything else works fine: the <b>Surah index, Juz index, Quran text, book-form pages, English translation, Prayer Times, Qibla, bookmarks, ayah-by-ayah audio, offline downloads, Hifz Test, Tajweed Colors</b>.</li><li><b>To get the coach:</b> install <b>Google Chrome</b> and open this page in Chrome.</li></ul></div>' +
   '<div class="footer-note">All learning progress, prayer adjustments and downloads stay on your device.</div>' +
   '<div class="btn-group"><button class="primary" id="infoClose">Got it</button><button class="danger" id="infoReset">Reset app</button></div>' +
 '</div>';
@@ -5859,7 +6904,7 @@ window.addEventListener('error', e => { console.error('[QuranCoach] runtime erro
 (function applySupportBanner(){
   if(!SPEECH_SUPPORTED){
     supportBox.hidden = false;
-    supportBox.innerHTML = '⚠️ <b>Live recitation is not available in this browser.</b><br>Your browser does not expose the Web Speech API. Page text, English translation, Prayer Times, audio playback and offline downloads still work everywhere. For live recitation, please use <b>Chrome</b> on Android or desktop, or <b>Safari 14.5+</b> on iPhone. Chinese-market phones (Huawei, Honor, Xiaomi, OPPO, vivo) often ship browsers without this API — install <b>Google Chrome</b> and open the page there.';
+    supportBox.innerHTML = '⚠️ <b>Live recitation is not available in this browser.</b><br>Your browser does not expose the Web Speech API. Page text, English translation, Prayer Times, audio playback, Hifz Test, Tajweed Colors and offline downloads still work everywhere. For live recitation, please use <b>Chrome</b> on Android or desktop, or <b>Safari 14.5+</b> on iPhone.';
     return;
   }
   if(IS_HUAWEI){
@@ -5868,20 +6913,6 @@ window.addEventListener('error', e => { console.error('[QuranCoach] runtime erro
   }
 })();
 
-/* ============================================================
-   HOME HIJRI CARD — MUST MATCH THE CALENDAR MODAL EXACTLY
-   ============================================================
-   The Home-screen Hijri date, the calendar modal's "today" cell,
-   the Important Islamic Dates list and the Prayer Times screen
-   all derive from the SAME deterministic arithmetic conversion
-   (gregorianToJDN → jdnToHijri → gregorianToHijri).  The old
-   implementation used Intl.DateTimeFormat with the
-   'islamic-umalqura' calendar, which is supplied by the
-   browser/OS and can differ by a day between devices (and
-   between OS builds on the same device).  It has been removed
-   everywhere, so the Home card can never disagree with the
-   calendar, with the prayer-times screen, or with another
-   device. */
 function updateHijriDate(){
   const now = new Date();
   let en = ''; let ar = '';
@@ -6035,9 +7066,6 @@ function recomputePrayerTimes(){
   return out;
 }
 
-/* Same deterministic algorithm as the Home card and calendar — no
-   Intl.DateTimeFormat so the prayer screen can never disagree with
-   them on any device. */
 function fmtPrayerHijri(date){
   try{
     const h = gregorianToHijri(date);
