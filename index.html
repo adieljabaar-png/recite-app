@@ -467,6 +467,10 @@ body.light-mode .surah-row .dlbtn{background:rgba(42,111,224,.08);border-color:r
 body.light-mode .surah-row .dlbtn.downloading{background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.55);color:#8a6100;}
 body.light-mode .surah-row .dlbtn.done{background:rgba(31,154,90,.14);border-color:rgba(31,154,90,.55);color:#1f9a5a;}
 
+.surah-row .dlbtn[data-type="tr"] { background:rgba(47,208,122,.10); border-color:rgba(47,208,122,.35); color:var(--good); }
+.surah-row .dlbtn[data-type="tr"].downloading { background:rgba(255,176,32,.16); border-color:rgba(255,176,32,.60); color:#ffcf6b; font-size:.55rem; }
+.surah-row .dlbtn[data-type="tr"].done { background:rgba(47,208,122,.16); border-color:rgba(47,208,122,.60); color:var(--good); }
+
 .reciter-dropdown{position:relative;margin:4px 0 10px;}
 .reciter-trigger{
   display:flex;align-items:center;gap:11px;width:100%;
@@ -1754,6 +1758,26 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
 .islamic-dates{
   border-color: var(--gold) !important;
 }
+
+/* ============================================================
+   FIX 4b — GOLDEN BORDERS ON COACH SCREEN TABS
+   Mirrors the homepage tile / feature-tab gold frame so the
+   Back, Info, theme (menu) buttons, mode toggles, surah-nav
+   row and action buttons all share the same golden outline.
+   ============================================================ */
+#screenCoach header button,
+#screenCoach #surahNavRow button,
+#screenCoach .btn-row button,
+#screenCoach .toggles .toggle,
+#screenCoach #btnMic{
+  border-color: var(--gold) !important;
+}
+
+/* Keep the frame golden even when a mode pill is selected,
+   so every coach tab reads as the same "tab" family. */
+#screenCoach .toggle.mode-pill.active{
+  border-color: var(--gold) !important;
+}
 </style>
 </head>
 <body>
@@ -1811,7 +1835,7 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
     <button class="tile" id="tilePlayAudio" type="button">
       <span class="tile-icon">▶️</span>
       <span class="tile-title">Play audio</span>
-      <span class="tile-sub">English translation by Yusuf Ali</span>
+      <span class="tile-sub">Arabic &amp; Translation</span>
     </button>
     <button class="tile" id="tileBookmarks" type="button">
       <span class="tile-icon">🔖</span>
@@ -1926,16 +1950,41 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   <div class="sub-header">
     <button id="backFromAudio" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Play audio</h1>
-    <span class="sub-note">English translation by Yusuf Ali</span>
+    <span class="sub-note">Arabic &amp; Translation</span>
   </div>
+
   <div class="reciter-dropdown" id="reciterDropdown">
     <button class="reciter-trigger" id="reciterTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Select reciter">
       <span class="rt-icon">🎙️</span>
-      <span class="rt-meta"><span class="rt-label">Reciter</span><span class="rt-value" id="reciterValue">—</span></span>
+      <span class="rt-meta"><span class="rt-label">RECITER</span><span class="rt-value" id="reciterValue">—</span></span>
       <span class="rt-chev">▾</span>
     </button>
     <div class="reciter-menu" id="reciterMenu" role="listbox" aria-label="Available Qaris" hidden></div>
   </div>
+  
+  <div class="reciter-dropdown" id="translationDropdown">
+    <button class="reciter-trigger" id="translationTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Audio Translation">
+      <span class="rt-icon">🌐</span>
+      <span class="rt-meta"><span class="rt-label">AUDIO TRANSLATION</span><span class="rt-value" id="translationValue">—</span></span>
+      <span class="rt-chev">▾</span>
+    </button>
+    <div class="reciter-menu" id="translationMenu" role="listbox" aria-label="Available Translations" hidden></div>
+  </div>
+
+  <div class="reciter-dropdown" id="textTranslationDropdown">
+    <button class="reciter-trigger" id="textTranslationTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Select Text Translation">
+      <span class="rt-icon">📖</span>
+      <span class="rt-meta"><span class="rt-label">TEXT TRANSLATION</span><span class="rt-value" id="textTranslationValue">—</span></span>
+      <span class="rt-chev">▾</span>
+    </button>
+    <div class="reciter-menu" id="textTranslationMenu" role="listbox" aria-label="Available Text Translations" hidden></div>
+  </div>
+
+  <label class="toggle" id="translateAudioChip" style="width: 100%; justify-content: flex-start; margin-bottom: 10px; padding: 12px 16px; border-radius: 14px;">
+    <input type="checkbox" id="chkTranslateAudio" style="width: 20px; height: 20px;">
+    <span style="font-weight: 700; font-size: .9rem; color: var(--text);">Play translation audio</span>
+  </label>
+
   <div class="surah-list" id="audioSurahList"><div class="loading">Loading…</div></div>
 </div>
 
@@ -2312,6 +2361,19 @@ const reciterTrigger  = document.getElementById('reciterTrigger');
 const reciterMenu     = document.getElementById('reciterMenu');
 const reciterValue    = document.getElementById('reciterValue');
 
+const translationDropdown = document.getElementById('translationDropdown');
+const translationTrigger  = document.getElementById('translationTrigger');
+const translationMenu     = document.getElementById('translationMenu');
+const translationValue    = document.getElementById('translationValue');
+
+const textTranslationDropdown = document.getElementById('textTranslationDropdown');
+const textTranslationTrigger  = document.getElementById('textTranslationTrigger');
+const textTranslationMenu     = document.getElementById('textTranslationMenu');
+const textTranslationValue    = document.getElementById('textTranslationValue');
+
+const chkTranslateAudio   = document.getElementById('chkTranslateAudio');
+const translateAudioChip  = document.getElementById('translateAudioChip');
+
 const progressSection   = document.getElementById('progressSection');
 const progressTrigger   = document.getElementById('progressTrigger');
 const progressMenu      = document.getElementById('progressMenu');
@@ -2345,9 +2407,38 @@ const READER_EDITION = 'text_indopak';
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 
-const TRANSLATION_ALQURAN = 'en.yusufali';
-const TRANSLATION_QURANCOM_ID = 203;
-const TRANSLATION_LABEL = 'Abdullah Yusuf Ali';
+/* ============================================================
+   TEXT TRANSLATION MODEL
+   Two English translations are supported:
+   • Abdullah Yusuf Ali   (alquran.cloud: en.yusufali, quran.com: 203)
+   • Saheeh International (alquran.cloud: en.sahih,    quran.com: 20)
+   The user selects their preferred text translation from the
+   "TEXT TRANSLATION" dropdown on the Play audio screen. When they
+   enable translation audio playback (Saheeh International), the
+   text automatically switches to Saheeh International so the
+   audio and text always match.
+   ============================================================ */
+const TEXT_TRANSLATION_OPTIONS = [
+  { id: 'en.yusufali', quranComId: 203, label: 'Abdullah Yusuf Ali',  shortLabel: 'Yusuf Ali' },
+  { id: 'en.sahih',    quranComId: 20,  label: 'Saheeh International', shortLabel: 'Saheeh Intl' }
+];
+
+let translationTextId = (function () {
+  try {
+    const stored = localStorage.getItem('qc.translationText');
+    if (stored && TEXT_TRANSLATION_OPTIONS.some(t => t.id === stored)) return stored;
+  } catch (e) {}
+  return 'en.yusufali';
+})();
+
+function getTextTranslationById(id) {
+  return TEXT_TRANSLATION_OPTIONS.find(t => t.id === id) || TEXT_TRANSLATION_OPTIONS[0];
+}
+function currentTextTranslation()            { return getTextTranslationById(translationTextId); }
+function currentTextTranslationLabel()       { return currentTextTranslation().label; }
+function currentTextTranslationQuranComId()  { return currentTextTranslation().quranComId; }
+
+const TRANSLATION_ALQURAN = 'en.yusufali'; // legacy constant — kept for safety; new code uses translationTextId
 
 const VAPID_PUBLIC_KEY = 'BHpU2OJZjHoYab_-F8I369UTsJjx9ArleSiggsdQ2dcch4mTQFQLTEvanyto6J5f8xFh-tshGyGsJNiDj9xy1aE';
 
@@ -2598,6 +2689,17 @@ const RECITER_ORDER = [
   'Salah_Al_Budair_128kbps','Ali_Jaber_64kbps'
 ];
 
+/* Audio translation options (what the reciter's English companion audio plays).
+   Each option carries a `textId` — the text translation to display underneath
+   the Arabic while this audio translation is being played. */
+const TRANSLATION_AUDIO_OPTIONS = [
+  {
+    id: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps',
+    label: 'English - Saheeh International',
+    textId: 'en.sahih'
+  }
+];
+
 const _levCache = new Map();
 const _LEV_MAX  = 50000;
 const LEV_CACHE_MAX = 6;
@@ -2690,6 +2792,10 @@ function buildAyahUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
 
+function buildTranslationAudioUrl(folder, surah, ayah){
+  return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
+}
+
 const AUDIO_CACHE_NAME = 'qc-audio';
 const DOWNLOADS_STORE_KEY = 'qc.downloads';
 const DOWNLOAD_CONCURRENCY = 3;
@@ -2776,14 +2882,15 @@ function surahAyahTotal(surahNumber){
   return SURAH_AYAH_COUNTS[surahNumber - 1] || 0;
 }
 
-function getAudioDownloadBtn(surahNumber){
+function getAudioDownloadBtn(surahNumber, type) {
   if(!audioSurahList) return null;
-  return audioSurahList.querySelector('.dlbtn[data-surah="' + surahNumber + '"]');
+  return audioSurahList.querySelector('.dlbtn[data-surah="' + surahNumber + '"][data-type="' + type + '"]');
 }
 
-function updateAudioDownloadBtn(btn, surahNumber){
+function updateAudioDownloadBtn(btn, surahNumber, type){
   if(!btn) return;
-  const key = downloadKeyFor(reciter, surahNumber);
+
+  const key = type === 'ar' ? downloadKeyFor(reciter, surahNumber) : downloadKeyFor(viewerAudio.translationId, surahNumber);
   const running = dlState.get(key);
   btn.classList.remove('downloading','done','failed');
 
@@ -2804,8 +2911,8 @@ function updateAudioDownloadBtn(btn, surahNumber){
     return;
   }
   btn.textContent = '⬇';
-  btn.title = 'Download audio for offline listening';
-  btn.setAttribute('aria-label', 'Download audio');
+  btn.title = type === 'ar' ? 'Download Arabic audio' : 'Download English translation audio';
+  btn.setAttribute('aria-label', type === 'ar' ? 'Download Arabic audio' : 'Download English audio');
 }
 
 function downloadAbortBridge(parentSignal, ms){
@@ -2833,16 +2940,42 @@ async function requestPersistentStorage(){
   return false;
 }
 
+async function probeTranslationAudio(url){
+  if(!url) return false;
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { try{ ctrl.abort(); }catch(_){} }, 8000);
+    let res = null;
+    try{
+      res = await fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Range': 'bytes=0-0' },
+        signal: ctrl.signal
+      });
+    } finally { clearTimeout(t); }
+    if(!res) return false;
+    if(!res.ok && res.status !== 206) return false;
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if(ct && !/audio|mpeg|mp3|octet-stream|ogg|wav|x-m4a|mp4|aac|flac|webm/.test(ct)) return false;
+    try{ if(res.body) res.body.cancel(); }catch(_){}
+    return true;
+  }catch(_){ return false; }
+}
+
 async function fetchAudioForOffline(url, parentSignal){
   const bridge = downloadAbortBridge(parentSignal, DOWNLOAD_TIMEOUT_MS);
   try{
     try{
       const res = await fetch(url, { mode: 'cors', cache: 'no-store', signal: bridge.signal });
-      if(res && res.ok){
+      if(res){
+        if(!res.ok) return null;
         const ct = (res.headers.get('content-type') || '').toLowerCase();
-        if(!ct || /audio|mpeg|mp3|octet-stream/.test(ct)) return res;
+        if(!ct || /audio|mpeg|mp3|octet-stream|ogg|wav|x-m4a|mp4|aac|flac|webm/.test(ct)) return res;
+        return null;
       }
     }catch(_){}
+
     if(bridge.signal.aborted) return null;
     try{
       const res = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: bridge.signal });
@@ -2852,17 +2985,19 @@ async function fetchAudioForOffline(url, parentSignal){
   } finally { bridge.release(); }
 }
 
-async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, signal){
+async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, signal, isTranslation){
   try{
     const hit = await cache.match(primaryUrl, { ignoreSearch: true, ignoreVary: true });
     if(hit) return 'cached';
   }catch(_){}
 
   const sources = [primaryUrl];
-  islamicNetworkUrls(reciterId, surah, ayah).forEach(u => sources.push(u));
-  if(reciterId !== FALLBACK_RECITER){
-    sources.push(buildAyahUrl(FALLBACK_RECITER, surah, ayah));
-    islamicNetworkUrls(FALLBACK_RECITER, surah, ayah).forEach(u => sources.push(u));
+  if(!isTranslation){
+      islamicNetworkUrls(reciterId, surah, ayah).forEach(u => sources.push(u));
+      if(reciterId !== FALLBACK_RECITER){
+        sources.push(buildAyahUrl(FALLBACK_RECITER, surah, ayah));
+        islamicNetworkUrls(FALLBACK_RECITER, surah, ayah).forEach(u => sources.push(u));
+      }
   }
 
   for(let i = 0; i < sources.length; i++){
@@ -2898,7 +3033,7 @@ async function downloadSurahAudio(surahNumber){
   const state = { surah: surahNumber, reciter: reciterId, total: totalAyahs, done: 0, failed: [], controller: controller };
   dlState.set(key, state);
 
-  const refreshBtn = () => updateAudioDownloadBtn(getAudioDownloadBtn(surahNumber), surahNumber);
+  const refreshBtn = () => updateAudioDownloadBtn(getAudioDownloadBtn(surahNumber, 'ar'), surahNumber, 'ar');
   refreshBtn();
 
   let next = 1;
@@ -2909,7 +3044,7 @@ async function downloadSurahAudio(surahNumber){
       const ayah = next++;
       if(ayah > totalAyahs) return;
       const primaryUrl = buildAyahUrl(reciterId, surahNumber, ayah);
-      const r = await fetchAndStoreAyah(cache, reciterId, surahNumber, ayah, primaryUrl, controller.signal);
+      const r = await fetchAndStoreAyah(cache, reciterId, surahNumber, ayah, primaryUrl, controller.signal, false);
       if(r === 'quota'){ quotaHit = true; try{ controller.abort(); }catch(_){} return; }
       if(r === 'aborted') return;
       if(r === 'ok' || r === 'cached') state.done++;
@@ -2943,21 +3078,83 @@ async function downloadSurahAudio(surahNumber){
   refreshAudioRowStates();
 }
 
-function confirmSurahDownload(surahNumber){
+async function downloadTranslationSurahAudio(surahNumber) {
+    const transId = viewerAudio.translationId;
+    const key = downloadKeyFor(transId, surahNumber);
+    if(dlState.has(key)) return;
+
+    const totalAyahs = surahAyahTotal(surahNumber);
+    if(!totalAyahs) return;
+
+    await requestPersistentStorage();
+    let cache;
+    try{ cache = await caches.open(AUDIO_CACHE_NAME); }
+    catch(e){ showToast('⚠️ Offline storage is not available in this browser.', 4200); return; }
+
+    const controller = new AbortController();
+    const state = { surah: surahNumber, reciter: transId, total: totalAyahs, done: 0, failed: [], controller: controller, isTranslation: true };
+    dlState.set(key, state);
+
+    const refreshBtn = () => updateAudioDownloadBtn(getAudioDownloadBtn(surahNumber, 'tr'), surahNumber, 'tr');
+    refreshBtn();
+
+    let next = 1;
+    let quotaHit = false;
+
+    async function worker(){
+        while(!controller.signal.aborted){
+            const ayah = next++;
+            if(ayah > totalAyahs) return;
+            const primaryUrl = buildTranslationAudioUrl(transId, surahNumber, ayah);
+            const r = await fetchAndStoreAyah(cache, transId, surahNumber, ayah, primaryUrl, controller.signal, true);
+            if(r === 'quota'){ quotaHit = true; try{ controller.abort(); }catch(_){} return; }
+            if(r === 'aborted') return;
+            if(r === 'ok' || r === 'cached') state.done++;
+            else state.failed.push(ayah);
+            refreshBtn();
+        }
+    }
+
+    try{
+        const workers = [];
+        for(let w = 0; w < DOWNLOAD_CONCURRENCY; w++) workers.push(worker());
+        await Promise.all(workers);
+    }catch(err){ console.warn('[Download] failed:', err); }
+
+    const wasAborted = controller.signal.aborted;
+    dlState.delete(key);
+
+    if(quotaHit){ showToast('⚠️ Storage is full. Free up space, then tap ⬇ to resume.', 4600); }
+    else if(wasAborted){ showToast('⏹ Download cancelled — tap ⬇ to resume later.', 3600); }
+    else if(state.failed.length === 0){
+        downloads[key] = { surah: surahNumber, reciter: transId, total: totalAyahs, ts: Date.now() };
+        saveDownloadsStore();
+        showToast('✅ Translation for <b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> saved for offline listening.', 4000);
+        updateTranslationCheckboxState();
+    } else if(state.done > 0){
+        showToast('⚠️ ' + state.failed.length + ' ayah(s) could not be downloaded. Tap ⬇ to retry.', 4600);
+    } else {
+        showToast('⚠️ Download failed. Check your connection and try again.', 4200);
+    }
+
+    refreshAudioRowStates();
+}
+
+function confirmSurahDownload(surahNumber, type){
   return new Promise(resolve => {
     const total = surahAyahTotal(surahNumber);
-    const estMb = Math.max(1, Math.round(total * 0.13));
+    const estMb = Math.max(1, Math.round(total * (type === 'ar' ? 0.13 : 0.08)));
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = '<div class="modal">' +
       '<div class="grabber"></div>' +
-      '<h2>Download surah audio</h2>' +
+      '<h2>Download ' + (type === 'ar' ? 'Arabic' : 'Translation') + ' audio</h2>' +
       '<p style="margin-bottom:12px"><b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> · ' + total + ' ayahs</p>' +
       '<div class="okbox">' +
-        'Qari: <b>' + escapeHtml(reciterLabel()) + '</b><br>' +
+        'Source: <b>' + (type === 'ar' ? reciterLabel() : (TRANSLATION_AUDIO_OPTIONS.find(x => x.id === viewerAudio.translationId)?.label || 'English Translation')) + '</b><br>' +
         'Estimated size: <b>~' + estMb + ' MB</b><br>' +
         'Saved on this device for offline playback.<br>' +
-        '<span style="opacity:.85">If an ayah is unavailable from this Qari, a backup recording is used.</span>' +
+        (type === 'ar' ? '<span style="opacity:.85">If an ayah is unavailable from this Qari, a backup recording is used.</span>' : '') +
       '</div>' +
       '<button class="primary" id="dlConfirmYes" type="button">Download</button>' +
       '<div style="height:8px"></div>' +
@@ -2971,14 +3168,14 @@ function confirmSurahDownload(surahNumber){
   });
 }
 
-function confirmRemoveDownload(surahNumber){
+function confirmRemoveDownload(surahNumber, type){
   return new Promise(resolve => {
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = '<div class="modal">' +
       '<div class="grabber"></div>' +
       '<h2>Remove download?</h2>' +
-      '<p><b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> with <b>' + escapeHtml(reciterLabel()) + '</b> is saved on this device.</p>' +
+      '<p><b>' + escapeHtml(surahDisplayName(surahNumber)) + '</b> ' + (type === 'ar' ? 'Arabic' : 'Translation') + ' audio is saved on this device.</p>' +
       '<div class="errbox">Deleting frees the storage space. The surah will still play online afterwards.</div>' +
       '<button class="danger" id="dlRemoveYes" type="button" style="width:100%">Delete download</button>' +
       '<div style="height:8px"></div>' +
@@ -2992,38 +3189,52 @@ function confirmRemoveDownload(surahNumber){
   });
 }
 
-async function removeSurahDownload(surahNumber){
-  const reciterId = reciter;
-  const entry = downloads[downloadKeyFor(reciterId, surahNumber)];
+async function removeSurahDownload(surahNumber, type){
+  const reciterId = type === 'ar' ? reciter : viewerAudio.translationId;
+  const key = downloadKeyFor(reciterId, surahNumber);
+  const entry = downloads[key];
   const totalAyahs = (entry && entry.total) || surahAyahTotal(surahNumber);
   let removed = 0;
   try{
     const cache = await caches.open(AUDIO_CACHE_NAME);
     for(let a = 1; a <= totalAyahs; a++){
-      const url = buildAyahUrl(reciterId, surahNumber, a);
+      const url = type === 'ar' ? buildAyahUrl(reciterId, surahNumber, a) : buildTranslationAudioUrl(reciterId, surahNumber, a);
       try{ const ok = await cache.delete(url); if(ok) removed++; }catch(_){}
     }
   }catch(_){}
-  delete downloads[downloadKeyFor(reciterId, surahNumber)];
+  delete downloads[key];
   saveDownloadsStore();
   refreshAudioRowStates();
+  updateTranslationCheckboxState();
   showToast('🗑️ Removed ' + removed + ' saved file' + (removed === 1 ? '' : 's') + '.');
 }
 
-async function handleAudioDownloadTap(surahNumber){
-  const key = downloadKeyFor(reciter, surahNumber);
+async function handleAudioDownloadTap(surahNumber, type){
+  const key = type === 'ar' ? downloadKeyFor(reciter, surahNumber) : downloadKeyFor(viewerAudio.translationId, surahNumber);
   const running = dlState.get(key);
   if(running){ try{ running.controller.abort(); }catch(_){} return; }
   if(downloads[key]){
-    const yes = await confirmRemoveDownload(surahNumber);
-    if(yes) await removeSurahDownload(surahNumber);
+    const yes = await confirmRemoveDownload(surahNumber, type);
+    if(yes) await removeSurahDownload(surahNumber, type);
     return;
   }
   if(!navigator.onLine){ showToast('📶 Connect to the internet to download audio.', 3800); return; }
   if(!('caches' in window)){ showToast('⚠️ This browser cannot store audio offline.', 4200); return; }
-  const yes = await confirmSurahDownload(surahNumber);
+
+  if(type === 'tr'){
+    const probeUrl = buildTranslationAudioUrl(viewerAudio.translationId, surahNumber, 1);
+    showToast('⏳ Checking translation availability…', 6000);
+    const available = await probeTranslationAudio(probeUrl);
+    if(!available){
+      showToast('⚠️ This English translation isn\'t available on the audio server.', 6000);
+      return;
+    }
+  }
+
+  const yes = await confirmSurahDownload(surahNumber, type);
   if(!yes) return;
-  downloadSurahAudio(surahNumber);
+  if(type === 'ar') downloadSurahAudio(surahNumber);
+  else downloadTranslationSurahAudio(surahNumber);
 }
 
 const QRGen = (function(){
@@ -3329,6 +3540,8 @@ function showScreen(name){
   if(name !== 'coach' && readerFullscreen) exitReaderFullscreen();
   if(name === 'home') refreshProgressMenu();
   closeReciterMenu();
+  closeTranslationMenu();
+  closeTextTranslationMenu();
   window.scrollTo(0, 0);
 }
 
@@ -3565,9 +3778,6 @@ function renderHifzMushaf(){
       span.className = 'hifz-word';
       span.textContent = tok;
 
-      // Pure pause/diacritic marks (waqf symbols etc.) contain no Arabic letters
-      // after normalisation. Render them visibly and never add them as match
-      // targets — otherwise the "Reveal on Mistake" recognizer would stall.
       if(!normArCached(tok)){
         span.classList.add('hifz-visible');
         line.appendChild(span);
@@ -3778,8 +3988,6 @@ const tjState = {
   enabledRules: new Set(TJ_ALL_RULES.slice())
 };
 
-/* Fetch all verses of a surah with the authoritative tajweed HTML field.
-   Uses pagination so even Al-Baqarah (286 ayahs) loads fully. */
 async function fetchTajweedSurah(surahNumber){
   const allVerses = [];
   const perPage = 50;
@@ -3801,7 +4009,6 @@ async function fetchTajweedSurah(surahNumber){
   return allVerses;
 }
 
-/* Convert API HTML to our colour class spans */
 function decorateTajweedHtml(html){
   let out = String(html || '');
   out = out.replace(/<tajweed\s+class=["']?([^"'\s>]+)["']?\s*>/g,
@@ -3812,7 +4019,6 @@ function decorateTajweedHtml(html){
   return out;
 }
 
-/* Remove any colour classes for rules the user has toggled off. */
 function stripDisabledRules(line){
   const selector = TJ_ALL_RULES.map(r => '.tj-' + r).join(',');
   line.querySelectorAll(selector).forEach(sp => {
@@ -3911,9 +4117,6 @@ function toggleTajweedFullscreen(){
     btn.textContent = isFs ? '⤡' : '⛶';
     btn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Fullscreen');
   }
-  // In fullscreen mode the toolbar is hidden behind the fixed mushaf, so we
-  // add a floating minimize button (higher z-index) to guarantee the user
-  // can always exit fullscreen.
   let closeBtn = document.getElementById('tjFsCloseBtn');
   if(isFs){
     if(!closeBtn){
@@ -3942,7 +4145,6 @@ async function openTajweedScreen(){
   await populateTajweedSurahs();
 }
 
-/* -------- Wire new feature screens -------- */
 (function wireNewHomeFeatures(){
   const tileHifz    = document.getElementById('tileHifz');
   const tileTajweed = document.getElementById('tileTajweed');
@@ -4009,8 +4211,6 @@ async function openTajweedScreen(){
     }
   });
 })();
-
-/* -------- The rest of the original script (unchanged behavior) -------- */
 
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -4619,6 +4819,100 @@ function changeReciter(id){
   refreshAudioRowStates();
 }
 
+function renderTranslationSelect(){
+  if(!translationMenu) return;
+  translationMenu.innerHTML = '';
+  TRANSLATION_AUDIO_OPTIONS.forEach((t, i) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'reciter-item' + (viewerAudio.translationId === t.id ? ' active' : '');
+    item.dataset.translation = t.id;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', viewerAudio.translationId === t.id ? 'true' : 'false');
+    item.innerHTML = '<span class="ri-num">' + (i + 1) + '</span><span class="ri-name">' + escapeHtml(t.label) + '</span><span class="ri-check">✓</span>';
+    item.addEventListener('click', () => { closeTranslationMenu(); changeTranslation(t.id); });
+    translationMenu.appendChild(item);
+  });
+  updateTranslationTrigger();
+}
+function updateTranslationTrigger(){
+  if(translationValue) {
+    const t = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === viewerAudio.translationId);
+    translationValue.textContent = t ? t.label : 'English - Saheeh International';
+  }
+}
+function openTranslationMenu(){
+  if(!translationMenu || !translationTrigger || !translationDropdown) return;
+  translationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.translation === viewerAudio.translationId; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  translationDropdown.classList.add('open'); translationMenu.hidden = false; translationTrigger.setAttribute('aria-expanded', 'true');
+  const active = translationMenu.querySelector('.reciter-item.active');
+  if(active && active.scrollIntoView){ try{ active.scrollIntoView({ block: 'nearest' }); }catch(_){} }
+}
+function closeTranslationMenu(){
+  if(!translationMenu || !translationTrigger || !translationDropdown) return;
+  translationDropdown.classList.remove('open'); translationMenu.hidden = true; translationTrigger.setAttribute('aria-expanded', 'false');
+}
+function toggleTranslationMenu(){ if(!translationMenu) return; if(translationMenu.hidden) openTranslationMenu(); else closeTranslationMenu(); }
+
+function changeTranslation(id){
+  viewerAudio.translationId = id;
+  localStorage.setItem('qc.translationAudioId', id);
+  updateTranslationTrigger();
+  if(translationMenu){ translationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.translation === id; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); }); }
+  const label = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === id);
+  showToast('🌐 Audio translation: <b>' + (label ? label.label : id) + '</b>');
+  updateTranslationCheckboxState();
+  refreshAudioRowStates();
+  if(viewerAudio.active && viewerAudio.playTranslation){
+    reloadViewerTranslation();
+  }
+}
+
+/* ---------- TEXT TRANSLATION DROPDOWN ---------- */
+function renderTextTranslationSelect(){
+  if(!textTranslationMenu) return;
+  textTranslationMenu.innerHTML = '';
+  TEXT_TRANSLATION_OPTIONS.forEach((t, i) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'reciter-item' + (translationTextId === t.id ? ' active' : '');
+    item.dataset.textTrans = t.id;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', translationTextId === t.id ? 'true' : 'false');
+    item.innerHTML = '<span class="ri-num">' + (i + 1) + '</span><span class="ri-name">' + escapeHtml(t.label) + '</span><span class="ri-check">✓</span>';
+    item.addEventListener('click', () => { closeTextTranslationMenu(); changeTextTranslation(t.id); });
+    textTranslationMenu.appendChild(item);
+  });
+  updateTextTranslationTrigger();
+}
+function updateTextTranslationTrigger(){
+  if(textTranslationValue) textTranslationValue.textContent = currentTextTranslationLabel();
+}
+function openTextTranslationMenu(){
+  if(!textTranslationMenu || !textTranslationTrigger || !textTranslationDropdown) return;
+  textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.textTrans === translationTextId; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  textTranslationDropdown.classList.add('open'); textTranslationMenu.hidden = false; textTranslationTrigger.setAttribute('aria-expanded', 'true');
+  const active = textTranslationMenu.querySelector('.reciter-item.active');
+  if(active && active.scrollIntoView){ try{ active.scrollIntoView({ block: 'nearest' }); }catch(_){} }
+}
+function closeTextTranslationMenu(){
+  if(!textTranslationMenu || !textTranslationTrigger || !textTranslationDropdown) return;
+  textTranslationDropdown.classList.remove('open'); textTranslationMenu.hidden = true; textTranslationTrigger.setAttribute('aria-expanded', 'false');
+}
+function toggleTextTranslationMenu(){ if(!textTranslationMenu) return; if(textTranslationMenu.hidden) openTextTranslationMenu(); else closeTextTranslationMenu(); }
+
+function changeTextTranslation(id){
+  translationTextId = id;
+  try{ localStorage.setItem('qc.translationText', id); }catch(e){}
+  updateTextTranslationTrigger();
+  if(textTranslationMenu){ textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.textTrans === id; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); }); }
+  showToast('📖 Text translation: <b>' + escapeHtml(currentTextTranslationLabel()) + '</b>');
+  try{ readerState.pages.clear(); }catch(e){}
+  if(viewerAudio.active && viewerAudio.surah && !viewerAudio.playTranslation){
+    reloadViewerTranslation();
+  }
+}
+
 async function renderAudioSurahList(){
   if(audioListRendered){ refreshAudioRowStates(); return; }
   audioSurahList.innerHTML = '<div class="loading">Loading…</div>';
@@ -4634,14 +4928,19 @@ async function renderAudioSurahList(){
       row.setAttribute('aria-label', 'Play Surah ' + s.englishName);
       row.innerHTML = '<span class="num">' + String(s.number).padStart(3,'0') + '</span>' +
         '<span class="meta"><span class="en">' + escapeHtml(s.englishName) + '</span><span class="sub">' + s.numberOfAyahs + ' ayahs · ' + escapeHtml(s.revelationType) + '</span></span>' +
-        '<button class="dlbtn" type="button" data-surah="' + s.number + '" aria-label="Download audio">⬇</button>' +
+        '<div class="dl-btn-group" style="display:flex; gap:4px; flex-shrink:0;">' +
+          '<button class="dlbtn" type="button" data-surah="' + s.number + '" data-type="ar" aria-label="Download Arabic audio">⬇</button>' +
+          '<button class="dlbtn" type="button" data-surah="' + s.number + '" data-type="tr" aria-label="Download English audio">⬇</button>' +
+        '</div>' +
         '<span class="ar">' + escapeHtml(s.name) + '</span>' +
         '<button class="playbtn" type="button" tabindex="-1" aria-hidden="true"><span class="pb-ico">▶</span></button>';
       const activate = (ev) => { if(ev){ ev.preventDefault(); ev.stopPropagation(); } openSurahInViewer(s.number, 'audio'); };
       row.addEventListener('click', activate);
       row.addEventListener('keydown', (ev) => { if(ev.target !== row) return; if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); activate(ev); } });
-      const dlBtn = row.querySelector('.dlbtn');
-      if(dlBtn){ dlBtn.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); handleAudioDownloadTap(s.number); }); }
+      const dlArBtn = row.querySelector('.dlbtn[data-type="ar"]');
+      if(dlArBtn){ dlArBtn.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); handleAudioDownloadTap(s.number, 'ar'); }); }
+      const dlTrBtn = row.querySelector('.dlbtn[data-type="tr"]');
+      if(dlTrBtn){ dlTrBtn.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); handleAudioDownloadTap(s.number, 'tr'); }); }
       audioSurahList.appendChild(row);
     });
     audioListRendered = true;
@@ -4662,8 +4961,10 @@ function refreshAudioRowStates(){
       btn.classList.toggle('playing', isActive);
       if(ico) ico.textContent = isActive && !viewerAudio.paused ? '⏸' : '▶';
     }
-    const dl = row.querySelector('.dlbtn');
-    if(dl) updateAudioDownloadBtn(dl, s);
+    const dlAr = row.querySelector('.dlbtn[data-type="ar"]');
+    if(dlAr) updateAudioDownloadBtn(dlAr, s, 'ar');
+    const dlTr = row.querySelector('.dlbtn[data-type="tr"]');
+    if(dlTr) updateAudioDownloadBtn(dlTr, s, 'tr');
   });
 }
 
@@ -4696,7 +4997,7 @@ async function getJuzStartPage(juzNumber){
 }
 
 async function fetchPageIndopak(pageNumber){
-  const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber + '?fields=' + READER_EDITION + '&per_page=300&word_fields=text_indopak&translations=' + TRANSLATION_QURANCOM_ID;
+  const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber + '?fields=' + READER_EDITION + '&per_page=300&word_fields=text_indopak&translations=' + currentTextTranslationQuranComId();
   const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
@@ -4756,7 +5057,7 @@ async function fetchPageData(pageNumber){
   const hasTranslations = data.ayahs.some(a => a.translation && a.translation.length);
   if(!hasTranslations){
     try{
-      const enRes = await fetchWithTimeout(ALQURAN_API + '/page/' + pageNumber + '/' + TRANSLATION_ALQURAN, FETCH_TIMEOUT_MS).catch(() => null);
+      const enRes = await fetchWithTimeout(ALQURAN_API + '/page/' + pageNumber + '/' + translationTextId, FETCH_TIMEOUT_MS).catch(() => null);
       if(enRes && enRes.ok){
         const enJson = await enRes.json();
         if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){
@@ -4966,8 +5267,81 @@ const QV_CHROME_HIDE_MS = 3000;
 let viewerReturnScreen = 'home';
 let viewerHideFullscreen = false;
 
-const viewerAudio = { active: false, paused: false, surah: 0, ayahIdx: 0, ayahs: [], translations: [], meta: null, metaLoaded: false, token: 0 };
+function resolveDefaultTranslationId(){
+  const stored = localStorage.getItem('qc.translationAudioId');
+  if(stored && TRANSLATION_AUDIO_OPTIONS.some(t => t.id === stored)) return stored;
+  return 'English/Sahih_Intnl_Ibrahim_Walk_192kbps';
+}
+
+const viewerAudio = {
+  active: false, paused: false, surah: 0, ayahIdx: 0,
+  ayahs: [], translations: [], meta: null, metaLoaded: false, token: 0,
+  translationId: resolveDefaultTranslationId(),
+  playTranslation: false,
+  playTranslationWarned: false
+};
 let viewerAudioErrorStreak = 0;
+
+/* ============================================================
+   getActiveTextTranslationId()
+   The single source of truth for which English translation text
+   should be displayed right now.
+   • When the user is listening to translation audio (Saheeh
+     International) → return that audio option's textId so the
+     text always matches the audio.
+   • Otherwise → return the user's chosen text translation from
+     the TEXT TRANSLATION dropdown.
+   ============================================================ */
+function getActiveTextTranslationId(){
+  try{
+    if(viewerOpen && viewerMode === 'audio' && viewerAudio.playTranslation){
+      const audioOpt = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === viewerAudio.translationId);
+      if(audioOpt && audioOpt.textId) return audioOpt.textId;
+    }
+  }catch(e){}
+  return translationTextId;
+}
+
+async function reloadViewerTranslation(){
+  if(!viewerAudio.active || !viewerAudio.surah) return;
+  const targetSurah = viewerAudio.surah;
+  const textTransId = getActiveTextTranslationId();
+  try{
+    const res = await fetchWithTimeout(
+      ALQURAN_API + '/surah/' + targetSurah + '/' + textTransId,
+      FETCH_TIMEOUT_MS
+    );
+    if(!res.ok) return;
+    if(viewerAudio.surah !== targetSurah) return;
+    const json = await res.json();
+    if(viewerAudio.surah !== targetSurah) return;
+    if(json.code !== 200 || !json.data || !Array.isArray(json.data.ayahs)) return;
+    viewerAudio.translations = json.data.ayahs.map(a => cleanTranslation(a.text));
+    updateViewerTranslationsDOM();
+  }catch(e){ /* keep old text on failure */ }
+}
+
+function updateViewerTranslationsDOM(){
+  if(!viewerAudio.ayahs || !viewerAudio.ayahs.length) return;
+  pageEl.querySelectorAll('.ayah').forEach(el => {
+    const ayahNum = parseInt(el.dataset.ayah, 10);
+    if(!Number.isFinite(ayahNum)) return;
+    const idx = viewerAudio.ayahs.findIndex(x => x.numberInSurah === ayahNum);
+    if(idx === -1) return;
+    const trans = viewerAudio.translations[idx] || '';
+    let transEl = el.querySelector('.translation');
+    if(trans){
+      if(!transEl){
+        transEl = document.createElement('div');
+        transEl.className = 'translation';
+        el.appendChild(transEl);
+      }
+      transEl.textContent = trans;
+    } else if(transEl){
+      transEl.remove();
+    }
+  });
+}
 
 function isBrowserFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 
@@ -5157,6 +5531,7 @@ async function loadViewerAudioSurah(surahNumber){
   const myToken = viewerAudio.token;
   viewerAudio.active = true; viewerAudio.paused = false; viewerAudio.surah = surahNumber; viewerAudio.ayahIdx = 0;
   viewerAudio.ayahs = []; viewerAudio.translations = []; viewerAudio.meta = null; viewerAudio.metaLoaded = false; viewerAudioErrorStreak = 0;
+  viewerAudio.playTranslationWarned = false;
   viewerMode = 'audio';
   document.body.classList.add('viewer-audio-mode'); document.body.classList.remove('viewer-read-mode');
   pageEl.classList.remove('mushaf-book');
@@ -5171,9 +5546,10 @@ async function loadViewerAudioSurah(surahNumber){
   } });
 
   try{
+    const textTransId = getActiveTextTranslationId();
     const [arSettled, enSettled] = await Promise.allSettled([
       fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/quran-uthmani', FETCH_TIMEOUT_MS),
-      fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/' + TRANSLATION_ALQURAN, FETCH_TIMEOUT_MS)
+      fetchWithTimeout(ALQURAN_API + '/surah/' + surahNumber + '/' + textTransId, FETCH_TIMEOUT_MS)
     ]);
     if(myToken !== viewerAudio.token) return;
     if(arSettled.status !== 'fulfilled' || !arSettled.value.ok) throw new Error('Arabic fetch failed');
@@ -5224,6 +5600,18 @@ async function loadViewerAudioSurah(surahNumber){
     viewerAudio.ayahIdx = 1; playCurrentViewerAyah(); return;
   }
   viewerAudioErrorStreak = 0;
+
+  /* ── Play English translation for the first ayah too (Stream) ── */
+  if(viewerAudio.playTranslation){
+    const transId = viewerAudio.translationId;
+    const transUrl = buildTranslationAudioUrl(transId, surahNumber, 1);
+    if(transUrl){
+      await playTranslationWithHealing(transUrl);
+      if(myToken !== viewerAudio.token) return;
+      if(!viewerAudio.active || viewerAudio.paused) return;
+    }
+  }
+
   const el1 = findViewerAyahEl(surahNumber, 1);
   if(el1){ el1.classList.remove('playing'); el1.classList.add('done'); }
   viewerAudio.ayahIdx = 1;
@@ -5272,6 +5660,42 @@ function findViewerAyahEl(surahNumber, ayahNumber){
   return null;
 }
 
+function isTranslationSurahDownloaded(transId, surah) {
+    return !!downloads[downloadKeyFor(transId, surah)];
+}
+
+function updateTranslationCheckboxState() {
+    if(!chkTranslateAudio || !translateAudioChip) return;
+
+    chkTranslateAudio.disabled = false;
+    translateAudioChip.style.opacity = '1';
+    translateAudioChip.style.pointerEvents = 'auto';
+}
+
+async function playTranslationWithHealing(url){
+  let result = await playUrl(url);
+  if(!result || result.ok !== false) return result;
+  if(result.reason !== 'load-error' && result.reason !== 'timeout') return result;
+  if(!navigator.onLine) return result;
+  try{
+    const healUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + '_heal=' + Date.now();
+    const res = await fetch(healUrl, { cache: 'no-store' });
+    if(!res.ok) return result;
+    const blob = await res.blob();
+    if(!blob.size || blob.size < 200) return result;
+    try{
+      const cache = await caches.open(AUDIO_CACHE_NAME);
+      await cache.put(url, new Response(blob, {
+        status: 200, statusText: 'OK',
+        headers: { 'Content-Type': blob.type || 'audio/mpeg' }
+      }));
+    }catch(_){}
+    const blobUrl = URL.createObjectURL(blob);
+    try{ return await playUrl(blobUrl); }
+    finally{ setTimeout(() => { try{ URL.revokeObjectURL(blobUrl); }catch(_){} }, 120000); }
+  }catch(_){ return result; }
+}
+
 async function playCurrentViewerAyah(){
   if(!viewerAudio.active) return;
   if(!viewerOpen) return;
@@ -5296,10 +5720,12 @@ async function playCurrentViewerAyah(){
     pageEl.querySelectorAll('.ayah.playing').forEach(a => a.classList.remove('playing'));
     if(line){ line.classList.add('playing'); line.classList.remove('done'); scrollElementIntoView(line, true); }
   };
+  
   const result = await playUrl(url, { onStart: markPlaying });
   if(myToken !== viewerAudio.token) return;
   if(!viewerAudio.active) return;
   if(viewerAudio.paused) return;
+  
   if(result && result.ok === false){
     if(result.reason === 'autoplay-blocked'){ viewerAudioPause(); showToast('🔊 Tap the ▶ button in the reader to start playback (the browser needs one more tap from you).', 4200); if(line){ line.classList.remove('playing'); } return; }
     if(result.reason === 'superseded' || result.reason === 'stopped'){ if(line){ line.classList.remove('playing'); } return; }
@@ -5309,6 +5735,19 @@ async function playCurrentViewerAyah(){
     viewerAudio.ayahIdx++; playCurrentViewerAyah(); return;
   }
   viewerAudioErrorStreak = 0;
+
+  // Play Translation Audio if enabled — Stream directly
+  if (viewerAudio.playTranslation) {
+      const transId = viewerAudio.translationId;
+      const transUrl = buildTranslationAudioUrl(transId, sNum, aNum);
+      
+      if (transUrl) {
+          const trResult = await playTranslationWithHealing(transUrl);
+          if(myToken !== viewerAudio.token) return;
+          if(!viewerAudio.active || viewerAudio.paused) return;
+      }
+  }
+
   if(line){ line.classList.remove('playing'); line.classList.add('done'); }
   viewerAudio.ayahIdx++;
   playCurrentViewerAyah();
@@ -5606,7 +6045,13 @@ function playUrl(url, opts){
     const tryFallback = () => {
       if(triedFallback) return false; triedFallback = true;
       const idx = url.indexOf('/data/'); if(idx === -1) return false;
-      const tail = url.substring(url.indexOf('/', idx + 6) + 1);
+      const rest = url.substring(idx + 6);
+      const slash = rest.indexOf('/');
+      if(slash === -1) return false;
+      const folder = rest.substring(0, slash);
+      if(!RECITER_LABELS[folder]) return false;
+      const tail = rest.substring(slash + 1);
+      if(tail.indexOf('/') !== -1) return false;
       const fbUrl = AYAH_AUDIO_BASE + FALLBACK_RECITER + '/' + tail;
       if(fbUrl === url) return false;
       try{
@@ -5895,7 +6340,7 @@ async function loadSurah(n, keepFeedback){
   ensureMushafFsBtn();
   setStatus('Downloading Surah ' + surahNum + '…', 'loading');
   const arUrl = ALQURAN_API + '/surah/' + surahNum + '/' + EDITION_COACH;
-  const enUrl = ALQURAN_API + '/surah/' + surahNum + '/' + TRANSLATION_ALQURAN;
+  const enUrl = ALQURAN_API + '/surah/' + surahNum + '/' + translationTextId;
   try{
     const [arSettled, enSettled] = await Promise.allSettled([fetchWithTimeout(arUrl, FETCH_TIMEOUT_MS), fetchWithTimeout(enUrl, FETCH_TIMEOUT_MS)]);
     if(arSettled.status !== 'fulfilled' || !arSettled.value.ok) throw new Error('Arabic edition: ' + explainFetchFailure(arSettled));
@@ -5998,11 +6443,6 @@ function renderVerses(ayahs, translations){
     words.push({ raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum });
   }
 
-  // Render a pure pause / ornament token (ۖ ۗ ۘ ۙ ۚ ۛ ۞ ۝ ۩ or any
-  // token that normalises to "") as visual decoration WITHOUT adding it
-  // to `words[]`. Otherwise `ptr` would land on an empty-norm entry that no
-  // recognised speech can ever match — Follow mode's 2-word lookahead would
-  // stall, and Tajweed mode would record phantom "mistakes".
   function pushDecoration(tok, parent){
     const span = document.createElement('span');
     span.className = 'w-deco';
@@ -6573,7 +7013,13 @@ function showInstallPromptModal(){
 
 tileSurahIndex.addEventListener('click', () => { showScreen('index'); renderSurahIndex(); });
 tileJuzIndex.addEventListener('click', () => { showScreen('juz'); renderJuzIndex(); });
-tilePlayAudio.addEventListener('click', () => { showScreen('audio'); renderReciterSelect(); closeReciterMenu(); renderAudioSurahList(); });
+tilePlayAudio.addEventListener('click', () => {
+  showScreen('audio');
+  renderReciterSelect(); closeReciterMenu();
+  renderTranslationSelect(); closeTranslationMenu();
+  renderTextTranslationSelect(); closeTextTranslationMenu();
+  renderAudioSurahList();
+});
 tileBookmarks.addEventListener('click', () => { showScreen('bookmarks'); renderBookmarksScreen(); });
 openCoachBtn.addEventListener('click', () => openCoachScreen());
 backFromIndex.addEventListener('click', () => showScreen('home'));
@@ -6602,6 +7048,29 @@ btnBackHome.addEventListener('click', () => { if(readerFullscreen) exitReaderFul
   reciterTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleReciterMenu(); });
   document.addEventListener('click', (e) => { if(reciterMenu.hidden) return; if(reciterDropdown.contains(e.target)) return; closeReciterMenu(); });
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !reciterMenu.hidden){ closeReciterMenu(); } });
+})();
+
+(function wireTranslationDropdown(){
+  if(!translationTrigger || !translationMenu || !translationDropdown) return;
+  translationTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleTranslationMenu(); });
+  document.addEventListener('click', (e) => { if(translationMenu.hidden) return; if(translationDropdown.contains(e.target)) return; closeTranslationMenu(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !translationMenu.hidden){ closeTranslationMenu(); } });
+  
+  if(chkTranslateAudio){
+    chkTranslateAudio.addEventListener('change', (e) => {
+      viewerAudio.playTranslation = e.target.checked;
+      if(viewerAudio.active && viewerAudio.surah && viewerAudio.metaLoaded){
+        reloadViewerTranslation();
+      }
+    });
+  }
+})();
+
+(function wireTextTranslationDropdown(){
+  if(!textTranslationTrigger || !textTranslationMenu || !textTranslationDropdown) return;
+  textTranslationTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleTextTranslationMenu(); });
+  document.addEventListener('click', (e) => { if(textTranslationMenu.hidden) return; if(textTranslationDropdown.contains(e.target)) return; closeTextTranslationMenu(); });
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !textTranslationMenu.hidden){ closeTextTranslationMenu(); } });
 })();
 
 (function wireProgressMenu(){
@@ -6662,7 +7131,7 @@ document.addEventListener('visibilitychange',()=>{
 let lastTouch=0;
 document.addEventListener('touchend',e=>{
   const now=Date.now();
-  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step, .dlbtn, .streak-bar, .feature-tab, .hifz-mode, .hifz-word, .tj-chip, .tajweed-toolbar, .tj-ayah')){
+  if(now-lastTouch<300 && !e.target.closest('button, input, select, .fs-controls, .audio-overlay, .w, .tile, .coach-bar, .surah-row, .reciter-item, .reciter-trigger, .reciter-menu, .qv-chrome, .qv-btn, .qv-vol-slider, .islamic-dates-list li, .cal-cell, .cal-nav, .bookmark-row, .juz-row, .progress-trigger, .progress-item, .qr-card, .home-menu-item, .install-step, .dlbtn, .streak-bar, .feature-tab, .hifz-mode, .hifz-word, .tj-chip, .tajweed-toolbar, .tj-ayah, .ps-tab')){
     e.preventDefault();
   }
   lastTouch=now;
@@ -6681,6 +7150,8 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
     if(qrFullscreen && !qrFullscreen.hidden){ closeQrScreen(); return; }
     if(reciterMenu && !reciterMenu.hidden){ closeReciterMenu(); return; }
+    if(translationMenu && !translationMenu.hidden){ closeTranslationMenu(); return; }
+    if(textTranslationMenu && !textTranslationMenu.hidden){ closeTextTranslationMenu(); return; }
     if(homeMenu && !homeMenu.hidden){ homeMenu.hidden = true; homeMenuBtn.setAttribute('aria-expanded','false'); return; }
     if(viewerOpen){ closeViewer(); return; }
     if(readerFullscreen){ exitReaderFullscreen(); return; }
@@ -6736,7 +7207,9 @@ if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target ==
   applyTheme(); applyMutexUI(); applyFollowOnlyUI();
   setMicButton(); updateFullscreenIcon(); updateViewerFullscreenIcon(); updateFsMicBtn(); updateQvVolIcon(); applyViewerTranslateUI();
   volumeSlider.value = String(currentVolume); qvVolSlider.value = String(currentVolume);
-  updateVolIcon(); updateReciterTrigger(); refreshPermissionState();
+  updateVolIcon(); updateReciterTrigger(); updateTranslationTrigger(); updateTextTranslationTrigger();
+  updateTranslationCheckboxState();
+  refreshPermissionState();
   loadBookmarks(); renderBookmarksScreen(); renderJuzIndex(); refreshProgressMenu();
   updateInstallMenuItem(); maybeShowInstallPrompt();
   updateStreakUI(); renderStreakBadges();
@@ -6812,10 +7285,10 @@ function openInfoModal(){
   '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>The Home screen shows today\'s <b>Hijri date</b> in English and Arabic, computed from the same arithmetic algorithm used by the calendar.</li><li>Tap the card to open a <b>month view</b> of the Hijri and Gregorian calendars together.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li>Open any surah from the index or pick a <b>Juz</b> — pages turn by swiping.</li><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li><li>Tap <b>EN</b> to show or hide the English translation.</li><li>The mushaf page follows the <b>light / dark theme</b>.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>: a framed page, a top row with the surah name · page number · juz name, then the <b>Bismillah on its own centred line</b>, followed by the ayahs flowing as one continuous justified words text.</li><li>Ayah numbers appear as small <b>medallions</b> inside the text.</li><li>Verses of <b>Sajdah</b> are marked with a <b>۩</b> and a pop-up notice appears when you open a page containing one.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">4</span> 📖 Translation — ' + escapeHtml(TRANSLATION_LABEL) + '</h3><ul><li>Every English translation shown in the reader, the audio player and the recitation coach is the <b>Holy Qur\'an translation by ' + escapeHtml(TRANSLATION_LABEL) + '</b>.</li><li><b>Footnotes are omitted.</b> Only the translation text itself is shown.</li><li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">4</span> 📖 Two English translations — Yusuf Ali &amp; Saheeh International</h3><ul><li>The reader, the audio screen and the recitation coach can show either <b>Abdullah Yusuf Ali</b> or <b>Saheeh International</b> English translation of the Holy Qur\'an.</li><li>On the <b>Play audio</b> screen, tap the <b>Text Translation</b> dropdown to choose which one is displayed in the reader, the coach, and the audio player.</li><li><b>Automatic text matching:</b> when you tick the <b>Play translation audio</b> checkbox (the Saheeh International English recitation), the app automatically switches the displayed English text to <b>Saheeh International</b> underneath each Arabic ayah — so text and audio always match.</li><li><b>Footnotes are omitted.</b> Only the translation text itself is shown.</li><li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li>On the <b>Play audio</b> screen, tap the <b>Reciter</b> dropdown to open a scrollable list of all ' + RECITER_ORDER.length + ' Qaris.</li><li>Your choice is remembered and used everywhere ayah audio is played.</li><li><b>Default reciter:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><div style="font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:6px">Available Qaris (' + RECITER_ORDER.length + ')</div><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
   '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> in the reader to bookmark it.</li><li>Tap a bookmark to jump back to that page.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li><li>Tick the <b>Play translation audio</b> checkbox to hear an English recitation of each verse after the Arabic recitation. The English text shown on-screen will then automatically match the Saheeh International audio.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Tap <b>Prayer Times</b> on the Home screen.</li><li>Tap the bell next to any prayer to turn its alarm on or off.</li><li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b>, <b>Beep</b> or <b>Mute</b>.</li><li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid.</li><li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Tap <b>Hifz Test</b> on the Home screen for a memorization test with 3 modes: Silent Recall, Reveal-on-Mistake, Blank Last Line.</li><li>Tap <b>Tajweed Colors</b> on the Home screen for an authoritative, surah-by-surah colored mushaf sourced from <b>Quran.com\'s Uthmani Tajweed</b> annotations (Hafs ʿan ʿAsim).</li><li>Choose any of the <b>114 surahs</b> from the dropdown, toggle 12 tajweed rules on/off, and tap <b>⛶</b> to read in full screen with a large font.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>Recite, bookmark, or download something each day to grow your <b>daily streak</b>.</li><li>Tap the streak bar to see all 10 achievements you can unlock.</li></ul></div>' +
@@ -7227,18 +7700,15 @@ function firePrayerAlarm(p){
   tryNext();
 }
 
-/* Prayer-time beep — three short rising beeps (≈180 ms each, 180 ms apart)
-   instead of one long tone, so it is unmistakably a notification and much
-   shorter than the previous 2.5 s drone. */
 function playPrayerBeep(){
   try{
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
     const t0 = audioCtx.currentTime;
-    const beepDur  = 0.18;   // length of each beep (seconds)
-    const beepGap  = 0.18;   // silence between beeps (seconds)
-    const freqs    = [880, 990, 1175];
-    for(let i = 0; i < 3; i++){
+    const beepDur  = 0.18;
+    const beepGap  = 0.18;
+    const freqs    = [880, 1175];
+    for(let i = 0; i < 2; i++){
       const start = t0 + i * (beepDur + beepGap);
       const o = audioCtx.createOscillator();
       const g = audioCtx.createGain();
@@ -7251,7 +7721,7 @@ function playPrayerBeep(){
       o.connect(g); g.connect(audioCtx.destination);
       o.start(start); o.stop(start + beepDur + 0.02);
     }
-    if(navigator.vibrate) navigator.vibrate([180, 150, 180, 150, 180]);
+    if(navigator.vibrate) navigator.vibrate([180, 150, 180]);
   }catch(e){}
 }
 
@@ -7439,7 +7909,7 @@ function renderAdjustPane(pane){
 function renderAlarmsPane(pane){
   const sounds = [
     { id:'athaan', ico:'🕌', title:'Athaan',  sub:'Full call to prayer (needs internet the first time)' },
-    { id:'beep',   ico:'🔔', title:'Beep',    sub:'Three short beeps — works fully offline' },
+    { id:'beep',   ico:'🔔', title:'Beep',    sub:'Two short beeps — works fully offline' },
     { id:'mute',   ico:'🔕', title:'Mute',    sub:'Visual reminder and notification only' }
   ];
   let soundHtml = '';

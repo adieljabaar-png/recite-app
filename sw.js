@@ -1,33 +1,34 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v29 — Bumps the shell cache so the new index.html replaces
-         the v28 shell on the next install event.
+   v31 — Bumps the shell cache so the new index.html replaces
+         the v30 shell on the next install event.
 
          Changes delivered in this version:
-           • Shell cache bumped to v29 so the current index.html
-             (with the pause/ornament fix for Follow & Tajweed
-             modes and the three-beep prayer alarm) is precached
-             and served to clients.
-           • Push-notification icon / badge now use an inline
-             SVG data URI instead of "./icon-192.png" — that file
-             never existed in the deploy, so notifications used to
-             show with no icon at all. The data URI works on
-             Chrome / Edge / Safari (installed PWA).
-           • The `push` handler now also exposes `data.url` to
-             notificationclick as before, and defaults the tag
-             to the persisted 'qc-notification' key so repeat
-             pushes collapse into a single banner instead of
-             stacking.
+           • Shell cache bumped to v31 so the current index.html
+             (with the new Text Translation selector, Saheeh
+             International text option, and automatic Saheeh text
+             switching whenever Saheeh audio translation is
+             enabled) is precached and served to clients.
+           • No fetch-handler changes were required for the new
+             translation text: both alquran.cloud edition IDs
+             (en.yusufali / en.sahih) are served from the same
+             HOST_ALQURAN endpoint, and both quran.com numeric
+             translation IDs (203 Yusuf Ali / 20 Saheeh Intl) are
+             served from HOST_QURAN_COM — so the existing
+             networkFirst(TEXT_CACHE) strategy caches both
+             translations correctly with no extra code.
 
-         All existing v28 functionality is kept — including the
-         explicit fetch-handler bypasses for /my-analytics/,
-         /_vercel/, /api/* and /sw.js.
+         All existing v30 functionality is kept — including the
+         inline SVG notification icons, pause/ornament fixes,
+         three-beep prayer alarm, English translation audio
+         caching on everyayah.com, and explicit fetch-handler
+         bypasses for /my-analytics/, /_vercel/, /api/* and /sw.js.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v29';
+const VERSION = 'v31';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
