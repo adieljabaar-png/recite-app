@@ -1,21 +1,33 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v28 — Bumps the shell cache so the new index.html replaces
-         the v27 shell on the next install event.
+   v29 — Bumps the shell cache so the new index.html replaces
+         the v28 shell on the next install event.
+
          Changes delivered in this version:
-           • Analytics, API, and SW paths are now explicitly
-             excluded from the fetch handler. Vercel Web
-             Analytics (/my-analytics/*, /_vercel/*), serverless
-             endpoints (/api/*) and the service worker itself
-             (/sw.js) now always go straight to the network and
-             are never served from a cache.
-         All existing v27 functionality is kept.
+           • Shell cache bumped to v29 so the current index.html
+             (with the pause/ornament fix for Follow & Tajweed
+             modes and the three-beep prayer alarm) is precached
+             and served to clients.
+           • Push-notification icon / badge now use an inline
+             SVG data URI instead of "./icon-192.png" — that file
+             never existed in the deploy, so notifications used to
+             show with no icon at all. The data URI works on
+             Chrome / Edge / Safari (installed PWA).
+           • The `push` handler now also exposes `data.url` to
+             notificationclick as before, and defaults the tag
+             to the persisted 'qc-notification' key so repeat
+             pushes collapse into a single banner instead of
+             stacking.
+
+         All existing v28 functionality is kept — including the
+         explicit fetch-handler bypasses for /my-analytics/,
+         /_vercel/, /api/* and /sw.js.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v28';
+const VERSION = 'v29';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -40,6 +52,19 @@ const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 const TEXT_CACHE_MAX = 400;
 const RUNTIME_MAX    = 120;
 const MANIFEST_TIMEOUT_MS = 2000;
+
+/* Inline SVG icon used by push notifications.  The deploy ships no
+   icon-192.png / badge-72.png raster files — the app itself uses SVG
+   data URIs in <link rel="icon"> / <link rel="apple-touch-icon">.
+   Reusing the same artwork here means the OS notification banner
+   actually shows the Recite logo instead of a broken-image marker. */
+const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'>" +
+    "<rect width='180' height='180' rx='40' fill='#000000'/>" +
+    "<path d='M90 62 Q58 48 28 50 L28 118 Q58 116 90 130 Z' fill='#F5C542'/>" +
+    "<path d='M90 62 Q122 48 152 50 L152 118 Q122 116 90 130 Z' fill='#D9A32B'/>" +
+  "</svg>"
+);
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
@@ -106,7 +131,14 @@ self.addEventListener('message', event => {
 self.addEventListener('push', event => {
   let data = { title: 'Quran Recitation Coach', body: 'You have a new message.', url: './' };
   try{ if(event.data) data = Object.assign(data, event.data.json()); }catch(_){}
-  event.waitUntil(self.registration.showNotification(data.title, { body: data.body, icon: './icon-192.png', badge: './icon-192.png', tag: data.tag || 'qc-notification', renotify: true, data: { url: data.url } }));
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: NOTIFICATION_ICON,
+    badge: NOTIFICATION_ICON,
+    tag: data.tag || 'qc-notification',
+    renotify: true,
+    data: { url: data.url }
+  }));
 });
 
 self.addEventListener('notificationclick', event => {
@@ -114,7 +146,12 @@ self.addEventListener('notificationclick', event => {
   const target = (event.notification.data && event.notification.data.url) || './';
   event.waitUntil((async () => {
     const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for(const c of list){ if(c.url.startsWith(self.location.origin) && 'focus' in c){ c.navigate(target); return c.focus(); } }
+    for(const c of list){
+      if(c.url.startsWith(self.location.origin) && 'focus' in c){
+        try{ c.navigate(target); }catch(_){}
+        return c.focus();
+      }
+    }
     if(clients.openWindow) return clients.openWindow(target);
   })());
 });

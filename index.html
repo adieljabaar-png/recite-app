@@ -1045,6 +1045,7 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.error{background:rgba(255,90,106,.22);color:#ff9aa4;text-decoration:underline wavy var(--bad);text-underline-offset:8px;animation:shake .32s ease;}
 .w.skipped{background:rgba(255,176,32,.16);color:#ffcf6b;text-decoration:line-through;text-decoration-color:var(--warn);}
 .w.model{background:rgba(255,176,32,.3);color:#fff}
+.w-deco{display:inline-block;padding:0 3px;opacity:.9;pointer-events:none;cursor:default;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @keyframes locatePulse{0%{background:rgba(79,140,255,.55);box-shadow:0 0 0 0 rgba(79,140,255,.6);color:#fff}100%{background:transparent;box-shadow:0 0 0 18px rgba(79,140,255,0);color:var(--text)}}
 .w.located{animation:locatePulse .9s ease}
@@ -5997,6 +5998,18 @@ function renderVerses(ayahs, translations){
     words.push({ raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum });
   }
 
+  // Render a pure pause / ornament token (ۖ ۗ ۘ ۙ ۚ ۛ ۞ ۝ ۩ or any
+  // token that normalises to "") as visual decoration WITHOUT adding it
+  // to `words[]`. Otherwise `ptr` would land on an empty-norm entry that no
+  // recognised speech can ever match — Follow mode's 2-word lookahead would
+  // stall, and Tajweed mode would record phantom "mistakes".
+  function pushDecoration(tok, parent){
+    const span = document.createElement('span');
+    span.className = 'w-deco';
+    span.textContent = tok;
+    parent.appendChild(span);
+  }
+
   let lastSurah = -1;
   ayahs.forEach((a, i)=>{
     const surahId = a.surah ? a.surah.number : (mode==='surah' ? surahNum : 1);
@@ -6026,7 +6039,10 @@ function renderVerses(ayahs, translations){
     line.dataset.surah = surahId; line.dataset.ayah = ayahNum;
     if(JUZ_START_VERSE[surahId + ':' + ayahNum]) line.classList.add('juz-start');
     const toks = text.split(/\s+/).filter(Boolean);
-    toks.forEach(tok => pushWord(tok, surahId, ayahNum, line));
+    toks.forEach(tok => {
+      if(!normArCached(tok)){ pushDecoration(tok, line); return; }
+      pushWord(tok, surahId, ayahNum, line);
+    });
     const num=document.createElement('span');
     num.className='ayah-num'; num.textContent = toAr(ayahNum);
     line.appendChild(num);
@@ -6746,6 +6762,7 @@ function openCoachInfoModal(){
       '<li>Both modes use your browser\'s <b>built-in speech recognition</b> — no custom model download. An internet connection is required.</li>' +
       '<li>Hold any word for 3 seconds to start reciting from that point.</li>' +
       '<li>On Android phones the coach stays <b>silent and vibration-free while listening</b> so the microphone never picks up its own tones.</li>' +
+      '<li><b>Pauses and ornaments</b> — waqf marks (ۖ ۗ ۘ ۙ ۚ ۛ), rub-el-hizb (۞), sajdah (۩) and end-of-ayah (۝) symbols — are drawn but <b>never counted as words to recite</b>. The coach only listens for real words, so it never stalls on a symbol.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
@@ -7210,21 +7227,31 @@ function firePrayerAlarm(p){
   tryNext();
 }
 
+/* Prayer-time beep — three short rising beeps (≈180 ms each, 180 ms apart)
+   instead of one long tone, so it is unmistakably a notification and much
+   shorter than the previous 2.5 s drone. */
 function playPrayerBeep(){
   try{
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
     const t0 = audioCtx.currentTime;
-    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-    o.type = 'sine'; o.frequency.value = 880;
-    const duration = 2.5;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.28, t0 + 0.05);
-    g.gain.setValueAtTime(0.28, t0 + duration - 0.1);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(t0); o.stop(t0 + duration + 0.1);
-    if(navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+    const beepDur  = 0.18;   // length of each beep (seconds)
+    const beepGap  = 0.18;   // silence between beeps (seconds)
+    const freqs    = [880, 990, 1175];
+    for(let i = 0; i < 3; i++){
+      const start = t0 + i * (beepDur + beepGap);
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freqs[i];
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.28, start + 0.015);
+      g.gain.setValueAtTime(0.28, start + beepDur - 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + beepDur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(start); o.stop(start + beepDur + 0.02);
+    }
+    if(navigator.vibrate) navigator.vibrate([180, 150, 180, 150, 180]);
   }catch(e){}
 }
 
@@ -7412,7 +7439,7 @@ function renderAdjustPane(pane){
 function renderAlarmsPane(pane){
   const sounds = [
     { id:'athaan', ico:'🕌', title:'Athaan',  sub:'Full call to prayer (needs internet the first time)' },
-    { id:'beep',   ico:'🔔', title:'Beep',    sub:'Simple chime — works fully offline' },
+    { id:'beep',   ico:'🔔', title:'Beep',    sub:'Three short beeps — works fully offline' },
     { id:'mute',   ico:'🔕', title:'Mute',    sub:'Visual reminder and notification only' }
   ];
   let soundHtml = '';
