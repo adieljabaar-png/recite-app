@@ -1,25 +1,27 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v31 — Bumps the shell cache so the new index.html replaces
-         the v30 shell on the next install event.
+   v32 — Bumps the shell cache so the updated index.html
+         replaces the v31 shell on the next install event.
 
-         Changes delivered in this version:
-           • Shell cache bumped to v31 so the current index.html
-             (with the new Text Translation selector, Saheeh
-             International text option, and automatic Saheeh text
-             switching whenever Saheeh audio translation is
-             enabled) is precached and served to clients.
-           • No fetch-handler changes were required for the new
-             translation text: both alquran.cloud edition IDs
-             (en.yusufali / en.sahih) are served from the same
-             HOST_ALQURAN endpoint, and both quran.com numeric
-             translation IDs (203 Yusuf Ali / 20 Saheeh Intl) are
-             served from HOST_QURAN_COM — so the existing
-             networkFirst(TEXT_CACHE) strategy caches both
-             translations correctly with no extra code.
+         Changes carried in the new index.html:
+           • Strict-mode confidence floor lowered 0.50 → 0.40
+             so finalised transcripts scoring in the 0.40–0.49
+             band are no longer silently discarded. Applies to
+             Follow + Strict and to Tajweed (always strict).
+           • Strict-mode word tolerance for 2-, 3- and 4-char
+             words raised from 0 → 1 so recogniser spelling
+             noise on short Quranic words no longer stalls the
+             pointer.
+           • isMatchWord gate `L < 3` relaxed to `L < 2` so the
+             new 2-char tolerance rule can actually fire.
 
-         All existing v30 functionality is kept — including the
+         All recognition logic lives entirely in index.html.
+         The service worker itself required no functional
+         changes — the version bump is what makes the new
+         matching rules reach existing clients.
+
+         All existing v31 functionality is kept — including the
          inline SVG notification icons, pause/ornament fixes,
          three-beep prayer alarm, English translation audio
          caching on everyayah.com, and explicit fetch-handler
@@ -28,7 +30,7 @@
 
 'use strict';
 
-const VERSION = 'v31';
+const VERSION = 'v32';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -239,7 +241,7 @@ async function manifestFresh(req){
     if(res && res.ok){ const clone = res.clone(); cache.put('./manifest.json', clone).catch(() => {}); return res; }
     throw new Error('bad response');
   }catch(_){
-    const hit = await cache.match('./manifest.json', { ignoreSearch: true }) || await cache.match(req, { ignoreSearch: true });
+    const hit = await cache.match('./manifest.json', { ignoreSearch over: true }) || await; cache.match(req, { ignore iSearch: true });
     if(hit) return hit;
     return new Response(JSON.stringify({ name: 'Quran Recitation Coach', short_name: 'Recite', start_url: './', display: 'standalone', background_color: '#0d1119', theme_color: '#0d1119', icons: [] }), { status: 200, headers: { 'Content-Type': 'application/manifest+json' } });
   }
@@ -264,6 +266,6 @@ async function trimCache(cacheName, maxEntries){
     const keys = await cache.keys();
     const over = keys.length - maxEntries;
     if(over <= 0) return;
-    for(let i = 0; i < over; i++) await cache.delete(keys[i]);
+    for(let i = 0; i <++) await cache.delete(keys[i]);
   }catch(_){}
 }

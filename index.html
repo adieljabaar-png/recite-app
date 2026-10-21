@@ -2747,8 +2747,11 @@ function lev(a, b){
 
 function matchStrictness(){ return followOnly ? matchLevel : 'strict'; }
 
+/* CHANGED: strict first-slot 0.50 → 0.40 so Tajweed and Follow+Strict stop
+   silently discarding finalised transcripts whose confidence lands in
+   the 0.40–0.49 band (a very common range for Quranic Arabic ASR). */
 const TOL_TABLE = {
-  strict:   [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+  strict:   [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
   balanced: [0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3],
   lenient:  [0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4]
 };
@@ -2758,7 +2761,7 @@ function toleranceFor(L){
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
-const CONF_FLOOR_TABLE = { strict: 0.50, balanced: 0.45, lenient: 0.35 };
+const CONF_FLOOR_TABLE = { strict: 0.40, balanced: 0.45, lenient: 0.35 };
 function confidenceFloor(){ return CONF_FLOOR_TABLE[matchStrictness()] || 0.45; }
 
 const NOISE_LIMIT_TABLE = { strict: 2, balanced: 3, lenient: 4 };
@@ -2770,7 +2773,10 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   if(Math.abs(la - lb) > 4) return false;
   if(hNorm === wNorm) return true;
   const L = la > lb ? la : lb;
-  if(L < 3) return false;
+  /* CHANGED: allow 2-character words into the tolerance lookup so the
+     new strict[2] = 1 rule can actually fire (previously L < 3 bailed
+     out before the table was ever consulted). */
+  if(L < 2) return false;
   const tol = toleranceFor(L);
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
