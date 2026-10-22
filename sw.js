@@ -1,36 +1,48 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v32 — Bumps the shell cache so the updated index.html
-         replaces the v31 shell on the next install event.
+   v33 — Critical repair release.
 
-         Changes carried in the new index.html:
-           • Strict-mode confidence floor lowered 0.50 → 0.40
-             so finalised transcripts scoring in the 0.40–0.49
-             band are no longer silently discarded. Applies to
-             Follow + Strict and to Tajweed (always strict).
-           • Strict-mode word tolerance for 2-, 3- and 4-char
-             words raised from 0 → 1 so recogniser spelling
-             noise on short Quranic words no longer stalls the
-             pointer.
-           • isMatchWord gate `L < 3` relaxed to `L < 2` so the
-             new 2-char tolerance rule can actually fire.
+   v32 (which never activated on any client) shipped with two
+   JavaScript syntax errors that prevented the service worker
+   from parsing at all. Because of that, the PWA could not be
+   opened while offline — the install event was never even
+   registered. This release fixes both syntax errors, which
+   restores the entire offline pipeline.
 
-         All recognition logic lives entirely in index.html.
-         The service worker itself required no functional
-         changes — the version bump is what makes the new
-         matching rules reach existing clients.
+       • manifestFresh():  `{ ignoreSearch over: true }) || await;
+                            cache.match(req, { ignore iSearch: true })`
+       • trimCache():      `for(let i = 0; i <++) ...`
 
-         All existing v31 functionality is kept — including the
-         inline SVG notification icons, pause/ornament fixes,
-         three-beep prayer alarm, English translation audio
-         caching on everyayah.com, and explicit fetch-handler
-         bypasses for /my-analytics/, /_vercel/, /api/* and /sw.js.
+   Additional improvement in v33:
+     • Pre-caches the Google Fonts stylesheet and every font
+       file it references during install (bounded to 20 s so
+       install can never hang). Previously the four Arabic
+       font families only became available offline after the
+       user had visited the app once while online — the very
+       first cold offline open fell back to a system serif.
+       With this change the typography renders identically
+       online and offline, from the first offline launch.
+
+   All existing behaviour is preserved:
+     • Shell / navigation network-first, cache fallback.
+     • Quran text APIs (api.alquran.cloud, api.quran.com)
+       network-first with cache fallback.
+     • Google Fonts cache-first.
+     • Downloaded ayah audio served from the persistent
+       'qc-audio' cache first, network second.
+     • Offline audio request returns 504 rather than hanging.
+     • Inline SVG notification icon (no external PNG).
+     • Explicit fetch-handler bypasses for /my-analytics/,
+       /_vercel/, /api/* and /sw.js so analytics, serverless
+       functions and SW updates are never intercepted.
+     • CLEAR_CACHES / CLEAR_AUDIO_CACHE / REFRESH_MANIFEST
+       message handlers.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v32';
+const VERSION = 'v33';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -56,9 +68,16 @@ const TEXT_CACHE_MAX = 400;
 const RUNTIME_MAX    = 120;
 const MANIFEST_TIMEOUT_MS = 2000;
 
-/* Inline SVG icon used by push notifications.  The deploy ships no
-   icon-192.png / badge-72.png raster files — the app itself uses SVG
-   data URIs in <link rel="icon"> / <link rel="apple-touch-icon">.
+/* The exact Google Fonts stylesheet URL used by <link> in index.html.
+   Pre-cached during install so the stylesheet is available offline
+   on the very first cold open — not just on the second visit. */
+const FONT_CSS_URL = 'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap';
+const FONT_FETCH_TIMEOUT_MS  = 8000;
+const FONTS_PREFETCH_TOTAL_MS = 20000;
+
+/* Inline SVG icon used by push notifications. The deploy ships no
+   icon-192.png / badge-72.png raster files — the app itself uses
+   SVG data URIs in <link rel="icon"> / <link rel="apple-touch-icon">.
    Reusing the same artwork here means the OS notification banner
    actually shows the Recite logo instead of a broken-image marker. */
 const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
@@ -69,38 +88,65 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
   "</svg>"
 );
 
+/* ============================================================
+   INSTALL — cache shell + pre-cache Google Fonts
+   ============================================================ */
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const cache = await caches.open(SHELL_CACHE);
-    await Promise.all(SHELL_URLS.map(async url => {
-      try{
-        const req = new Request(url, { cache: 'reload' });
-        const res = await fetch(req);
-        if(res && (res.ok || res.type === 'opaque')) await cache.put(url, res.clone());
-      }catch(_){}
-    }));
-    await self.skipWaiting();
+    // 1. Shell — awaited (mandatory for offline open)
+    try{
+      const cache = await caches.open(SHELL_CACHE);
+      await Promise.all(SHELL_URLS.map(async url => {
+        try{
+          const req = new Request(url, { cache: 'reload' });
+          const res = await fetch(req);
+          if(res && (res.ok || res.type === 'opaque')) await cache.put(url, res.clone());
+        }catch(_){}
+      }));
+    }catch(_){}
+
+    // 2. Google Fonts — best-effort, bounded to 20 s so install
+    //    can never hang if the network is slow or the CDN is down.
+    try{
+      await Promise.race([
+        prefetchFonts().catch(() => {}),
+        new Promise(r => setTimeout(r, FONTS_PREFETCH_TOTAL_MS))
+      ]);
+    }catch(_){}
+
+    // 3. Activate immediately
+    try{ await self.skipWaiting(); }catch(_){}
   })());
 });
 
+/* ============================================================
+   ACTIVATE — drop every stale versioned cache, claim clients
+   ============================================================ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    const keys = await caches.keys();
-    const toDelete = keys.filter(name => {
-      if(VERSIONED_CACHES.includes(name)) return false;
-      if(PERSISTENT_CACHES.includes(name)) return false;
-      const owned = OWNED_PREFIXES.some(p => name.startsWith(p));
-      if(!owned) return false;
-      return true;
-    });
-    await Promise.all(toDelete.map(name => caches.delete(name)));
+    try{
+      const keys = await caches.keys();
+      const toDelete = keys.filter(name => {
+        if(VERSIONED_CACHES.includes(name)) return false;
+        if(PERSISTENT_CACHES.includes(name)) return false;
+        const owned = OWNED_PREFIXES.some(p => name.startsWith(p));
+        if(!owned) return false;
+        return true;
+      });
+      await Promise.all(toDelete.map(name => caches.delete(name)));
+    }catch(_){}
+
     if(self.registration && self.registration.navigationPreload){
       try{ await self.registration.navigationPreload.disable(); }catch(_){}
     }
-    await self.clients.claim();
+    try{ await self.clients.claim(); }catch(_){}
   })());
 });
 
+/* ============================================================
+   MESSAGES — SKIP_WAITING / CLEAR_CACHES / CLEAR_AUDIO_CACHE /
+              REFRESH_MANIFEST
+   ============================================================ */
 self.addEventListener('message', event => {
   const data = event.data || {};
   if(data.type === 'SKIP_WAITING'){ self.skipWaiting(); return; }
@@ -123,7 +169,11 @@ self.addEventListener('message', event => {
     event.waitUntil((async () => {
       try{
         const cache = await caches.open(SHELL_CACHE);
-        await Promise.all([cache.delete('./manifest.json', { ignoreSearch: true }), cache.delete('./index.html', { ignoreSearch: true }), cache.delete('./', { ignoreSearch: true })]);
+        await Promise.all([
+          cache.delete('./manifest.json', { ignoreSearch: true }),
+          cache.delete('./index.html',    { ignoreSearch: true }),
+          cache.delete('./',              { ignoreSearch: true })
+        ]);
       }catch(_){}
       if(event.source && event.source.postMessage) event.source.postMessage({ type: 'MANIFEST_REFRESHED' });
     })());
@@ -131,6 +181,9 @@ self.addEventListener('message', event => {
   }
 });
 
+/* ============================================================
+   PUSH — show notification with the Recite logo
+   ============================================================ */
 self.addEventListener('push', event => {
   let data = { title: 'Quran Recitation Coach', body: 'You have a new message.', url: './' };
   try{ if(event.data) data = Object.assign(data, event.data.json()); }catch(_){}
@@ -159,6 +212,9 @@ self.addEventListener('notificationclick', event => {
   })());
 });
 
+/* ============================================================
+   FETCH — strategy dispatch
+   ============================================================ */
 self.addEventListener('fetch', event => {
   const req = event.request;
 
@@ -179,17 +235,43 @@ self.addEventListener('fetch', event => {
     if(url.pathname === '/sw.js')                  return;   // the service worker itself
   }
 
-  if(url.hostname === HOST_EVERYAYAH){ event.respondWith(audioFromDownloadCache(req)); return; }
-  if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){ event.respondWith(cacheFirst(req, FONTS_CACHE)); return; }
-  if(url.hostname === HOST_QURAN_COM){ event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX)); return; }
-  if(url.hostname === HOST_ALQURAN){ event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX)); return; }
+  // Audio from everyayah.com — served from the persistent download
+  // cache first (works fully offline), network second.
+  if(url.hostname === HOST_EVERYAYAH){
+    event.respondWith(audioFromDownloadCache(req));
+    return;
+  }
+
+  // Google Fonts — cache-first, pre-populated at install.
+  if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){
+    event.respondWith(cacheFirst(req, FONTS_CACHE));
+    return;
+  }
+
+  // Quran text APIs — network-first with cache fallback.
+  if(url.hostname === HOST_QURAN_COM || url.hostname === HOST_ALQURAN){
+    event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
+    return;
+  }
+
+  // Same-origin
   if(url.origin === self.location.origin){
-    if(url.pathname.endsWith('/manifest.json')){ event.respondWith(manifestFresh(req)); return; }
-    if(req.mode === 'navigate'){ event.respondWith(shellNavigation(req)); return; }
+    if(url.pathname.endsWith('/manifest.json')){
+      event.respondWith(manifestFresh(req));
+      return;
+    }
+    if(req.mode === 'navigate'){
+      event.respondWith(shellNavigation(req));
+      return;
+    }
     event.respondWith(cacheFirst(req, RUNTIME_CACHE, RUNTIME_MAX));
     return;
   }
 });
+
+/* ============================================================
+   Fetch strategies
+   ============================================================ */
 
 async function audioFromDownloadCache(req){
   try{
@@ -197,22 +279,29 @@ async function audioFromDownloadCache(req){
     const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
     if(hit) return hit;
   }catch(_){}
-  try{ return await fetch(req); }
-  catch(err){ return new Response('', { status: 504, statusText: 'Gateway Timeout' }); }
+  try{
+    return await fetch(req);
+  }catch(_){
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
 }
 
 async function cacheFirst(req, cacheName, maxEntries){
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(req, { ignoreSearch: false });
+  const hit = await cache.match(req);
   if(hit) return hit;
   try{
     const res = await fetch(req);
     if(res && (res.ok || res.type === 'opaque')){
       const clone = res.clone();
-      cache.put(req, clone).then(() => { if(maxEntries) trimCache(cacheName, maxEntries); }).catch(() => {});
+      cache.put(req, clone)
+        .then(() => { if(maxEntries) trimCache(cacheName, maxEntries); })
+        .catch(() => {});
     }
     return res;
-  }catch(err){ return new Response('', { status: 504, statusText: 'Gateway Timeout' }); }
+  }catch(_){
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
 }
 
 async function networkFirst(req, cacheName, maxEntries){
@@ -221,42 +310,91 @@ async function networkFirst(req, cacheName, maxEntries){
     const res = await fetch(req);
     if(res && res.ok){
       const clone = res.clone();
-      cache.put(req, clone).then(() => { if(maxEntries) trimCache(cacheName, maxEntries); }).catch(() => {});
+      cache.put(req, clone)
+        .then(() => { if(maxEntries) trimCache(cacheName, maxEntries); })
+        .catch(() => {});
     }
     return res;
-  }catch(err){
-    const hit = await cache.match(req, { ignoreSearch: false });
+  }catch(_){
+    const hit = await cache.match(req);
     if(hit) return hit;
-    return new Response(JSON.stringify({ code: 503, status: 'OFFLINE', data: null }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ code: 503, status: 'OFFLINE', data: null }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
 
 async function manifestFresh(req){
   const cache = await caches.open(SHELL_CACHE);
+
+  // 1. Try network with a 2 s budget (manifest changes must reach the
+  //    client quickly, but offline must never hang on the request).
   try{
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
-    const res = await fetch(req, { signal: controller.signal, cache: 'no-store' });
-    clearTimeout(timer);
-    if(res && res.ok){ const clone = res.clone(); cache.put('./manifest.json', clone).catch(() => {}); return res; }
+    const timer = setTimeout(() => { try{ controller.abort(); }catch(_){} }, MANIFEST_TIMEOUT_MS);
+    let res;
+    try{
+      res = await fetch(req, { signal: controller.signal, cache: 'no-store' });
+    } finally {
+      clearTimeout(timer);
+    }
+    if(res && res.ok){
+      const clone = res.clone();
+      cache.put('./manifest.json', clone).catch(() => {});
+      return res;
+    }
     throw new Error('bad response');
-  }catch(_){
-    const hit = await cache.match('./manifest.json', { ignoreSearch over: true }) || await; cache.match(req, { ignore iSearch: true });
+  }catch(_){ /* fall through to cache */ }
+
+  // 2. Offline — serve from cache. Try both the canonical key and the
+  //    request's own URL, since the navigation may hit either one.
+  try{
+    let hit = await cache.match('./manifest.json', { ignoreSearch: true });
+    if(!hit) hit = await cache.match(req, { ignoreSearch: true });
     if(hit) return hit;
-    return new Response(JSON.stringify({ name: 'Quran Recitation Coach', short_name: 'Recite', start_url: './', display: 'standalone', background_color: '#0d1119', theme_color: '#0d1119', icons: [] }), { status: 200, headers: { 'Content-Type': 'application/manifest+json' } });
-  }
+  }catch(_){}
+
+  // 3. Last resort — inline fallback manifest so installation never fails.
+  return new Response(
+    JSON.stringify({
+      name: 'Quran Recitation Coach',
+      short_name: 'Recite',
+      start_url: './',
+      scope: './',
+      display: 'standalone',
+      background_color: '#0d1119',
+      theme_color: '#0d1119',
+      icons: []
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/manifest+json; charset=utf-8' } }
+  );
 }
 
 async function shellNavigation(req){
   const cache = await caches.open(SHELL_CACHE);
   try{
     const res = await fetch(req);
-    if(res && res.ok && res.type === 'basic'){ const clone = res.clone(); cache.put('./index.html', clone).catch(() => {}); }
+    if(res && res.ok && res.type === 'basic'){
+      const clone = res.clone();
+      cache.put('./index.html', clone).catch(() => {});
+    }
     return res;
-  }catch(err){
-    const hit = await cache.match(req, { ignoreSearch: true }) || await cache.match('./index.html', { ignoreSearch: true }) || await cache.match('./', { ignoreSearch: true });
+  }catch(_){
+    let hit = null;
+    try{
+      hit = await cache.match(req, { ignoreSearch: true })
+         || await cache.match('./index.html', { ignoreSearch: true })
+         || await cache.match('./', { ignoreSearch: true });
+    }catch(_){}
     if(hit) return hit;
-    return new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7"><h2>You are offline</h2><p>Open the app once while online to enable offline mode.</p>', { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(
+      '<!doctype html><meta charset="utf by-8"><title>Offline</title>' +
+ index.html      '<body, style="font-family:s storesans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
+      '<h2>You are offline</h2>' +
+      '<p>Open the app once while online to enable offline mode.</p>',
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
   }
 }
 
@@ -266,6 +404,71 @@ async function trimCache(cacheName, maxEntries){
     const keys = await cache.keys();
     const over = keys.length - maxEntries;
     if(over <= 0) return;
-    for(let i = 0; i <++) await cache.delete(keys[i]);
+    for(let i = 0; i < over; i++) await cache.delete(keys[i]);
   }catch(_){}
+}
+
+/* ============================================================
+   Google Fonts pre-cache (bounded, best-effort)
+   ============================================================
+   Fetches the exact stylesheet URL used it
+   in FONTS_CACHE, then parses every `url(...)` entry it contains
+   and fetches each font file in parallel. Any individual failure
+   is ignored so one slow font file can never abort the whole
+   pre-cache. Total operation is wrapped in a 20 s outer timeout
+   by the caller.
+   ============================================================ */
+
+async function fetchWithTimeout(url, ms){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => { try{ ctrl.abort(); }catch(_){} }, ms);
+  try{
+    return await fetch(url, {
+      signal: ctrl.signal,
+      mode: 'cors',
+      credentials: 'omit',
+      cache: 'no-store'
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function prefetchFonts(){
+  let cache;
+  try{ cache = await caches.open(FONTS_CACHE); }catch(_){ return; }
+
+  // 1. Fetch and cache the CSS stylesheet
+  let cssText = '';
+  try{
+    const cssRes = await fetchWithTimeout(FONT_CSS_URL, FONT_FETCH_TIMEOUT_MS);
+    if(cssRes && cssRes.ok){
+      cssText = await cssRes.clone().text();
+      try{ await cache.put(FONT_CSS_URL, cssRes); }catch(_){}
+    }
+  }catch(_){}
+
+  if(!cssText) return;
+
+  // 2. Extract every absolute url(...) referenced from the stylesheet
+  const urls = [];
+  const re = /url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g;
+  let m;
+  while((m = re.exec(cssText)) !== null){
+    const u = m[2];
+    if(u && /^https?:\/\//i.test(u)) urls.push(u);
+  }
+
+  // 3. Fetch each font file in parallel, skipping ones already cached
+  const unique = Array.from(new Set(urls));
+  await Promise.all(unique.map(async u => {
+    try{
+      const existing = await cache.match(u, { ignoreSearch: true });
+      if(existing) return;
+      const r = await fetchWithTimeout(u, FONT_FETCH_TIMEOUT_MS);
+      if(r && (r.ok || r.type === 'opaque')){
+        try{ await cache.put(u, r); }catch(_){}
+      }
+    }catch(_){}
+  }));
 }

@@ -2745,6 +2745,14 @@ function lev(a, b){
   return r;
 }
 
+/* ------------------------------------------------------------------
+   matchStrictness()
+   The single source of truth for how tolerant the grader is.
+   • Follow mode → whatever the Match selector is set to
+                   (Strict / Balanced / Lenient).
+   • Tajweed mode → ALWAYS 'strict', no exceptions. Changing the
+                    Follow-mode selector must never leak into Tajweed.
+   ------------------------------------------------------------------ */
 function matchStrictness(){ return followOnly ? matchLevel : 'strict'; }
 
 /* CHANGED: strict first-slot 0.50 → 0.40 so Tajweed and Follow+Strict stop
@@ -6744,8 +6752,17 @@ function gradeFull(tokens, isFinal, startIdx){
     pendingHeard.push(rawTok);
     used++;
     if(pendingHeard.length > noiseLimit()){
+      /* CHANGED: mark the current word once, then clear the WHOLE backlog
+         (not just one entry). Previously the code did `pendingHeard.shift()`
+         which left the queue at/above the threshold, so every remaining
+         token in the same recognition burst immediately fired its own
+         recordMistake() + advancePast(1) — cascading red marks onto the
+         following words. Clearing the backlog means the next mistake can
+         only fire once the user has recited at least noiseLimit+1 fresh
+         words for the next word. This behaviour applies to BOTH
+         Follow+Strict and Tajweed (both go through gradeFull). */
       recordMistake(ptr, 'misread', pendingHeard[0]);
-      pendingHeard.shift();
+      pendingHeard.length = 0;
       advancePast(1);
     }
   }
