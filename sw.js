@@ -1,28 +1,32 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v36 — Syntax fix release.
+   v37 — Ghunnah-length feature release.
 
-   Fixed critical syntax errors in the FETCH event handler that 
-   were causing the Service Worker to crash on startup. 
-   
-   Restored proper handling for:
+   Ships the new Ghunnah (nasalisation) length detection in the
+   Tajweed engine, alongside the existing madd-timing and
+   presence checks. The new client code lives in index.html; this
+   version bump forces the browser to discard every qc-*-v36
+   cache on activate so the updated HTML is served on next open.
+
+   All fetch-strategy behaviour from v36 is preserved:
      - Tajweed annotations (networkFresh).
      - Audio requests from everyayah.com (audioFromDownloadCache).
+     - Google Fonts pre-cache at install.
+     - Shell navigation with cache:'reload' (never serves stale HTML).
+     - Manifest with a 2 s network budget.
 
-   All other behaviour from v35 is preserved.
-
-   NOTE ON DEPLOY: after shipping v36, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v37, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v35 are deleted
+   next open runs the new code path. Caches qc-*-v36 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v36';
+const VERSION = 'v37';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

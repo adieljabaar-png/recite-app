@@ -1740,13 +1740,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-color: var(--gold) !important;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Tajweed status overlay (coach's Tajweed mode).
-   The .tj-* spans sit on the CHILD of .w — the space before [class^="tj-"]
-   in each selector below is REQUIRED. Status is shown via background /
-   underline so the authoritative Tajweed rule colour is preserved while
-   reciting.
-   ────────────────────────────────────────────────────────────────────── */
 .w.current   [class^="tj-"], .w.current   [class*=" tj-"],
 .w.correct   [class^="tj-"], .w.correct   [class*=" tj-"],
 .w.corrected [class^="tj-"], .w.corrected [class*=" tj-"],
@@ -1758,43 +1751,36 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   font-weight: inherit;
 }
 
-/* Current word — soft blue halo, rule colour stays. */
 .w.current [class^="tj-"], .w.current [class*=" tj-"] {
   background: rgba(79,140,255,.24);
   box-shadow: 0 0 0 1px rgba(79,140,255,.45);
   border-radius: 4px;
 }
-/* Correctly recited — green underline. */
 .w.correct [class^="tj-"], .w.correct [class*=" tj-"] {
   text-decoration: underline solid var(--good);
   text-underline-offset: 6px;
   text-decoration-thickness: 2px;
 }
-/* Self-corrected — dotted amber underline. */
 .w.corrected [class^="tj-"], .w.corrected [class*=" tj-"] {
   text-decoration: underline dotted var(--warn);
   text-underline-offset: 6px;
 }
-/* Misread / rule violation — red wavy underline + tint. */
 .w.error [class^="tj-"], .w.error [class*=" tj-"] {
   background: rgba(255,90,106,.18);
   text-decoration: underline wavy var(--bad);
   text-underline-offset: 6px;
   border-radius: 4px;
 }
-/* Skipped word — amber strike-through. */
 .w.skipped [class^="tj-"], .w.skipped [class*=" tj-"] {
   background: rgba(255,176,32,.18);
   text-decoration: line-through;
   text-decoration-color: var(--warn);
   border-radius: 4px;
 }
-/* Model word (played back) — amber tint only. */
 .w.model [class^="tj-"], .w.model [class*=" tj-"] {
   background: rgba(255,176,32,.28);
   border-radius: 4px;
 }
-/* Gentle warning (short madd / missing ghunnah) — amber dotted underline. */
 .w.warned [class^="tj-"], .w.warned [class*=" tj-"] {
   background: rgba(255,176,32,.10);
   text-decoration: underline dotted var(--warn);
@@ -1802,7 +1788,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-radius: 4px;
 }
 
-/* Tajweed Noise Notice */
 #tajweedNoiseChip {
   color: var(--warn);
   border-color: rgba(255,176,32,.6);
@@ -3592,8 +3577,9 @@ let lastMicError = null;
 
 // ── RMS voice-activity analyser ──────────────────────────────────────────
 // Taps the same MediaStream that feeds the speech recogniser and keeps a
-// rolling 4-second window of 30 ms RMS samples. Used by the madd-timing
-// check so we measure actual sustained voice energy instead of ASR latency.
+// rolling 4-second window of 30 ms RMS samples. Used by the madd-timing and
+// ghunnah-timing checks so we measure actual sustained voice energy instead
+// of ASR latency.
 const rmsAnalyser = (function(){
   const samples = [];
   const MAX_AGE_MS = 4000;
@@ -4380,6 +4366,22 @@ const MADD_MIN_DELTA_MS = {
   necessary:   1300
 };
 
+// Ghunnah (nasalisation) minimum durations. Tajweed rules require 2 ḥarakāt
+// of nasalisation in every ghunnah-producing context. Using the same
+// ms-per-ḥarakāt scale as the madd check:
+//   - direct shaddah ghunnah (نّ / مّ): 350 ms — the delta window is almost
+//     entirely nasalisation, so the tight floor is safe.
+//   - ikhfa / idghaam_ghunnah / iqlab: the delta also contains the
+//     surrounding vowel and consonant, so raise the floor slightly to avoid
+//     false-flagging normal recitation.
+const GHUNNAH_MIN_MS = {
+  ghunnah:          350,
+  ikhfa:            550,
+  idghaam_ghunnah:  500,
+  iqlab:            450,
+  default:          350
+};
+
 let lastDirectCommitIdx = -1;
 let lastDirectCommitAt  = 0;
 let lastCommitBatchId   = -1;
@@ -4392,13 +4394,22 @@ function parseTajweedWordRules(decoratedHtml){
     ghunnahLetters: [],
     silentLetters: [],
     hasGhunnah: false,
-    hasSilent: false
+    hasSilent: false,
+    ghunnahType: null,
+    hasGhunnahContext: false
   };
   if (!decoratedHtml) return rules;
 
   if (decoratedHtml.indexOf('tj-madda_necessary') !== -1) rules.madd = 'necessary';
   else if (decoratedHtml.indexOf('tj-madda_permissible') !== -1) rules.madd = 'permissible';
   else if (decoratedHtml.indexOf('tj-madda_normal') !== -1) rules.madd = 'normal';
+
+  // Ghunnah-producing rule detection (most specific first).
+  if      (decoratedHtml.indexOf('tj-idghaam_ghunnah') !== -1)   rules.ghunnahType = 'idghaam_ghunnah';
+  else if (decoratedHtml.indexOf('tj-ikhfa') !== -1)             rules.ghunnahType = 'ikhfa';
+  else if (decoratedHtml.indexOf('tj-iqlab') !== -1)             rules.ghunnahType = 'iqlab';
+  else if (decoratedHtml.indexOf('tj-ghunnah') !== -1)           rules.ghunnahType = 'ghunnah';
+  rules.hasGhunnahContext = !!rules.ghunnahType;
 
   const gRe = /<span class="tj-ghunnah">([\s\S]*?)<\/span>/g;
   let m;
@@ -4504,6 +4515,36 @@ function runStrict1Checks(idx, heard, opts){
         markStrict1Error(prevW, 'madd',
           sourceLabel + ' ' + Math.round(effectiveMs) + ' ms, needs \u2265 ' +
           required + ' ms' + (rmsAvailable ? ' (asr ' + Math.round(asrMs) + ' ms)' : ''));
+      }
+    }
+  }
+
+  // Ghunnah timing: nasalisation length. Same RMS voice-activity measurement
+  // as the madd check, but keyed off hasGhunnahContext so it fires for the
+  // four ghunnah-producing rules (direct ghunnah, ikhfa, idghaam_ghunnah,
+  // iqlab). Presence-check (strict1GhunnahOk) below runs first so an
+  // entirely-missing nasal letter wins over a "too short" flag on the same
+  // word.
+  if (!opts.skipTiming &&
+      lastDirectCommitIdx >= 0 &&
+      idx === lastDirectCommitIdx + 1 &&
+      lastCommitBatchId !== currentBatchId){
+    const prevW = words[lastDirectCommitIdx];
+    if (prevW && prevW.tjRules && prevW.tjRules.hasGhunnahContext){
+      const gType    = prevW.tjRules.ghunnahType || 'ghunnah';
+      const required = (GHUNNAH_MIN_MS[gType] != null) ? GHUNNAH_MIN_MS[gType] : GHUNNAH_MIN_MS.default;
+      const asrMs    = now - lastDirectCommitAt;
+      const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
+      const voiceMs      = rmsAvailable
+        ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)
+        : 0;
+      const effectiveMs  = rmsAvailable ? voiceMs : asrMs;
+      const sourceLabel  = rmsAvailable ? 'voice' : 'timing';
+
+      if (effectiveMs < required){
+        markStrict1Error(prevW, 'ghunnah-length',
+          sourceLabel + ' nasalisation ' + Math.round(effectiveMs) +
+          ' ms, needs \u2265 ' + required + ' ms (' + gType + ')');
       }
     }
   }
@@ -7942,7 +7983,7 @@ function openCoachInfoModal(){
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
       '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach also verifies two key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough before the next word is spoken — the coach measures the <b>actual sustained voice energy</b> from the live microphone, not just the speech-recognition latency, so a rushed madd is flagged red.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — if the nasal letter is missing, the word is flagged red and counted as a mistake.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach also verifies three key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough before the next word is spoken — the coach measures the <b>actual sustained voice energy</b> from the live microphone, not just the speech-recognition latency, so a rushed madd is flagged red.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — if the nasal letter is missing, the word is flagged red and counted as a mistake.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules (direct shaddah ghunnah نّ / مّ, ikhfāʾ, idghām with ghunnah, iqlāb) all require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between the word\'s commit and the next word\'s commit and flags the word red if the nasalisation is too short.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
