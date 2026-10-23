@@ -1801,6 +1801,21 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   text-underline-offset: 6px;
   border-radius: 4px;
 }
+
+/* Tajweed Noise Notice */
+#tajweedNoiseChip {
+  color: var(--warn);
+  border-color: rgba(255,176,32,.6);
+  background: rgba(255,176,32,.1);
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
+}
+body.light-mode #tajweedNoiseChip {
+  color: #7a5500;
+  border-color: rgba(198,138,0,.6);
+  background: rgba(198,138,0,.1);
+}
 </style>
 </head>
 <body>
@@ -2074,6 +2089,9 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
         <option value="lenient">Lenient</option>
       </select>
     </label>
+    <span class="toggle" id="tajweedNoiseChip" hidden>
+      ⚠️ Background noise may affect Tajweed accuracy
+    </span>
     <label class="toggle hide-text" id="hideTextChip" hidden>
       <input type="checkbox" id="chkHideText"> 🙈 Hide text
     </label>
@@ -6814,6 +6832,10 @@ function applyMutexUI(){
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
   if(matchChip) matchChip.hidden = !followOnly;
   if(hideTextChip) hideTextChip.hidden = !followOnly;
+  
+  const tjNoiseChip = document.getElementById('tajweedNoiseChip');
+  if(tjNoiseChip) tjNoiseChip.hidden = followOnly;
+
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
   if(selMatch) selMatch.value = matchLevel;

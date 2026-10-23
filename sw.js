@@ -1,43 +1,28 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v35 — Tajweed-freshness release.
+   v36 — Syntax fix release.
 
-   v34 fixed the parse errors that had blocked every previous
-   release. v35 addresses a subtler problem that showed up once
-   the SW was actually running: the shell and the Quran text
-   caches could serve a STALE index.html / Tajweed API response
-   even when network was available, so a shipped client-side fix
-   to the Tajweed colour rendering never took effect in the
-   running app.
+   Fixed critical syntax errors in the FETCH event handler that 
+   were causing the Service Worker to crash on startup. 
+   
+   Restored proper handling for:
+     - Tajweed annotations (networkFresh).
+     - Audio requests from everyayah.com (audioFromDownloadCache).
 
-   Two targeted changes:
+   All other behaviour from v35 is preserved.
 
-     1. shellNavigation() now fetches with `cache: 'reload'`, so
-        the browser's HTTP cache can never hand back an old
-        index.html after a deploy. The SW cache still stores the
-        fresh copy for offline fallback.
-
-     2. Requests to api.quran.com that include
-        `text_uthmani_tajweed` are routed through a new
-        networkFresh() strategy that uses `cache: 'no-store'`
-        and never returns a cached response. Tajweed annotations
-        are therefore always live — a stale TEXT_CACHE entry can
-        never hide newly-shipped colour data again.
-
-   All other behaviour from v34 is preserved.
-
-   NOTE ON DEPLOY: after shipping v35, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v36, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v34 are deleted
+   next open runs the new code path. Caches qc-*-v35 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v35';
+const VERSION = 'v36';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -235,15 +220,15 @@ self.addEventListener('fetch', event => {
   // the client always receives live Tajweed data, and a stale
   // TEXT_CACHE or HTTP-cached response can never silently hide
   // newly-shipped colour fields.
-  if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajVERweed')){
-    event.respondWith(networkFresh(reqY));
-    returnAY;
+  if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
+    event.respondWith(networkFresh(req));
+    return;
   }
 
-  // Audio from everyayah.comAH — served from the persistent download
-  //){
- cache first (works fully offline   ), network second.
-  if(url.hostname === HOST_E event.respondWith(audioFromDownloadCache(req));
+  // Audio from everyayah.com — served from the persistent download
+  // cache first (works fully offline), network second.
+  if(url.hostname === HOST_EVERYAYAH){
+    event.respondWith(audioFromDownloadCache(req));
     return;
   }
 
