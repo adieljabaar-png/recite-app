@@ -1,44 +1,62 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v38 — Single-word Tajweed grading release.
+   v39 — Ghunnah detection + batched-commit timing release.
 
-   Ships the rewritten gradeFull() engine in index.html:
+   Ships two fixes to the Tajweed engine in index.html:
 
-     • Every spoken token is now graded against ONE word at a time
-       — no merged-token shortcut, no split-token shortcut. Each
-       word therefore passes individually through runStrict1Checks()
-       (madd timing, ghunnah presence, ghunnah length).
-     • On a lookahead hit, only the word that was actually attempted
-       (and failed) is marked `skipped` and counted as an error.
-       Intermediate words the reciter never reached are left
-       untouched — they are neither marked wrong nor counted.
-     • The Tajweed / strict confidence floor has been lowered from
-       0.40 to 0.35, so fewer legitimate final results get filtered
-       out in Tajweed mode.
+     FIX A — Ghunnah presence check now runs for ALL four
+     ghunnah-producing rules, not only the direct `tj-ghunnah`
+     span.
+
+       • strict1GhunnahOk() now keys off `hasGhunnahContext`
+         (set for ikhfa, idghaam_ghunnah, iqlab and direct
+         ghunnah) instead of `hasGhunnah`, which was only set
+         when a `tj-ghunnah` span was present.
+       • When no `tj-ghunnah` letters were extracted, the
+         expected nasal letter is derived from the rule type:
+           – ikhfa            → require ن if present in the word
+           – iqlab            → require م (noon pronounced as meem)
+           – idghaam_ghunnah  → no standalone nasal letter (timing only)
+       • A dropped nasal letter in ikhfa / iqlab words is now
+         flagged red and counted as a mistake, instead of being
+         silently allowed.
+
+     FIX C — Batched-commit timing is no longer skipped.
+
+       • The per-word timing check (madd length, ghunnah length)
+         still runs whenever the previous commit is in a
+         DIFFERENT ASR result — so "now - lastDirectCommitAt" is
+         real audio time.
+       • When the previous commit was in the SAME batch,
+         its requirement is accumulated into batchTimingCtx and
+         validated at the end of gradeFull() via the RMS
+         voice-activity analyser over the whole batch window.
+       • This closes the hole where fast recitation that landed
+         multiple words in one ASR result was silently passed.
 
    The new client code lives in index.html; this version bump
-   forces the browser to discard every qc-*-v37 cache on activate
+   forces the browser to discard every qc-*-v38 cache on activate
    so the updated HTML is served on next open.
 
-   All fetch-strategy behaviour from v37 is preserved:
+   All fetch-strategy behaviour from v38 is preserved:
      - Tajweed annotations (networkFresh).
      - Audio requests from everyayah.com (audioFromDownloadCache).
      - Google Fonts pre-cache at install.
      - Shell navigation with cache:'reload' (never serves stale HTML).
      - Manifest with a 2 s network budget.
 
-   NOTE ON DEPLOY: after shipping v38, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v39, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v37 are deleted
+   next open runs the new code path. Caches qc-*-v38 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v38';
+const VERSION = 'v39';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

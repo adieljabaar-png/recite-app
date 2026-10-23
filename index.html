@@ -3576,10 +3576,6 @@ let micStream = null;
 let lastMicError = null;
 
 // ── RMS voice-activity analyser ──────────────────────────────────────────
-// Taps the same MediaStream that feeds the speech recogniser and keeps a
-// rolling 4-second window of 30 ms RMS samples. Used by the madd-timing and
-// ghunnah-timing checks so we measure actual sustained voice energy instead
-// of ASR latency.
 const rmsAnalyser = (function(){
   const samples = [];
   const MAX_AGE_MS = 4000;
@@ -4156,15 +4152,7 @@ function decorateTajweedToSpans(html){
   return out;
 }
 
-// Split a tajweed-marked ayah into an array of { norm, html } word objects.
-// Parsed via the DOM so whitespace inside <tajweed>…</tajweed> can never
-// produce a malformed fragment, and so that an Arabic word whose letters
-// are split across sibling nodes (e.g. <span class="tj-ham_wasl">ٱ</span> +
-// text "لْحَمْدُ") is correctly accumulated into a single word object.
 function splitTajweedIntoWords(tajweedHtml){
-  // ── Primary path: DOM walk that accumulates adjacent text and tajweed
-  //    span chunks into complete whitespace-delimited words, exactly like
-  //    the browser renders them.
   const decorated = decorateTajweedToSpans(tajweedHtml);
   const tpl = document.createElement('template');
   tpl.innerHTML = decorated;
@@ -4215,11 +4203,8 @@ function splitTajweedIntoWords(tajweedHtml){
   try {
     for (let i = 0; i < tpl.content.childNodes.length; i++) walk(tpl.content.childNodes[i]);
     flush();
-  } catch(e){ /* fall through to safeguard */ }
+  } catch(e){ }
 
-  // ── Safeguard: if the DOM walk produced nothing, or it produced words but
-  //    lost every colour span even though the decorated source clearly had
-  //    some, fall back to a simple regex split.
   const sourceHasColour = /<span class="tj-/.test(decorated);
   const resultHasColour = out.some(w => /<span class="tj-/.test(w.html));
   if (out.length === 0 || (sourceHasColour && !resultHasColour)){
@@ -4366,14 +4351,6 @@ const MADD_MIN_DELTA_MS = {
   necessary:   1300
 };
 
-// Ghunnah (nasalisation) minimum durations. Tajweed rules require 2 ḥarakāt
-// of nasalisation in every ghunnah-producing context. Using the same
-// ms-per-ḥarakāt scale as the madd check:
-//   - direct shaddah ghunnah (نّ / مّ): 350 ms — the delta window is almost
-//     entirely nasalisation, so the tight floor is safe.
-//   - ikhfa / idghaam_ghunnah / iqlab: the delta also contains the
-//     surrounding vowel and consonant, so raise the floor slightly to avoid
-//     false-flagging normal recitation.
 const GHUNNAH_MIN_MS = {
   ghunnah:          350,
   ikhfa:            550,
@@ -4387,6 +4364,10 @@ let lastDirectCommitAt  = 0;
 let lastCommitBatchId   = -1;
 let currentBatchId      = 0;
 let silentWarned        = false;
+
+// Fix C: batch-cumulative timing context. Populated during a gradeFull()
+// call, finalised at the end of that call. Null outside gradeFull().
+let batchTimingCtx = null;
 
 function parseTajweedWordRules(decoratedHtml){
   const rules = {
@@ -4404,7 +4385,6 @@ function parseTajweedWordRules(decoratedHtml){
   else if (decoratedHtml.indexOf('tj-madda_permissible') !== -1) rules.madd = 'permissible';
   else if (decoratedHtml.indexOf('tj-madda_normal') !== -1) rules.madd = 'normal';
 
-  // Ghunnah-producing rule detection (most specific first).
   if      (decoratedHtml.indexOf('tj-idghaam_ghunnah') !== -1)   rules.ghunnahType = 'idghaam_ghunnah';
   else if (decoratedHtml.indexOf('tj-ikhfa') !== -1)             rules.ghunnahType = 'ikhfa';
   else if (decoratedHtml.indexOf('tj-iqlab') !== -1)             rules.ghunnahType = 'iqlab';
@@ -4433,11 +4413,31 @@ function strict1MaddOk(prevW, deltaMs){
   return deltaMs >= need;
 }
 
+// ── Fix A: presence check now runs for all four ghunnah-producing contexts ──
+// Previously this function short-circuited on `hasGhunnah`, which is only
+// set for the direct `tj-ghunnah` span. Ikhfa / idghaam_ghunnah / iqlab
+// words set `hasGhunnahContext` but not `hasGhunnah`, so their presence
+// check silently returned true and a dropped nasal letter was never
+// caught for those three rules. Now we key off `hasGhunnahContext` and
+// derive the expected nasal letter from the rule type when no
+// `tj-ghunnah` letters were extracted:
+//   • ikhfa            → noon (ن) if present in the written word
+//   • iqlab            → meem (م) — the noon is pronounced as meem
+//   • idghaam_ghunnah  → no standalone nasal letter (assimilated)
 function strict1GhunnahOk(w, heard){
-  if (!w || !w.tjRules || !w.tjRules.hasGhunnah) return true;
+  if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
   const N = '\u0646', M = '\u0645';
   let required = '';
   for (let i = 0; i < w.tjRules.ghunnahLetters.length; i++) required += w.tjRules.ghunnahLetters[i];
+  if (!required){
+    if (w.tjRules.ghunnahType === 'ikhfa'){
+      required = (w.norm && w.norm.indexOf(N) !== -1) ? N : '';
+    } else if (w.tjRules.ghunnahType === 'iqlab'){
+      required = M;
+    } else {
+      return true;
+    }
+  }
   if (!required) return true;
   const hasNasal = required.indexOf(N) !== -1 || required.indexOf(M) !== -1;
   if (!hasNasal) return true;
@@ -4493,54 +4493,41 @@ function runStrict1Checks(idx, heard, opts){
   if (!w) return;
   const now = performance.now();
 
-  // Madd timing: uses the RMS voice-activity measurement when available,
-  // because ASR commit latency can turn a short madd into a long "delta".
+  // Track this commit for the batch-cumulative timing check (Fix C).
+  if (batchTimingCtx) batchTimingCtx.wordCount++;
+
+  // Whether the previous committed word belongs to the CURRENT batch. When
+  // it does, the wall-clock delta between its commit and this one is
+  // meaningless (both happen inside the same synchronous ASR-result loop),
+  // so the per-word timing check is skipped and the cumulative batch check
+  // takes over at the end of gradeFull.
+  const prevInSameBatch = (lastDirectCommitIdx >= 0) && (lastCommitBatchId === currentBatchId);
+
+  // Per-word timing check — only fires when the previous commit was in a
+  // DIFFERENT batch, so that "now - lastDirectCommitAt" reflects real
+  // audio time and not a same-loop timestamp.
   if (!opts.skipTiming &&
       lastDirectCommitIdx >= 0 &&
       idx === lastDirectCommitIdx + 1 &&
-      lastCommitBatchId !== currentBatchId){
+      !prevInSameBatch){
     const prevW = words[lastDirectCommitIdx];
+    const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
+    const voiceMs = rmsAvailable ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now) : 0;
+    const asrMs = now - lastDirectCommitAt;
+    const effectiveMs = rmsAvailable ? voiceMs : asrMs;
+    const sourceLabel = rmsAvailable ? 'voice' : 'timing';
+
     if (prevW && prevW.tjRules && prevW.tjRules.madd){
       const required = MADD_MIN_DELTA_MS[prevW.tjRules.madd] || 0;
-      const asrMs    = now - lastDirectCommitAt;
-
-      const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
-      const voiceMs      = rmsAvailable
-        ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)
-        : 0;
-      const effectiveMs  = rmsAvailable ? voiceMs : asrMs;
-      const sourceLabel  = rmsAvailable ? 'voice' : 'timing';
-
       if (effectiveMs < required){
         markStrict1Error(prevW, 'madd',
           sourceLabel + ' ' + Math.round(effectiveMs) + ' ms, needs \u2265 ' +
           required + ' ms' + (rmsAvailable ? ' (asr ' + Math.round(asrMs) + ' ms)' : ''));
       }
     }
-  }
-
-  // Ghunnah timing: nasalisation length. Same RMS voice-activity measurement
-  // as the madd check, but keyed off hasGhunnahContext so it fires for the
-  // four ghunnah-producing rules (direct ghunnah, ikhfa, idghaam_ghunnah,
-  // iqlab). Presence-check (strict1GhunnahOk) below runs first so an
-  // entirely-missing nasal letter wins over a "too short" flag on the same
-  // word.
-  if (!opts.skipTiming &&
-      lastDirectCommitIdx >= 0 &&
-      idx === lastDirectCommitIdx + 1 &&
-      lastCommitBatchId !== currentBatchId){
-    const prevW = words[lastDirectCommitIdx];
     if (prevW && prevW.tjRules && prevW.tjRules.hasGhunnahContext){
-      const gType    = prevW.tjRules.ghunnahType || 'ghunnah';
+      const gType = prevW.tjRules.ghunnahType || 'ghunnah';
       const required = (GHUNNAH_MIN_MS[gType] != null) ? GHUNNAH_MIN_MS[gType] : GHUNNAH_MIN_MS.default;
-      const asrMs    = now - lastDirectCommitAt;
-      const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
-      const voiceMs      = rmsAvailable
-        ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)
-        : 0;
-      const effectiveMs  = rmsAvailable ? voiceMs : asrMs;
-      const sourceLabel  = rmsAvailable ? 'voice' : 'timing';
-
       if (effectiveMs < required){
         markStrict1Error(prevW, 'ghunnah-length',
           sourceLabel + ' nasalisation ' + Math.round(effectiveMs) +
@@ -4549,11 +4536,37 @@ function runStrict1Checks(idx, heard, opts){
     }
   }
 
+  // Fix C: when the previous commit was in the SAME batch, accumulate its
+  // timing requirement into the batch total. gradeFull then verifies at
+  // the end that the batch as a whole had enough sustained voice activity
+  // (via the RMS analyser) to cover all batched requirements. This closes
+  // the previous hole where fast recitation that landed multiple words in
+  // one ASR result was silently skipped by the timing check.
+  if (prevInSameBatch && batchTimingCtx &&
+      lastDirectCommitIdx >= 0 && idx === lastDirectCommitIdx + 1){
+    const prevW = words[lastDirectCommitIdx];
+    if (prevW && prevW.tjRules){
+      if (prevW.tjRules.madd){
+        const req = MADD_MIN_DELTA_MS[prevW.tjRules.madd] || 0;
+        if (req > 0){
+          batchTimingCtx.cumulativeRequired += req;
+          batchTimingCtx.lastReqWordIdx = lastDirectCommitIdx;
+        }
+      }
+      if (prevW.tjRules.hasGhunnahContext){
+        const gType = prevW.tjRules.ghunnahType || 'ghunnah';
+        const req = (GHUNNAH_MIN_MS[gType] != null) ? GHUNNAH_MIN_MS[gType] : GHUNNAH_MIN_MS.default;
+        if (req > 0){
+          batchTimingCtx.cumulativeRequired += req;
+          batchTimingCtx.lastReqWordIdx = lastDirectCommitIdx;
+        }
+      }
+    }
+  }
+
   if (!strict1GhunnahOk(w, heard)){
     markStrict1Error(w, 'ghunnah', 'nasal letter missing (\u0646 / \u0645)');
   }
-
-  // Silent-letter check DISABLED per user request.
 
   if (opts.breakChain){
     lastDirectCommitIdx = -1;
@@ -7356,100 +7369,136 @@ function gradeFull(tokens, isFinal, startIdx){
   let used = 0;
   const LOOKAHEAD = 2;
 
-  for(let ti = start; ti < tokens.length; ti++){
-    const rawTok = tokens[ti];
-    const heard  = normArCached(rawTok);
-    if(!heard){ used++; continue; }
-    if(ptr >= words.length){ used++; continue; }
-    const hPhon = phonArCached(rawTok);
+  // Fix C: set up the batch-cumulative timing context for this grade call.
+  // Populated by runStrict1Checks for words whose predecessor was in the
+  // same ASR batch; validated at the end of the loop below.
+  const outerBatchCtx = batchTimingCtx;
+  batchTimingCtx = {
+    batchId: currentBatchId,
+    startTime: lastDirectCommitAt,
+    cumulativeRequired: 0,
+    lastReqWordIdx: -1,
+    wordCount: 0
+  };
 
-    if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
-    if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
+  try{
+    for(let ti = start; ti < tokens.length; ti++){
+      const rawTok = tokens[ti];
+      const heard  = normArCached(rawTok);
+      if(!heard){ used++; continue; }
+      if(ptr >= words.length){ used++; continue; }
+      const hPhon = phonArCached(rawTok);
 
-    // Direct match — every word is checked individually by strict 1 / Tajweed
-    if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
-      commitCorrect(ptr);
-      runStrict1Checks(ptr, heard);
-      advancePast(1);
-      pendingHeard.length = 0; consecutiveReds = 0;
-      used++; continue;
-    }
+      if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
+      if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
-    let found = -1;
-    const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
-    for(let k = 1; k <= maxK; k++){
-      const target = words[ptr + k];
-      if(heard === target.norm){ found = k; break; }
-      if(k === 1 && isMatchWord(heard, hPhon, null, target)){ found = k; break; }
-      if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
-    }
-    if(found > 0){
-      // Only mark the word that was actually attempted (and failed) as wrong.
-      // The intermediate words were never recited nor checked → don't mark them.
+      if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
+        commitCorrect(ptr);
+        runStrict1Checks(ptr, heard);
+        advancePast(1);
+        pendingHeard.length = 0; consecutiveReds = 0;
+        used++; continue;
+      }
+
+      let found = -1;
+      const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
+      for(let k = 1; k <= maxK; k++){
+        const target = words[ptr + k];
+        if(heard === target.norm){ found = k; break; }
+        if(k === 1 && isMatchWord(heard, hPhon, null, target)){ found = k; break; }
+        if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
+      }
+      if(found > 0){
+        if(!followOnly){
+          const sw = words[ptr];
+          if(sw && !sw.el.classList.contains('error') && !sw.el.classList.contains('skipped')){
+            sw.el.classList.remove('current','correct','corrected','model','located');
+            sw.el.classList.add('skipped');
+            errors++;
+            const m = {
+              idx: mistakeCounter++,
+              correct: sw.raw.replace(TASHKEEL,''),
+              heard: (pendingHeard.length ? pendingHeard[0] : rawTok),
+              verse: sw.verse,
+              kind: 'skipped'
+            };
+            mistakes.push(m); appendMistake(m);
+            scheduleHUD();
+          }
+        }
+        commitCorrect(ptr + found);
+        runStrict1Checks(ptr + found, heard);
+        advancePast(found + 1);
+        pendingHeard.length = 0; consecutiveReds = 0;
+        used++; continue;
+      }
+
+      if(!isFinal && isStrongPartialPrefix(heard)){
+        if(pendingHeard.length === 1 &&
+           heard.startsWith(normArCached(pendingHeard[0]))){
+          pendingHeard[0] = rawTok;
+        } else {
+          pendingHeard.push(rawTok);
+        }
+        used++; continue;
+      }
+
       if(!followOnly){
-        const sw = words[ptr];
-        if(sw && !sw.el.classList.contains('error') && !sw.el.classList.contains('skipped')){
-          sw.el.classList.remove('current','correct','corrected','model','located');
-          sw.el.classList.add('skipped');
+        const w = words[ptr];
+        if(w && !w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
+          w.el.classList.add('error');
+          w.el.classList.remove('current','correct','corrected','model','located');
           errors++;
           const m = {
             idx: mistakeCounter++,
-            correct: sw.raw.replace(TASHKEEL,''),
-            heard: (pendingHeard.length ? pendingHeard[0] : rawTok),
-            verse: sw.verse,
-            kind: 'skipped'
+            correct: w.raw.replace(TASHKEEL,''),
+            heard: rawTok,
+            verse: w.verse,
+            kind: 'misread'
           };
           mistakes.push(m); appendMistake(m);
           scheduleHUD();
+          if(beepOn) beepThrottled('error');
         }
       }
-      // Run strict 1 / Tajweed checks on the matched word — single-word,
-      // no batching, no skipTiming.
-      commitCorrect(ptr + found);
-      runStrict1Checks(ptr + found, heard);
-      advancePast(found + 1);
-      pendingHeard.length = 0; consecutiveReds = 0;
-      used++; continue;
+      lastDirectCommitIdx = -1;
+      lastDirectCommitAt  = 0;
+      lastCommitBatchId   = -1;
+      if(consecutiveReds < 2){
+        advancePast(1);
+        consecutiveReds++;
+      }
+      pendingHeard.length = 0;
+      used++;
     }
 
-    if(!isFinal && isStrongPartialPrefix(heard)){
-      if(pendingHeard.length === 1 &&
-         heard.startsWith(normArCached(pendingHeard[0]))){
-        pendingHeard[0] = rawTok;
-      } else {
-        pendingHeard.push(rawTok);
-      }
-      used++; continue;
-    }
-
-    if(!followOnly){
-      const w = words[ptr];
-      if(w && !w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
-        w.el.classList.add('error');
-        w.el.classList.remove('current','correct','corrected','model','located');
-        errors++;
-        const m = {
-          idx: mistakeCounter++,
-          correct: w.raw.replace(TASHKEEL,''),
-          heard: rawTok,
-          verse: w.verse,
-          kind: 'misread'
-        };
-        mistakes.push(m); appendMistake(m);
-        scheduleHUD();
-        if(beepOn) beepThrottled('error');
+    // Fix C: cumulative batch validation. If this batch committed two or
+    // more words and any of them had a timing requirement, verify that the
+    // batch as a whole produced enough sustained voice energy (RMS) to
+    // cover the summed requirements. This is what closes the previous gap
+    // where fast recitation that landed multiple words in a single ASR
+    // result was silently skipped by the per-word timing check.
+    const ctx = batchTimingCtx;
+    if (ctx && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 && ctx.lastReqWordIdx >= 0){
+      const now = performance.now();
+      const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
+      if (rmsAvailable){
+        const voiceMs = rmsAnalyser.voiceDurationMs(ctx.startTime, now);
+        if (voiceMs < ctx.cumulativeRequired){
+          const w = words[ctx.lastReqWordIdx];
+          if (w && !w.el.classList.contains('error')){
+            markStrict1Error(w, 'ghunnah-batch',
+              'batch of ' + ctx.wordCount + ' words: voice ' +
+              Math.round(voiceMs) + ' ms < required ' +
+              Math.round(ctx.cumulativeRequired) + ' ms');
+          }
+        }
       }
     }
-    lastDirectCommitIdx = -1;
-    lastDirectCommitAt  = 0;
-    lastCommitBatchId   = -1;
-    if(consecutiveReds < 2){
-      advancePast(1);
-      consecutiveReds++;
-    }
-    pendingHeard.length = 0;
-    used++;
+  } finally {
+    batchTimingCtx = outerBatchCtx;
   }
+
   return used;
 }
 
