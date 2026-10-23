@@ -1,28 +1,20 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v33 — Critical repair release.
+   v34 — Recovery release.
 
-   v32 (which never activated on any client) shipped with two
-   JavaScript syntax errors that prevented the service worker
-   from parsing at all. Because of that, the PWA could not be
-   opened while offline — the install event was never even
-   registered. This release fixes both syntax errors, which
-   restores the entire offline pipeline.
+   v33 shipped with a corrupted shellNavigation() body containing
+   a JavaScript syntax error (a stray `index.html` identifier
+   adjacent to a string literal), plus garbled characters in the
+   inline offline HTML ("utf by-8" for "utf-8", "s storesans-serif"
+   for "sans-serif"). Because the whole worker failed to parse,
+   the PWA could not be opened while offline — the install event
+   was never even registered. This release fixes all of that,
+   which restores the entire offline pipeline.
 
-       • manifestFresh():  `{ ignoreSearch over: true }) || await;
-                            cache.match(req, { ignore iSearch: true })`
-       • trimCache():      `for(let i = 0; i <++) ...`
-
-   Additional improvement in v33:
-     • Pre-caches the Google Fonts stylesheet and every font
-       file it references during install (bounded to 20 s so
-       install can never hang). Previously the four Arabic
-       font families only became available offline after the
-       user had visited the app once while online — the very
-       first cold offline open fell back to a system serif.
-       With this change the typography renders identically
-       online and offline, from the first offline launch.
+   The two syntax errors first reported in v32 (manifestFresh()
+   and trimCache()) remain fixed, as does the Google Fonts
+   pre-cache behaviour from v33.
 
    All existing behaviour is preserved:
      • Shell / navigation network-first, cache fallback.
@@ -42,7 +34,7 @@
 
 'use strict';
 
-const VERSION = 'v33';
+const VERSION = 'v34';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -389,8 +381,8 @@ async function shellNavigation(req){
     }catch(_){}
     if(hit) return hit;
     return new Response(
-      '<!doctype html><meta charset="utf by-8"><title>Offline</title>' +
- index.html      '<body, style="font-family:s storesans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
+      '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
+      '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
       '<h2>You are offline</h2>' +
       '<p>Open the app once while online to enable offline mode.</p>',
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -411,7 +403,7 @@ async function trimCache(cacheName, maxEntries){
 /* ============================================================
    Google Fonts pre-cache (bounded, best-effort)
    ============================================================
-   Fetches the exact stylesheet URL used it
+   Fetches the exact stylesheet URL used by index.html, stores it
    in FONTS_CACHE, then parses every `url(...)` entry it contains
    and fetches each font file in parallel. Any individual failure
    is ignored so one slow font file can never abort the whole
