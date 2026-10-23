@@ -1,32 +1,44 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v37 — Ghunnah-length feature release.
+   v38 — Single-word Tajweed grading release.
 
-   Ships the new Ghunnah (nasalisation) length detection in the
-   Tajweed engine, alongside the existing madd-timing and
-   presence checks. The new client code lives in index.html; this
-   version bump forces the browser to discard every qc-*-v36
-   cache on activate so the updated HTML is served on next open.
+   Ships the rewritten gradeFull() engine in index.html:
 
-   All fetch-strategy behaviour from v36 is preserved:
+     • Every spoken token is now graded against ONE word at a time
+       — no merged-token shortcut, no split-token shortcut. Each
+       word therefore passes individually through runStrict1Checks()
+       (madd timing, ghunnah presence, ghunnah length).
+     • On a lookahead hit, only the word that was actually attempted
+       (and failed) is marked `skipped` and counted as an error.
+       Intermediate words the reciter never reached are left
+       untouched — they are neither marked wrong nor counted.
+     • The Tajweed / strict confidence floor has been lowered from
+       0.40 to 0.35, so fewer legitimate final results get filtered
+       out in Tajweed mode.
+
+   The new client code lives in index.html; this version bump
+   forces the browser to discard every qc-*-v37 cache on activate
+   so the updated HTML is served on next open.
+
+   All fetch-strategy behaviour from v37 is preserved:
      - Tajweed annotations (networkFresh).
      - Audio requests from everyayah.com (audioFromDownloadCache).
      - Google Fonts pre-cache at install.
      - Shell navigation with cache:'reload' (never serves stale HTML).
      - Manifest with a 2 s network budget.
 
-   NOTE ON DEPLOY: after shipping v37, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v38, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v36 are deleted
+   next open runs the new code path. Caches qc-*-v37 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v37';
+const VERSION = 'v38';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

@@ -2775,7 +2775,7 @@ function toleranceFor(L){
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
-const CONF_FLOOR_TABLE = { strict: 0.40, balanced: 0.45, lenient: 0.35 };
+const CONF_FLOOR_TABLE = { strict: 0.35, balanced: 0.45, lenient: 0.35 };
 function confidenceFloor(){ return CONF_FLOOR_TABLE[matchStrictness()] || 0.45; }
 
 const NOISE_LIMIT_TABLE = { strict: 2, balanced: 3, lenient: 4 };
@@ -7366,28 +7366,11 @@ function gradeFull(tokens, isFinal, startIdx){
     if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
     if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
+    // Direct match — every word is checked individually by strict 1 / Tajweed
     if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
       commitCorrect(ptr);
       runStrict1Checks(ptr, heard);
       advancePast(1);
-      pendingHeard.length = 0; consecutiveReds = 0;
-      used++; continue;
-    }
-
-    if(trySplitTokenMatch(heard, rawTok)){
-      const fullHeard = normArCached(pendingHeard.join('') + rawTok);
-      commitCorrect(ptr);
-      runStrict1Checks(ptr, fullHeard);
-      advancePast(1);
-      pendingHeard.length = 0; consecutiveReds = 0;
-      used++; continue;
-    }
-
-    const mergedN = tryMergedTokenMatch(heard, hPhon);
-    if(mergedN > 0){
-      commitManyCorrect(ptr, ptr + mergedN);
-      runStrict1Checks(ptr, heard, { skipTiming: true, breakChain: true });
-      advancePast(mergedN);
       pendingHeard.length = 0; consecutiveReds = 0;
       used++; continue;
     }
@@ -7401,30 +7384,29 @@ function gradeFull(tokens, isFinal, startIdx){
       if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
     }
     if(found > 0){
-      if(matchStrictness() === 'strict'){
-        for(let k = 0; k < found; k++){
-          const sw = words[ptr + k];
-          if(!sw) continue;
-          const wasError = sw.el.classList.contains('error');
-          if(wasError) continue;
+      // Only mark the word that was actually attempted (and failed) as wrong.
+      // The intermediate words were never recited nor checked → don't mark them.
+      if(!followOnly){
+        const sw = words[ptr];
+        if(sw && !sw.el.classList.contains('error') && !sw.el.classList.contains('skipped')){
           sw.el.classList.remove('current','correct','corrected','model','located');
           sw.el.classList.add('skipped');
-          if(!followOnly){
-            errors++;
-            const m = {
-              idx: mistakeCounter++,
-              correct: sw.raw.replace(TASHKEEL,''),
-              heard: (k === 0 && pendingHeard.length) ? pendingHeard[0] : '',
-              verse: sw.verse,
-              kind: 'skipped'
-            };
-            mistakes.push(m); appendMistake(m);
-          }
+          errors++;
+          const m = {
+            idx: mistakeCounter++,
+            correct: sw.raw.replace(TASHKEEL,''),
+            heard: (pendingHeard.length ? pendingHeard[0] : rawTok),
+            verse: sw.verse,
+            kind: 'skipped'
+          };
+          mistakes.push(m); appendMistake(m);
+          scheduleHUD();
         }
-        if(!followOnly) scheduleHUD();
       }
+      // Run strict 1 / Tajweed checks on the matched word — single-word,
+      // no batching, no skipTiming.
       commitCorrect(ptr + found);
-      runStrict1Checks(ptr + found, heard, { skipTiming: true, breakChain: true });
+      runStrict1Checks(ptr + found, heard);
       advancePast(found + 1);
       pendingHeard.length = 0; consecutiveReds = 0;
       used++; continue;
