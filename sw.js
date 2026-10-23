@@ -1,40 +1,43 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v34 — Recovery release.
+   v35 — Tajweed-freshness release.
 
-   v33 shipped with a corrupted shellNavigation() body containing
-   a JavaScript syntax error (a stray `index.html` identifier
-   adjacent to a string literal), plus garbled characters in the
-   inline offline HTML ("utf by-8" for "utf-8", "s storesans-serif"
-   for "sans-serif"). Because the whole worker failed to parse,
-   the PWA could not be opened while offline — the install event
-   was never even registered. This release fixes all of that,
-   which restores the entire offline pipeline.
+   v34 fixed the parse errors that had blocked every previous
+   release. v35 addresses a subtler problem that showed up once
+   the SW was actually running: the shell and the Quran text
+   caches could serve a STALE index.html / Tajweed API response
+   even when network was available, so a shipped client-side fix
+   to the Tajweed colour rendering never took effect in the
+   running app.
 
-   The two syntax errors first reported in v32 (manifestFresh()
-   and trimCache()) remain fixed, as does the Google Fonts
-   pre-cache behaviour from v33.
+   Two targeted changes:
 
-   All existing behaviour is preserved:
-     • Shell / navigation network-first, cache fallback.
-     • Quran text APIs (api.alquran.cloud, api.quran.com)
-       network-first with cache fallback.
-     • Google Fonts cache-first.
-     • Downloaded ayah audio served from the persistent
-       'qc-audio' cache first, network second.
-     • Offline audio request returns 504 rather than hanging.
-     • Inline SVG notification icon (no external PNG).
-     • Explicit fetch-handler bypasses for /my-analytics/,
-       /_vercel/, /api/* and /sw.js so analytics, serverless
-       functions and SW updates are never intercepted.
-     • CLEAR_CACHES / CLEAR_AUDIO_CACHE / REFRESH_MANIFEST
-       message handlers.
+     1. shellNavigation() now fetches with `cache: 'reload'`, so
+        the browser's HTTP cache can never hand back an old
+        index.html after a deploy. The SW cache still stores the
+        fresh copy for offline fallback.
+
+     2. Requests to api.quran.com that include
+        `text_uthmani_tajweed` are routed through a new
+        networkFresh() strategy that uses `cache: 'no-store'`
+        and never returns a cached response. Tajweed annotations
+        are therefore always live — a stale TEXT_CACHE entry can
+        never hide newly-shipped colour data again.
+
+   All other behaviour from v34 is preserved.
+
+   NOTE ON DEPLOY: after shipping v35, fully close the PWA (or
+   close every tab showing the site) and reopen it. The browser
+   fetches sw.js on navigation; the new worker's install calls
+   skipWaiting() and its activate calls clients.claim(), so the
+   next open runs the new code path. Caches qc-*-v34 are deleted
+   on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v34';
+const VERSION = 'v35';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -227,10 +230,20 @@ self.addEventListener('fetch', event => {
     if(url.pathname === '/sw.js')                  return;   // the service worker itself
   }
 
-  // Audio from everyayah.com — served from the persistent download
-  // cache first (works fully offline), network second.
-  if(url.hostname === HOST_EVERYAYAH){
-    event.respondWith(audioFromDownloadCache(req));
+  // Tajweed annotation requests — forced fresh, never cached.
+  // This is the fix for "Tajweed colour coding doesn't update":
+  // the client always receives live Tajweed data, and a stale
+  // TEXT_CACHE or HTTP-cached response can never silently hide
+  // newly-shipped colour fields.
+  if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajVERweed')){
+    event.respondWith(networkFresh(reqY));
+    returnAY;
+  }
+
+  // Audio from everyayah.comAH — served from the persistent download
+  //){
+ cache first (works fully offline   ), network second.
+  if(url.hostname === HOST_E event.respondWith(audioFromDownloadCache(req));
     return;
   }
 
@@ -317,6 +330,21 @@ async function networkFirst(req, cacheName, maxEntries){
   }
 }
 
+/* networkFresh — always goes to the network, bypasses the browser's
+   HTTP cache entirely, and never falls back to any cache. Used for
+   Tajweed annotation requests where freshness is more important than
+   offline availability (Tajweed colouring requires network anyway). */
+async function networkFresh(req){
+  try{
+    const freshReq = new Request(req, { cache: 'no-store' });
+    const res = await fetch(freshReq);
+    if(res) return res;
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }catch(_){
+    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
+
 async function manifestFresh(req){
   const cache = await caches.open(SHELL_CACHE);
 
@@ -366,7 +394,12 @@ async function manifestFresh(req){
 async function shellNavigation(req){
   const cache = await caches.open(SHELL_CACHE);
   try{
-    const res = await fetch(req);
+    // Force a fresh fetch — bypass the browser HTTP cache so a stale
+    // index.html can never be served after a deploy. This is the fix
+    // for "my Tajweed fix didn't reach the app": even with network
+    // available, HTTP-cached HTML was silently masking new client code.
+    const freshReq = new Request(req, { cache: 'reload' });
+    const res = await fetch(freshReq);
     if(res && res.ok && res.type === 'basic'){
       const clone = res.clone();
       cache.put('./index.html', clone).catch(() => {});
