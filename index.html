@@ -985,6 +985,8 @@ font-size:.76rem;direction:ltr;animation:slide-in .22s ease;min-height:32px;
 .mistakes-list .correct{font-family:'Amiri','Amiri Quran',serif;font-size:1.15rem;color:#fff;direction:rtl;flex-shrink:0;}
 .mistakes-list .heard{color:var(--muted);font-family:'Amiri','Amiri Quran',serif;font-size:.95rem;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .mistakes-list .meta{margin-left:auto;color:var(--muted);font-size:.65rem;white-space:nowrap;flex-shrink:0;font-family:-apple-system,sans-serif;}
+.mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;}
+body.light-mode .mistakes-list .tj-kind{background:rgba(120,80,220,.16);border-color:rgba(120,80,220,.55);color:#5b2d9e;}
 @keyframes slide-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
 .mushaf{
@@ -4459,20 +4461,50 @@ function strict1SilentOk(w, heard){
   return true;
 }
 
+// Human-readable names for each Tajweed rule violation kind. Every Tajweed
+// mistake recorded by the engine is tagged with one of these so the user can
+// always see *which* rule was broken (not just that something was wrong).
+const TAJWEED_ERROR_NAMES = {
+  'madd':           'Madd — too short',
+  'ghunnah':        'Ghunnah — nasal missing',
+  'ghunnah-length': 'Ghunnah — too short',
+  'ghunnah-batch':  'Ghunnah — too short'
+};
+
 function markStrict1Error(w, kind, detail){
   if (!w) return;
   if (w.el.classList.contains('error')) return;
   w.el.className = 'w error';
   errors++;
+
+  // Resolve the readable Tajweed rule name once, so it is persisted on the
+  // mistake object and rendered everywhere the mistake appears.
+  const tajweedName = TAJWEED_ERROR_NAMES[kind] || ('Tajweed — ' + kind);
+
   const m = {
     idx: mistakeCounter++,
     correct: w.raw.replace(TASHKEEL, ''),
-    heard: '[' + kind + '] ' + detail,
+    heard: detail,
     verse: w.verse,
-    kind: 'tajweed-' + kind
+    kind: 'tajweed-' + kind,
+    tajweedType: kind,
+    tajweedName: tajweedName
   };
   mistakes.push(m); appendMistake(m); scheduleHUD();
   if (beepOn) beepThrottled('error');
+
+  // Announce the named Tajweed mistake in the live feedback feed.
+  // Throttled so a fast reciter does not get flooded.
+  const now = performance.now();
+  if (now - (markStrict1Error._lastFeedbackAt || 0) > 1200){
+    markStrict1Error._lastFeedbackAt = now;
+    addFeedback(
+      '🎵 <b>Tajweed mistake — ' + escapeHtml(tajweedName) + '</b> · ' +
+      '<span class="ar">' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</span> · ' +
+      escapeHtml(detail),
+      true
+    );
+  }
 }
 
 function markStrict1Warning(w, kind, detail){
@@ -7249,9 +7281,23 @@ function appendMistake(m){
   mistakesPanel.hidden = false;
   mistakeCountBadge.textContent = String(mistakes.length);
   const li = document.createElement('li');
+
+  // Named Tajweed rule badge — appears only on Tajweed mistakes.
+  const kindBadge = m.tajweedName
+    ? '<span class="tj-kind" title="' + escapeHtml(m.tajweedName) + '">' +
+        escapeHtml(m.tajweedName) +
+      '</span>'
+    : '';
+
   const heardPart = m.heard ? '<span class="heard">→ ' + escapeHtml(m.heard) + '</span>' : '';
   const ayahPart = m.verse ? m.verse.split(':')[1] : '';
-  li.innerHTML = '<span class="idx">' + m.idx + '</span><span class="correct">' + escapeHtml(m.correct) + '</span>' + heardPart + '<span class="meta">Ayah ' + ayahPart + '</span>';
+  li.innerHTML =
+    '<span class="idx">' + m.idx + '</span>' +
+    kindBadge +
+    '<span class="correct">' + escapeHtml(m.correct) + '</span>' +
+    heardPart +
+    '<span class="meta">Ayah ' + ayahPart + '</span>';
+
   mistakesList.appendChild(li);
   mistakesList.scrollTop = mistakesList.scrollHeight;
 }
@@ -8012,7 +8058,7 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
       '<li>Tajweed is <b>permanently locked to the Strict setting</b>. The <b>Match</b> selector is <b>hidden</b> in Tajweed mode and Tajweed never changes or inherits your Follow-mode choice.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
-      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active.</li>' +
+      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ghunnah — too short</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
       '<li><b>Rule-aware checks:</b> while you recite, the coach also verifies three key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough before the next word is spoken — the coach measures the <b>actual sustained voice energy</b> from the live microphone, not just the speech-recognition latency, so a rushed madd is flagged red.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — if the nasal letter is missing, the word is flagged red and counted as a mistake.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules (direct shaddah ghunnah نّ / مّ, ikhfāʾ, idghām with ghunnah, iqlāb) all require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between the word\'s commit and the next word\'s commit and flags the word red if the nasalisation is too short.</li>' +
     '</ul>' +

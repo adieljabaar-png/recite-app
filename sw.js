@@ -1,62 +1,59 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v39 — Ghunnah detection + batched-commit timing release.
+   v40 — Named Tajweed mistakes.
 
-   Ships two fixes to the Tajweed engine in index.html:
+   Ships one focused fix to the Tajweed engine in index.html:
 
-     FIX A — Ghunnah presence check now runs for ALL four
-     ghunnah-producing rules, not only the direct `tj-ghunnah`
-     span.
+     NAMED TAJWEED MISTAKES — every Tajweed rule violation now
+     tells the user *which rule* was broken.
 
-       • strict1GhunnahOk() now keys off `hasGhunnahContext`
-         (set for ikhfa, idghaam_ghunnah, iqlab and direct
-         ghunnah) instead of `hasGhunnah`, which was only set
-         when a `tj-ghunnah` span was present.
-       • When no `tj-ghunnah` letters were extracted, the
-         expected nasal letter is derived from the rule type:
-           – ikhfa            → require ن if present in the word
-           – iqlab            → require م (noon pronounced as meem)
-           – idghaam_ghunnah  → no standalone nasal letter (timing only)
-       • A dropped nasal letter in ikhfa / iqlab words is now
-         flagged red and counted as a mistake, instead of being
-         silently allowed.
-
-     FIX C — Batched-commit timing is no longer skipped.
-
-       • The per-word timing check (madd length, ghunnah length)
-         still runs whenever the previous commit is in a
-         DIFFERENT ASR result — so "now - lastDirectCommitAt" is
-         real audio time.
-       • When the previous commit was in the SAME batch,
-         its requirement is accumulated into batchTimingCtx and
-         validated at the end of gradeFull() via the RMS
-         voice-activity analyser over the whole batch window.
-       • This closes the hole where fast recitation that landed
-         multiple words in one ASR result was silently passed.
+       • A new TAJWEED_ERROR_NAMES map converts the internal
+         slugs used by the Tajweed engine into readable rule
+         names:
+           – `madd`           → "Madd — too short"
+           – `ghunnah`        → "Ghunnah — nasal missing"
+           – `ghunnah-length` → "Ghunnah — too short"
+           – `ghunnah-batch`  → "Ghunnah — too short"
+       • markStrict1Error() now stores three extra fields on
+         every mistake object:
+           – tajweedType : the raw rule slug (madd / ghunnah / …)
+           – tajweedName : the human-readable rule label
+           – heard       : no longer carries the "[kind]" prefix
+       • appendMistake() renders the named rule as a purple
+         pill badge on each Tajweed mistake row, so the Mistake
+         panel shows e.g. "MADD — TOO SHORT" or
+         "GHUNNAH — NASAL MISSING" next to the misrecited word.
+       • The live feedback feed also announces the named rule
+         (throttled to one line per 1.2 s so fast recitation
+         isn't spammed).
+       • Every Tajweed check path is covered: madd duration,
+         ghunnah nasal-letter presence, ghunnah duration, and
+         the batched-commit ghunnah check.
 
    The new client code lives in index.html; this version bump
-   forces the browser to discard every qc-*-v38 cache on activate
+   forces the browser to discard every qc-*-v39 cache on activate
    so the updated HTML is served on next open.
 
-   All fetch-strategy behaviour from v38 is preserved:
+   All fetch-strategy behaviour from v39 is preserved:
      - Tajweed annotations (networkFresh).
      - Audio requests from everyayah.com (audioFromDownloadCache).
      - Google Fonts pre-cache at install.
      - Shell navigation with cache:'reload' (never serves stale HTML).
      - Manifest with a 2 s network budget.
+     - Persistent qc-audio cache survives every version bump.
 
-   NOTE ON DEPLOY: after shipping v39, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v40, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v38 are deleted
+   next open runs the new code path. Caches qc-*-v39 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v39';
+const VERSION = 'v40';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
