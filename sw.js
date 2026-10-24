@@ -1,88 +1,72 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v44 — Hamzat al-waṣl enforcement.
+   v43 — Silent-letter enforcement rewrite.
 
-   Ships the corrected strict1SilentOk() pipeline of index.html
-   where hamzat al-waṣl (the purple tj-ham_wasl span) is now
-   treated identically to a silent letter (the grey tj-silent
-   span). No new network endpoints, no new cache requirements —
-   the only functional change in the SW is the version bump,
-   which forces every qc-*-v43 cache to be discarded on activate
-   so the updated HTML reaches the client on next open.
+   Ships the corrected strict1SilentOk() + normNoSilent pipeline
+   of index.html. No new network endpoints, no new cache
+   requirements — the only functional change in the SW is the
+   version bump, which forces every qc-*-v42 cache to be
+   discarded on activate so the updated HTML reaches the client
+   on next open.
 
    Client-side changes shipped with this version:
 
-     1. Hamzat al-waṣl counts as a silent letter
-        Previously the Tajweed engine only inspected tj-silent
-        spans when building the silent-letter check. Hamzat
-        al-waṣl — annotated as tj-ham_wasl and coloured purple
-        on screen — was invisible to the rule engine, so a
-        reciter who pronounced the waṣl alif (e.g. the alif of
-        ٱلرَّحْمَٰنِ) was never flagged.
+     1. Silent-letter check is now POSITIONAL and CORRECT
+        strict1SilentOk() no longer uses full.indexOf(sl) +
+        full.split(sl).join(''). That old code stripped the
+        FIRST matching character, not the annotated silent one,
+        so multi-alif words like أَنَا (norm "انا", silent final
+        alif) silently compared the wrong pair of strings and
+        either missed real violations or false-flagged correct
+        recitations.
 
-        Now every place that reads silent letters also reads
-        ham_wasl letters:
-          • splitTajweedIntoWords()  — flushes { norm,
-            normNoSilent, html } with ham_wasl spans stripped
-            alongside tj-silent spans.
-          • fallbackSplitTajweedIntoWords() — same treatment.
-          • parseTajweedWordRules() — pushes ham_wasl letters
-            into rules.silentLetters, sets rules.hasSilent,
-            and computes rules.normNoSilent from the
-            decorated HTML with both span types removed.
+        The primary path now compares lev(heard, full) against
+        lev(heard, normNoSilent), where normNoSilent is the
+        normalised form with every tj-silent span stripped —
+        computed once per word from the Quran.com annotation
+        HTML. The reciter is flagged ONLY when heard is
+        strictly closer to the full form than to the
+        silent-stripped form. This is position-safe for
+        geminate mergers (first ل of الله) and multi-alif
+        words.
 
-        strict1SilentOk() already operates purely on
-        (full, normNoSilent, heard) — no code change is
-        required inside the check itself; feeding it the
-        correct normNoSilent is sufficient. A word like
-        ٱلرَّحْمَٰنِ now carries:
-             norm          = الرحمن   (6 chars, alif still there)
-             normNoSilent  = لرحمن    (5 chars, alif stripped)
-        and the same lev(heard, full) vs lev(heard, normNoSilent)
-        comparison that already catches a pronounced final alif
-        in أَنَا now catches a pronounced waṣl alif too.
+        The fallback (legacy cached data without normNoSilent)
+        now tries removing each occurrence of each silent letter
+        in turn and only flags when heard is closer to the full
+        form than to ALL variants — deliberately lenient so no
+        false positives.
 
-     2. Multi-class span regex hardening
-        The old silent-letter regexes were literal:
-             /<span class="tj-silent">…<\/span>/
-        which silently skipped any span whose class attribute
-        carried more than one token — e.g.
-             <span class="tj-silent tj-ham_wasl">…</span>
-        or any future annotation where the CDN combines rules.
-        Every silent / ham_wasl regex is now word-boundary aware:
-             /<span[^>]*class="[^"]*\b(?:tj-silent|tj-ham_wasl)\b[^"]*"[^>]*>[\s\S]*?<\/span>/
-        so multi-class spans are matched correctly, in both the
-        splitter strip step and the parser strip step, in the
-        primary and fallback code paths.
+     2. Silent-letter violations are ERRORS, not warnings
+        Previously they went through markStrict1Warning, which
+        painted the word yellow, never beeped, never touched the
+        mistakes panel, and only fired once per page (the
+        silentWarned latch). A user who repeated the violation
+        twice heard and saw nothing.
 
-     3. Silent violations keep their v43 error semantics
-        The v43 change that turns silent-letter violations into
-        markStrict1Error (beep, red word, Mistakes panel entry,
-        accuracy hit) applies unchanged to ham_wasl violations
-        now that they flow through the same code path. The
-        Mistakes pill still reads "Silent letter — pronounced"
-        because the underlying rule kind is unchanged — that
-        label covers both grey silent letters and purple
-        hamzat al-waṣl.
+        Now runStrict1Checks calls markStrict1Error for silent
+        violations: the word is beeped, added to the Mistakes
+        panel with the label "Silent letter — pronounced",
+        counted in `errors`, and reflected in Accuracy. No more
+        silent silent-letter failures.
 
-     4. In-app documentation updated
-        The Coach Info modal's silent-letter bullet now reads
-        "Silent letters (the grey span) and hamzat al-waṣl (the
-        purple span) must not be pronounced", matching the new
-        engine behaviour.
+     3. normNoSilent computed in the parser and carried through
+        • splitTajweedIntoWords() and its fallback
+          fallbackSplitTajweedIntoWords() now compute
+          { norm, normNoSilent, html } for every word.
+        • parseTajweedWordRules() also computes rules.normNoSilent
+          directly from the decorated HTML as a belt-and-braces
+          guard for words where the splitter missed the span.
+        • applyTajweedColorsToCoach() stores
+          w.normNoSilent = tWord.normNoSilent on each word object,
+          and copies it to w.tjRules.normNoSilent.
+        • removeTajweedColorsFromCoach() clears both so a mode
+          switch does not leak stale silent-stripped forms.
 
-   Preserved unchanged from v43:
-
-     - Positional silent-letter check: lev(heard, full) vs
-       lev(heard, normNoSilent), flagged only when heard is
-       strictly closer to the full form.
-     - Silent-letter violations raised as errors (beep,
-       Mistakes panel, accuracy), not one-shot warnings.
-     - normNoSilent computed in the parser and carried through
-       applyTajweedColorsToCoach / removeTajweedColorsFromCoach.
-     - 'silent' key in TAJWEED_ERROR_NAMES showing
-       "Silent letter — pronounced" in the Mistakes pill.
+     4. New rule name in the Mistakes panel
+        TAJWEED_ERROR_NAMES gains 'silent': 'Silent letter —
+        pronounced'. This is what the pill shows in the mistakes
+        list and in the live feedback feed.
 
    Preserved unchanged from v42:
 
@@ -124,17 +108,17 @@
      - All non-GET requests (feedback, subscribe, analytics)
        bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v44, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v43, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v43 are deleted
+   next open runs the new code path. Caches qc-*-v42 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v44';
+const VERSION = 'v43';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
