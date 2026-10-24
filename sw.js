@@ -1,99 +1,134 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v41 — Tajweed engine hardening.
+   v42 — Tajweed word-identification hardening.
 
-   Ships the nine-patch Tajweed engine rewrite in index.html.
-   No new network endpoints, no new cache requirements — the
-   only functional change in the SW is the version bump, which
-   forces every qc-*-v40 cache to be discarded on activate so
-   the updated HTML reaches the client on next open.
+   Ships the split-recombine + attempt-gated error-marking
+   rewrite of gradeFull() in index.html. No new network
+   endpoints, no new cache requirements — the only functional
+   change in the SW is the version bump, which forces every
+   qc-*-v41 cache to be discarded on activate so the updated
+   HTML reaches the client on next open.
 
    Client-side changes shipped with this version:
 
-     1. Silent-letter enforcement
-        strict1SilentOk() is now positional and geminate-aware:
-        it skips the doubled letter of e.g. the first ل of
-        الله and compares the heard token against the
-        silent-dropped form, flagging the word only when the
-        reciter unambiguously pronounced the silent letter.
-        Wired into runStrict1Checks() as a warning-level rule
-        (markStrict1Warning), so a correct recitation is never
-        marked red.
+     1. Split-token recombination in Tajweed mode
+        gradeFull() now calls trySplitTokenMatch() — the same
+        recombination helper Follow mode already used — before
+        its lookahead step. When the ASR splits a word into
+        fragments (e.g. "بس" + "م" for the target "بسم"), the
+        buffered fragments are joined and matched against
+        words[ptr] before any error path is reached. A clean
+        split is committed as one correct word, with
+        runStrict1Checks() still run on the combined form so
+        rule validation is not bypassed.
 
-     2. Ikhfāʾ shafawī support
-        strict1GhunnahOk() now handles م before ب in addition
-        to the four rules it already covered (direct shaddah,
-        ikhfāʾ ḥaqīqī, idghām with ghunnah, iqlāb). Previously
-        any word without a literal tj-ghunnah span passed the
-        check silently.
+     2. Attempt-gated error marking
+        New helper isPlausiblePronunciationAttempt(heard,
+        hPhon, w) gates the red "error" class. It rejects
+        tokens that cannot plausibly be a try at words[ptr]:
+        wildly wrong length ratio (outside 0.35–2.5×), or
+        Levenshtein distance > tol + 2 on the normalised form,
+        or > tol + 1 on the phonetic form. Tokens that fail
+        this test are buffered (as potential prefixes of the
+        next split) and silently skipped — the word is neither
+        marked red, nor beeped, nor counted in `errors`, nor
+        pushed into the mistakes panel. Genuine
+        mispronunciations are still flagged, because they
+        always fall inside the wide attempt band.
 
-     3. Per-rule batch-timing attribution
-        batchTimingCtx now carries a contributions[] list, and
-        gradeFull() resolves the failing rule from the earliest
-        unmet contributor. A fast-batched madd error is now
-        reported as "Madd — too short (fast batch)" — the new
-        madd-batch slug in TAJWEED_ERROR_NAMES — instead of
-        the always-wrong "Ghunnah — too short (fast batch)".
+     3. Extra net — truncated-prefix honouring on jump
+        When the ASR jumps to words[ptr+1] because it dropped
+        a token, the old code marked the intermediate word
+        `skipped` (amber). Now: if pendingHeard held a
+        truncation of words[ptr] at ≥ 40 % of the target
+        length, the truncated word is committed as *correct*
+        instead of skipped. Only the words that were truly
+        never attempted get amber. Nothing gets red.
 
-     4. Merged-token matching in Tajweed
-        gradeFull() now calls tryMergedTokenMatch(), which
-        Follow mode already used. A multi-word burst that the
-        ASR collapses into one token no longer registers as
-        "skipped" in the mistake panel.
+     4. Extra net — silent skips reset the red streak
+        consecutiveReds is now incremented only when a word is
+        actually marked `error`. Silent skips (unheard tokens,
+        drift) reset the counter to 0. Previously a run of
+        skipped words could trip the 2-red freeze and lock the
+        pointer indefinitely; now the pointer keeps flowing
+        through un-attempted words and only freezes on two
+        genuine mispronunciations in a row.
 
-     5. Continuous-voice madd check
-        The RMS analyser exposes longestContinuousVoiceMs(),
-        which measures the longest unbroken voiced run rather
-        than summed voice time. A madd broken by a pause is
-        now flagged red even when total voiced time exceeds
-        the threshold.
+     5. Loosened split-buffer threshold
+        isStrongPartialPrefix() now requires 40 % of the
+        target word (was 55 %). Mid-word splits that landed at
+        40–54 % of the target — common in words with consonant
+        clusters — are now buffered for recombination instead
+        of falling through to the error path. Affects both
+        Follow and Tajweed modes because both call the helper.
 
-     6. Adaptive MIN_RMS
-        The voice-detection floor recalibrates every four
-        seconds from the 20th-percentile ambient RMS, so the
-        same thresholds work in a quiet room and a noisy car
-        without a manual setting.
+     6. Merge-before-lookahead ordering
+        tryMergedTokenMatch() now runs before the lookahead
+        step in gradeFull(). A merged token such as
+        "بسمالله" can no longer be misread as a jump to
+        "الله", which previously marked the head of the merge
+        as skipped. All targets inside the merge are committed
+        correct in one step and each still gets its own
+        runStrict1Checks call (with skipTiming for k > 0 so
+        the madd timer is not spuriously applied to internal
+        words).
 
-     7. Pace-scaled thresholds
-        maddRequiredMs() and ghunnahRequiredMs() scale
-        inversely with currentPaceWPS, clamped to [0.75×,
-        1.6×]. A slow murattal is not held to fast-hadr
-        timings and vice versa.
+     7. Prefix buffering on final results
+        Prefix buffering in gradeFull() now applies to *final*
+        ASR results, not only interim ones, capped at 4
+        fragments per buffer. A reciter who pauses mid-word
+        finalises an incomplete token; previously that token
+        was treated as a mispronunciation. Now it is buffered
+        for the next token to complete.
 
-     8. Fresh Tajweed on surah change
-        loadSurah() now clears coachTajweedApplied,
-        coachTajweedReady and coachTajweedDegraded and
-        increments coachTajweedGen, so switching to a new
-        surah actually re-fetches and re-applies annotations
-        instead of silently doing nothing because the flag
-        was still true from the previous surah.
+     8. Skipped words never enter the mistakes list
+        Words jumped over during lookahead are marked `skipped`
+        (amber strikethrough) only. They are not counted in
+        `errors`, do not increment `mistakeCounter`, do not
+        appear in the Mistakes panel, and do not beep.
+        Accuracy is now (words_heard - words_misread) / words
+        rather than penalised by transient ASR drift.
 
-     9. Degraded-Tajweed banner
-        A failed annotation fetch in applyTajweedColorsToCoach
-        now flips the mode pill to "⚠️ Tajweed (degraded)" and
-        pushes a feedback line, instead of silently disabling
-        every rule check while the UI still says "Tajweed".
+   Preserved unchanged from v41:
 
-   All fetch-strategy behaviour from v40 is preserved:
-     - Tajweed annotations (networkFresh).
-     - Audio requests from everyayah.com (audioFromDownloadCache).
-     - Google Fonts pre-cache at install.
-     - Shell navigation with cache:'reload' (never serves stale HTML).
-     - Manifest with a 2 s network budget.
-     - Persistent qc-audio cache survives every version bump.
+     - Silent-letter enforcement (strict1SilentOk) — positional,
+       geminate-aware, wired as a warning rather than an error.
+     - Ikhfāʾ shafawī support in strict1GhunnahOk (م before ب).
+     - Per-rule batch-timing attribution via
+       batchTimingCtx.contributions[] — madd-batch vs
+       ghunnah-batch attribution is correct.
+     - Continuous-voice madd measurement
+       (longestContinuousVoiceMs).
+     - Adaptive MIN_RMS recalibration every four seconds.
+     - Pace-scaled madd/ghunnah thresholds (paceScale).
+     - Fresh Tajweed annotations on surah change
+       (coachTajweedApplied/Ready/Degraded reset, gen bump).
+     - Degraded-Tajweed pill banner on fetch failure.
 
-   NOTE ON DEPLOY: after shipping v41, fully close the PWA (or
+   Preserved unchanged from v40:
+
+     - Tajweed annotation requests served networkFresh.
+     - everyayah.com audio served from qc-audio download cache.
+     - Google Fonts pre-cache bounded to 20 s at install.
+     - Shell navigation with cache:'reload' — stale HTML can
+       never be served on a navigation.
+     - Manifest with a 2 s network budget, inline JSON fallback.
+     - qc-audio survives every version bump.
+     - All non-GET requests (feedback, subscribe, analytics)
+       bypass the SW untouched.
+
+   NOTE ON DEPLOY: after shipping v42, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v40 are deleted
+   next open runs the new code path. Caches qc-*-v41 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v41';
+const VERSION = 'v42';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

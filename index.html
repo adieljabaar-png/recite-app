@@ -2807,6 +2807,33 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   return false;
 }
 
+// Was `heard` a plausible (possibly wrong) attempt at word `w`,
+// or is it noise / a token that drifted from another word?
+// Used to gate the red "error" marking so a word the reciter
+// never actually attempted is skipped silently instead.
+function isPlausiblePronunciationAttempt(heard, hPhon, w){
+  if(!w || !heard || !w.norm) return false;
+  const heardLen  = heard.length;
+  const targetLen = w.norm.length;
+  if(targetLen === 0) return false;
+  if(heardLen < 2 && targetLen > 1) return false;
+
+  const ratio = heardLen / targetLen;
+  if(ratio < 0.35 || ratio > 2.5) return false;
+
+  const L   = Math.max(heardLen, targetLen);
+  const tol = toleranceFor(L);
+
+  // Wide "attempt band" — a clear try at this word even if mangled
+  if(lev(heard, w.norm) <= tol + 2) return true;
+
+  // Phonetic fallback for confusable letters the ASR normalises away
+  if(hPhon.length >= 2 && w.phon.length >= 2 &&
+     lev(hPhon, w.phon) <= tol + 1) return true;
+
+  return false;
+}
+
 function tryMergedTokenMatch(heard, hPhon){
   if(ptr >= words.length) return 0;
   if(heard.length <= words[ptr].norm.length + 1) return 0;
@@ -2841,7 +2868,7 @@ function isStrongPartialPrefix(heard){
   const target = words[ptr].norm;
   if(heard.length < 2 || heard.length >= target.length) return false;
   if(!target.startsWith(heard)) return false;
-  return (heard.length / target.length) >= 0.55;
+  return (heard.length / target.length) >= 0.40;
 }
 
 function buildAyahUrl(folder, surah, ayah){
@@ -7526,7 +7553,7 @@ function gradeFull(tokens, isFinal, startIdx){
     batchId: currentBatchId,
     startTime: lastDirectCommitAt,
     cumulativeRequired: 0,
-    contributions: [],   // ── PATCH 3
+    contributions: [],
     wordCount: 0
   };
 
@@ -7538,9 +7565,11 @@ function gradeFull(tokens, isFinal, startIdx){
       if(ptr >= words.length){ used++; continue; }
       const hPhon = phonArCached(rawTok);
 
+      // ── (a) self-repetition guard ─────────────────────────────
       if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
+      // ── (b) direct match at ptr ───────────────────────────────
       if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
         commitCorrect(ptr);
         runStrict1Checks(ptr, heard);
@@ -7549,6 +7578,21 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
+      // ── (c) SPLIT: buffered prefix + this token == words[ptr] ─
+      // Runs BEFORE lookahead so a split never looks like a jump.
+      if(trySplitTokenMatch(heard, rawTok)){
+        const combined = normArCached(pendingHeard.join('') + rawTok);
+        commitCorrect(ptr);
+        runStrict1Checks(ptr, combined);
+        advancePast(1);
+        pendingHeard.length = 0; consecutiveReds = 0;
+        used++; continue;
+      }
+
+      // ── (d) lookahead — token matches a word ahead ────────────
+      // EXTRA NET #1: if pendingHeard was a truncated attempt at
+      // words[ptr] and the ASR jumped to words[ptr+1], honour the
+      // truncated word as correct instead of falsely skipping it.
       let found = -1;
       const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
       for(let k = 1; k <= maxK; k++){
@@ -7559,20 +7603,26 @@ function gradeFull(tokens, isFinal, startIdx){
       }
       if(found > 0){
         if(!followOnly){
-          const sw = words[ptr];
-          if(sw && !sw.el.classList.contains('error') && !sw.el.classList.contains('skipped')){
-            sw.el.classList.remove('current','correct','corrected','model','located');
-            sw.el.classList.add('skipped');
-            errors++;
-            const m = {
-              idx: mistakeCounter++,
-              correct: sw.raw.replace(TASHKEEL,''),
-              heard: (pendingHeard.length ? pendingHeard[0] : rawTok),
-              verse: sw.verse,
-              kind: 'skipped'
-            };
-            mistakes.push(m); appendMistake(m);
-            scheduleHUD();
+          let skipStart = ptr;
+          // Extra net: honour truncated prefix as correct
+          if(pendingHeard.length){
+            const buffered = normArCached(pendingHeard.join(''));
+            const target   = words[ptr].norm;
+            if(buffered.length >= target.length * 0.40 &&
+               target.startsWith(buffered)){
+              commitCorrect(ptr);
+              skipStart = ptr + 1;
+            }
+          }
+          // Words between skipStart and ptr+found were never heard →
+          // amber (skipped) only, never red, never counted.
+          for(let k = skipStart; k < ptr + found; k++){
+            const sw = words[k];
+            if(sw && !sw.el.classList.contains('error') &&
+               !sw.el.classList.contains('skipped')){
+              sw.el.classList.remove('current','correct','corrected','model','located');
+              sw.el.classList.add('skipped');
+            }
           }
         }
         commitCorrect(ptr + found);
@@ -7582,9 +7632,7 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── PATCH 4: merged-token match now handled in Tajweed mode too,
-      // so a multi-word burst that the ASR collapses into one token does
-      // not register as "skipped".
+      // ── (e) MERGE: one token == N target words ────────────────
       const mergedN = tryMergedTokenMatch(heard, hPhon);
       if(mergedN > 0){
         commitManyCorrect(ptr, ptr + mergedN);
@@ -7596,63 +7644,86 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      if(!isFinal && isStrongPartialPrefix(heard)){
+      // ── (f) prefix buffering — works on FINAL and interim ────
+      // Extra net: finalised splits (reciter paused mid-word) also
+      // get buffered now, with a cap of 4 fragments.
+      if(isStrongPartialPrefix(heard)){
         if(pendingHeard.length === 1 &&
            heard.startsWith(normArCached(pendingHeard[0]))){
           pendingHeard[0] = rawTok;
-        } else {
+        } else if(pendingHeard.length < 4){
           pendingHeard.push(rawTok);
         }
         used++; continue;
       }
 
-      if(!followOnly){
-        const w = words[ptr];
-        if(w && !w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
-          w.el.classList.add('error');
-          w.el.classList.remove('current','correct','corrected','model','located');
-          errors++;
-          const m = {
-            idx: mistakeCounter++,
-            correct: w.raw.replace(TASHKEEL,''),
-            heard: rawTok,
-            verse: w.verse,
-            kind: 'misread'
-          };
-          mistakes.push(m); appendMistake(m);
-          scheduleHUD();
-          if(beepOn) beepThrottled('error');
-        }
+      // ── (g) DECISION: error vs buffer vs silent skip ─────────
+      // EXTRA NET #2: consecutiveReds only counts REAL errors —
+      // silent skips reset the counter, so the pointer never freezes
+      // from a run of unheard tokens.
+      const w = words[ptr];
+      const hasPending = pendingHeard.length > 0;
+      const plausible  = w && !hasPending &&
+                         isPlausiblePronunciationAttempt(heard, hPhon, w);
+
+      if(!plausible && pendingHeard.length < 4){
+        pendingHeard.push(rawTok);
+        used++; continue;
       }
+
+      let markedThisTime = false;
+      if(!followOnly && plausible &&
+         !w.el.classList.contains('error') &&
+         !w.el.classList.contains('skipped')){
+        w.el.classList.add('error');
+        w.el.classList.remove('current','correct','corrected','model','located');
+        errors++;
+        const m = {
+          idx: mistakeCounter++,
+          correct: w.raw.replace(TASHKEEL,''),
+          heard: rawTok,
+          verse: w.verse,
+          kind: 'misread'
+        };
+        mistakes.push(m); appendMistake(m);
+        scheduleHUD();
+        if(beepOn) beepThrottled('error');
+        markedThisTime = true;
+      }
+
       lastDirectCommitIdx = -1;
       lastDirectCommitAt  = 0;
       lastCommitBatchId   = -1;
-      if(consecutiveReds < 2){
-        advancePast(1);
+
+      if(markedThisTime){
+        // Genuine error — count toward red streak, freeze at 2
         consecutiveReds++;
+        if(consecutiveReds < 2) advancePast(1);
+      } else {
+        // Silent skip or follow mode — reset streak, always advance
+        consecutiveReds = 0;
+        advancePast(1);
       }
       pendingHeard.length = 0;
       used++;
     }
 
-    // ── PATCH 3: batch-cumulative validation attributes the shortfall
-    // to the earliest unmet contributor, so a madd failure is reported
-    // as madd (not always "ghunnah-batch").
+    // ── batch-cumulative Tajweed validation (unchanged) ───────
     const ctx = batchTimingCtx;
-    if (ctx && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 &&
-        ctx.contributions.length > 0){
+    if(ctx && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 &&
+       ctx.contributions.length > 0){
       const now = performance.now();
       const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
-      if (rmsAvailable){
+      if(rmsAvailable){
         const voiceMs = rmsAnalyser.voiceDurationMs(ctx.startTime, now);
-        if (voiceMs < ctx.cumulativeRequired){
+        if(voiceMs < ctx.cumulativeRequired){
           let cumulative = 0;
-          for (let ci = 0; ci < ctx.contributions.length; ci++){
+          for(let ci = 0; ci < ctx.contributions.length; ci++){
             const c = ctx.contributions[ci];
             cumulative += c.need;
-            if (voiceMs >= cumulative) continue;
+            if(voiceMs >= cumulative) continue;
             const w = words[c.idx];
-            if (w && !w.el.classList.contains('error')){
+            if(w && !w.el.classList.contains('error')){
               const tag = (c.rule === 'madd') ? 'madd-batch' : 'ghunnah-batch';
               markStrict1Error(w, tag,
                 'batch voice ' + Math.round(voiceMs) + ' ms < ' +
