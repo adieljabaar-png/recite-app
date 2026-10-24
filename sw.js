@@ -1,41 +1,81 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v40 — Named Tajweed mistakes.
+   v41 — Tajweed engine hardening.
 
-   Ships one focused fix to the Tajweed engine in index.html:
+   Ships the nine-patch Tajweed engine rewrite in index.html.
+   No new network endpoints, no new cache requirements — the
+   only functional change in the SW is the version bump, which
+   forces every qc-*-v40 cache to be discarded on activate so
+   the updated HTML reaches the client on next open.
 
-     NAMED TAJWEED MISTAKES — every Tajweed rule violation now
-     tells the user *which rule* was broken.
+   Client-side changes shipped with this version:
 
-       • A new TAJWEED_ERROR_NAMES map converts the internal
-         slugs used by the Tajweed engine into readable rule
-         names:
-           – `madd`           → "Madd — too short"
-           – `ghunnah`        → "Ghunnah — nasal missing"
-           – `ghunnah-length` → "Ghunnah — too short"
-           – `ghunnah-batch`  → "Ghunnah — too short"
-       • markStrict1Error() now stores three extra fields on
-         every mistake object:
-           – tajweedType : the raw rule slug (madd / ghunnah / …)
-           – tajweedName : the human-readable rule label
-           – heard       : no longer carries the "[kind]" prefix
-       • appendMistake() renders the named rule as a purple
-         pill badge on each Tajweed mistake row, so the Mistake
-         panel shows e.g. "MADD — TOO SHORT" or
-         "GHUNNAH — NASAL MISSING" next to the misrecited word.
-       • The live feedback feed also announces the named rule
-         (throttled to one line per 1.2 s so fast recitation
-         isn't spammed).
-       • Every Tajweed check path is covered: madd duration,
-         ghunnah nasal-letter presence, ghunnah duration, and
-         the batched-commit ghunnah check.
+     1. Silent-letter enforcement
+        strict1SilentOk() is now positional and geminate-aware:
+        it skips the doubled letter of e.g. the first ل of
+        الله and compares the heard token against the
+        silent-dropped form, flagging the word only when the
+        reciter unambiguously pronounced the silent letter.
+        Wired into runStrict1Checks() as a warning-level rule
+        (markStrict1Warning), so a correct recitation is never
+        marked red.
 
-   The new client code lives in index.html; this version bump
-   forces the browser to discard every qc-*-v39 cache on activate
-   so the updated HTML is served on next open.
+     2. Ikhfāʾ shafawī support
+        strict1GhunnahOk() now handles م before ب in addition
+        to the four rules it already covered (direct shaddah,
+        ikhfāʾ ḥaqīqī, idghām with ghunnah, iqlāb). Previously
+        any word without a literal tj-ghunnah span passed the
+        check silently.
 
-   All fetch-strategy behaviour from v39 is preserved:
+     3. Per-rule batch-timing attribution
+        batchTimingCtx now carries a contributions[] list, and
+        gradeFull() resolves the failing rule from the earliest
+        unmet contributor. A fast-batched madd error is now
+        reported as "Madd — too short (fast batch)" — the new
+        madd-batch slug in TAJWEED_ERROR_NAMES — instead of
+        the always-wrong "Ghunnah — too short (fast batch)".
+
+     4. Merged-token matching in Tajweed
+        gradeFull() now calls tryMergedTokenMatch(), which
+        Follow mode already used. A multi-word burst that the
+        ASR collapses into one token no longer registers as
+        "skipped" in the mistake panel.
+
+     5. Continuous-voice madd check
+        The RMS analyser exposes longestContinuousVoiceMs(),
+        which measures the longest unbroken voiced run rather
+        than summed voice time. A madd broken by a pause is
+        now flagged red even when total voiced time exceeds
+        the threshold.
+
+     6. Adaptive MIN_RMS
+        The voice-detection floor recalibrates every four
+        seconds from the 20th-percentile ambient RMS, so the
+        same thresholds work in a quiet room and a noisy car
+        without a manual setting.
+
+     7. Pace-scaled thresholds
+        maddRequiredMs() and ghunnahRequiredMs() scale
+        inversely with currentPaceWPS, clamped to [0.75×,
+        1.6×]. A slow murattal is not held to fast-hadr
+        timings and vice versa.
+
+     8. Fresh Tajweed on surah change
+        loadSurah() now clears coachTajweedApplied,
+        coachTajweedReady and coachTajweedDegraded and
+        increments coachTajweedGen, so switching to a new
+        surah actually re-fetches and re-applies annotations
+        instead of silently doing nothing because the flag
+        was still true from the previous surah.
+
+     9. Degraded-Tajweed banner
+        A failed annotation fetch in applyTajweedColorsToCoach
+        now flips the mode pill to "⚠️ Tajweed (degraded)" and
+        pushes a feedback line, instead of silently disabling
+        every rule check while the UI still says "Tajweed".
+
+   All fetch-strategy behaviour from v40 is preserved:
      - Tajweed annotations (networkFresh).
      - Audio requests from everyayah.com (audioFromDownloadCache).
      - Google Fonts pre-cache at install.
@@ -43,17 +83,17 @@
      - Manifest with a 2 s network budget.
      - Persistent qc-audio cache survives every version bump.
 
-   NOTE ON DEPLOY: after shipping v40, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v41, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v39 are deleted
+   next open runs the new code path. Caches qc-*-v40 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v40';
+const VERSION = 'v41';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
