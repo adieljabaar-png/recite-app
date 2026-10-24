@@ -1,124 +1,109 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v43 — Silent-letter enforcement rewrite.
+   v44 — Word-state visual fixes + ق/ك acceptance.
 
-   Ships the corrected strict1SilentOk() + normNoSilent pipeline
+   Ships the corrected isMatchWord(), .skipped styling,
+   gradeFull() skip detection, and Tajweed !important cascade
    of index.html. No new network endpoints, no new cache
    requirements — the only functional change in the SW is the
-   version bump, which forces every qc-*-v42 cache to be
+   version bump, which forces every qc-*-v43 cache to be
    discarded on activate so the updated HTML reaches the client
    on next open.
 
    Client-side changes shipped with this version:
 
-     1. Silent-letter check is now POSITIONAL and CORRECT
-        strict1SilentOk() no longer uses full.indexOf(sl) +
-        full.split(sl).join(''). That old code stripped the
-        FIRST matching character, not the annotated silent one,
-        so multi-alif words like أَنَا (norm "انا", silent final
-        alif) silently compared the wrong pair of strings and
-        either missed real violations or false-flagged correct
-        recitations.
+     1. ق / ك acceptance in isMatchWord()
+        A ك substituted for a ق is now accepted as correct
+        whenever (a) the target word contains ق, (b) the heard
+        token and target have the same length, and (c) the
+        heard form is exactly the target with every ق
+        replaced by ك. This covers short words like قُل → كُل
+        that the length-≥3 phonetic path used to skip, and
+        gives the reciter the benefit of the doubt in both
+        Follow and Tajweed modes. The word is still displayed
+        with its original Arabic (ق) — the substitution is
+        never written back.
 
-        The primary path now compares lev(heard, full) against
-        lev(heard, normNoSilent), where normNoSilent is the
-        normalised form with every tj-silent span stripped —
-        computed once per word from the Quran.com annotation
-        HTML. The reciter is flagged ONLY when heard is
-        strictly closer to the full form than to the
-        silent-stripped form. This is position-safe for
-        geminate mergers (first ل of الله) and multi-alif
-        words.
+     2. .skipped no longer looks like a mistake
+        The old style was background:rgba(255,176,32,.16) +
+        color:#ffcf6b + text-decoration:line-through. That
+        made any word the ASR had dropped or merged look like
+        a yellow strike-through error. The new style is a
+        subtle neutral tint (rgba(143,155,179,.08)) with no
+        decoration, and the matching inner-tajweed rule is
+        softened the same way.
 
-        The fallback (legacy cached data without normNoSilent)
-        now tries removing each occurrence of each silent letter
-        in turn and only flags when heard is closer to the full
-        form than to ALL variants — deliberately lenient so no
-        false positives.
+     3. Conservative skip detection in gradeFull()
+        Before marking a range as .skipped, the engine now
+        checks whether the heard token is a plausible
+        pronunciation of the CURRENT word (same length class,
+        within tolerance + 2). If yes, the word is committed
+        as correct and skipStart is advanced past it, so the
+        recognizer dropping a token no longer paints the
+        word yellow in the first place.
 
-     2. Silent-letter violations are ERRORS, not warnings
-        Previously they went through markStrict1Warning, which
-        painted the word yellow, never beeped, never touched the
-        mistakes panel, and only fired once per page (the
-        silentWarned latch). A user who repeated the violation
-        twice heard and saw nothing.
+     4. Tajweed !important cascade fixed
+        Every Tajweed rule class (.tj-madda_normal,
+        .tj-ikhfa, .tj-madda_permissible, …) uses
+        color: … !important. The word-state override rule
+        .w.correct [class^="tj-"], .w.current [class^="tj-"]
+        etc. was declared WITHOUT !important on color, so
+        author-!important always won — a correctly-recited
+        word that carried a Madd annotation stayed yellow
+        even though it was scored correct and had a green
+        underline. The override now uses
+        color: inherit !important, so the state colour
+        (green / blue / red) always shows through, and the
+        state distinction is carried by underline /
+        background as it was intended.
 
-        Now runStrict1Checks calls markStrict1Error for silent
-        violations: the word is beeped, added to the Mistakes
-        panel with the label "Silent letter — pronounced",
-        counted in `errors`, and reflected in Accuracy. No more
-        silent silent-letter failures.
+   Preserved unchanged from v43:
 
-     3. normNoSilent computed in the parser and carried through
-        • splitTajweedIntoWords() and its fallback
-          fallbackSplitTajweedIntoWords() now compute
-          { norm, normNoSilent, html } for every word.
-        • parseTajweedWordRules() also computes rules.normNoSilent
-          directly from the decorated HTML as a belt-and-braces
-          guard for words where the splitter missed the span.
-        • applyTajweedColorsToCoach() stores
-          w.normNoSilent = tWord.normNoSilent on each word object,
-          and copies it to w.tjRules.normNoSilent.
-        • removeTajweedColorsFromCoach() clears both so a mode
-          switch does not leak stale silent-stripped forms.
-
-     4. New rule name in the Mistakes panel
-        TAJWEED_ERROR_NAMES gains 'silent': 'Silent letter —
-        pronounced'. This is what the pill shows in the mistakes
-        list and in the live feedback feed.
+     - Silent-letter enforcement rewrite (positional
+       strict1SilentOk, normNoSilent pipeline, silent
+       violations counted as errors).
+     - Split-token recombination in Tajweed mode.
+     - Attempt-gated error marking.
+     - Truncated-prefix honouring on ASR jump.
+     - Silent skips reset the red streak.
+     - Loosened split-buffer threshold.
+     - Merge-before-lookahead ordering.
+     - Prefix buffering on final results.
+     - Skipped words never enter the mistakes list.
 
    Preserved unchanged from v42:
 
-     - Split-token recombination in Tajweed mode (trySplitTokenMatch
-       before lookahead).
-     - Attempt-gated error marking — isPlausiblePronunciationAttempt
-       gates red so noise / drift never becomes a mistake.
-     - Truncated-prefix honouring on ASR jump (≥ 40 % of target →
-       committed as correct, not skipped).
-     - Silent skips reset the red streak; consecutiveReds only
-       increments on real errors.
-     - Loosened split-buffer threshold (40 % of target word).
-     - Merge-before-lookahead ordering in gradeFull.
-     - Prefix buffering on final results, capped at 4 fragments.
-     - Skipped words never enter the mistakes list or errors count.
+     - Ikhfāʾ shafawī support.
+     - Per-rule batch-timing attribution.
+     - Continuous-voice madd measurement.
+     - Adaptive MIN_RMS recalibration.
+     - Pace-scaled madd/ghunnah thresholds.
+     - Fresh Tajweed annotations on surah change.
+     - Degraded-Tajweed pill banner.
 
-   Preserved unchanged from v41:
+   Preserved unchanged from v41–v40:
 
-     - Ikhfāʾ shafawī support in strict1GhunnahOk (م before ب).
-     - Per-rule batch-timing attribution via
-       batchTimingCtx.contributions[].
-     - Continuous-voice madd measurement
-       (longestContinuousVoiceMs).
-     - Adaptive MIN_RMS recalibration every four seconds.
-     - Pace-scaled madd/ghunnah thresholds (paceScale).
-     - Fresh Tajweed annotations on surah change
-       (coachTajweedApplied/Ready/Degraded reset, gen bump).
-     - Degraded-Tajweed pill banner on fetch failure.
-
-   Preserved unchanged from v40:
-
-     - Tajweed annotation requests served networkFresh.
-     - everyayah.com audio served from qc-audio download cache.
+     - Tajweed annotations served networkFresh.
+     - everyayah.com audio served from qc-audio.
      - Google Fonts pre-cache bounded to 20 s at install.
      - Shell navigation with cache:'reload' — stale HTML can
        never be served on a navigation.
-     - Manifest with a 2 s network budget, inline JSON fallback.
+     - Manifest with a 2 s network budget.
      - qc-audio survives every version bump.
-     - All non-GET requests (feedback, subscribe, analytics)
-       bypass the SW untouched.
+     - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v43, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v44, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v42 are deleted
+   next open runs the new code path. Caches qc-*-v43 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v43';
+const VERSION = 'v44';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

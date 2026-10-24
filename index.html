@@ -1049,7 +1049,10 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.correct{color:var(--good)}
 .w.corrected{color:var(--warn)}
 .w.error{background:rgba(255,90,106,.22);color:#ff9aa4;text-decoration:underline wavy var(--bad);text-underline-offset:8px;animation:shake .32s ease;}
-.w.skipped{background:rgba(255,176,32,.16);color:#ffcf6b;text-decoration:line-through;text-decoration-color:var(--warn);}
+/* Skipped words use a subtle neutral tint — no yellow background and no
+   strikethrough, so a word the recognizer dropped/merged is never shown
+   as a jarring "yellow strike-through". */
+.w.skipped{background:rgba(143,155,179,.08);color:inherit;text-decoration:none;}
 .w.model{background:rgba(255,176,32,.3);color:#fff}
 .w.warned{color:var(--warn) !important;text-decoration:underline dotted var(--warn);text-underline-offset:6px;background:rgba(255,176,32,.08);}
 .w-deco{display:inline-block;padding:0 3px;opacity:.9;pointer-events:none;cursor:default;}
@@ -1742,6 +1745,10 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-color: var(--gold) !important;
 }
 
+/* When a word carries a word-state class, override any inner tajweed
+   colour with !important so the state always wins (a .correct word is
+   always green, never yellow — even when the letter carries a Madd
+   annotation with its own !important colour). */
 .w.current   [class^="tj-"], .w.current   [class*=" tj-"],
 .w.correct   [class^="tj-"], .w.correct   [class*=" tj-"],
 .w.corrected [class^="tj-"], .w.corrected [class*=" tj-"],
@@ -1749,7 +1756,7 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
 .w.skipped   [class^="tj-"], .w.skipped   [class*=" tj-"],
 .w.model     [class^="tj-"], .w.model     [class*=" tj-"],
 .w.warned    [class^="tj-"], .w.warned    [class*=" tj-"] {
-  color: inherit;
+  color: inherit !important;
   font-weight: inherit;
 }
 
@@ -1774,9 +1781,8 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-radius: 4px;
 }
 .w.skipped [class^="tj-"], .w.skipped [class*=" tj-"] {
-  background: rgba(255,176,32,.18);
-  text-decoration: line-through;
-  text-decoration-color: var(--warn);
+  background: rgba(143,155,179,.10);
+  text-decoration: none;
   border-radius: 4px;
 }
 .w.model [class^="tj-"], .w.model [class*=" tj-"] {
@@ -2797,6 +2803,23 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   if(hPhon.length >= 3 && w.phon.length >= 3){
     if(lev(hPhon, w.phon) <= tol) return true;
   }
+
+  // ── ق / ك leniency ──────────────────────────────────────────────
+  // Many non-native reciters pronounce ق as ك (a very common
+  // substitution that is not a recitation error for the purposes of
+  // this coach). Accept it without penalty whenever:
+  //   1. the target word contains ق, AND
+  //   2. the heard token has the same length as the target (so we do
+  //      not mask dropped/added letters), AND
+  //   3. the heard form is exactly the target with every ق → ك.
+  // This also covers short words like قُل → كُل that the length-≥3
+  // phonetic path above skips.
+  if(wNorm.indexOf('\u0642') !== -1 && la === lb){
+    const wAsKaf = wNorm.replace(/\u0642/g, '\u0643');
+    if(hNorm === wAsKaf) return true;
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
     if(S / L >= 0.85){
@@ -4211,7 +4234,6 @@ function decorateTajweedToSpans(html){
   return out;
 }
 
-// ── FIXED: computes and stores normNoSilent for every word ────────────
 function splitTajweedIntoWords(tajweedHtml){
   const decorated = decorateTajweedToSpans(tajweedHtml);
   const tpl = document.createElement('template');
@@ -4283,7 +4305,6 @@ function splitTajweedIntoWords(tajweedHtml){
   return out;
 }
 
-// ── FIXED: computes and stores normNoSilent for every word ────────────
 function fallbackSplitTajweedIntoWords(decoratedHtml){
   const out = [];
   const pushWord = (html) => {
@@ -4409,7 +4430,6 @@ async function applyTajweedColorsToCoach(){
       if (normArCached(w.raw) !== tWord.norm) return;
       w.el.innerHTML = tWord.html;
       w.tjRules = parseTajweedWordRules(tWord.html);
-      // FIXED: store normNoSilent so silent-letter check can compare correctly
       w.normNoSilent = tWord.normNoSilent || w.norm;
       if (w.tjRules) w.tjRules.normNoSilent = w.normNoSilent;
       appliedCount++;
@@ -4520,7 +4540,6 @@ function parseTajweedWordRules(decoratedHtml){
     if (n){ rules.silentLetters.push(n); rules.hasSilent = true; }
   }
 
-  // Compute the silent-stripped normalised form directly from the HTML
   if (rules.hasSilent) {
     const noSilentHtml = decoratedHtml.replace(
       /<span[^>]*class="[^"]*tj-silent[^"]*"[^>]*>[\s\S]*?<\/span>/g, '');
@@ -4565,20 +4584,6 @@ function strict1GhunnahOk(w, heard){
   return true;
 }
 
-// ── FULLY FIXED silent-letter check ──────────────────────────────────
-// Primary path compares the heard token against:
-//   • the FULL normalised word (silent letter still present)
-//   • normNoSilent (silent letter stripped, computed from HTML spans)
-// If heard is strictly closer to the full form, the reciter pronounced
-// the silent letter → flag as error. This is position-safe: أَنَا
-// (norm "انا", silent final alif → normNoSilent "ان") behaves correctly
-// whether heard is "ana" (error) or "an" (correct).
-//
-// Fallback (no normNoSilent available — legacy cached data): try removing
-// each occurrence of each silent letter; the reciter is only flagged if
-// heard is strictly closer to the full form than to ALL silent-dropped
-// variants. This is deliberately lenient — we never false-positive on a
-// legitimate geminate merger such as the first ل of الله.
 function strict1SilentOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasSilent) return true;
   const full = w.norm;
@@ -4590,7 +4595,6 @@ function strict1SilentOk(w, heard){
     return dFull >= dNoSilent;
   }
 
-  // Fallback for legacy words without normNoSilent
   const dFull = lev(heard, full);
   let best = dFull;
   for (let i = 0; i < w.tjRules.silentLetters.length; i++){
@@ -4735,8 +4739,6 @@ function runStrict1Checks(idx, heard, opts){
     markStrict1Error(w, 'ghunnah', 'nasal letter missing (\u0646 / \u0645)');
   }
 
-  // FIXED: silent-letter violations are now marked as ERRORS (beep,
-  // mistakes panel, accuracy count) not one-shot warnings.
   if (!strict1SilentOk(w, heard)){
     markStrict1Error(w, 'silent', 'silent letter pronounced');
   }
@@ -7618,6 +7620,26 @@ function gradeFull(tokens, isFinal, startIdx){
               skipStart = ptr + 1;
             }
           }
+
+          // ── NEW: before marking as skipped, verify the current word is
+          // not actually what the reciter said (recognizer drop/merge). If
+          // the heard token is anywhere near the current word (within a
+          // reasonable pronunciation tolerance), treat it as correct
+          // rather than yellow-striking it.
+          if(skipStart === ptr && words[ptr]){
+            const cur = words[ptr];
+            const hN  = normArCached(rawTok);
+            if(hN && cur.norm){
+              const Lc  = Math.max(hN.length, cur.norm.length);
+              const tolc = toleranceFor(Lc);
+              const ld  = Math.abs(hN.length - cur.norm.length);
+              if(Lc > 0 && ld <= 2 && lev(hN, cur.norm) <= tolc + 2){
+                commitCorrect(ptr);
+                skipStart = ptr + 1;
+              }
+            }
+          }
+
           for(let k = skipStart; k < ptr + found; k++){
             const sw = words[k];
             if(sw && !sw.el.classList.contains('error') &&
