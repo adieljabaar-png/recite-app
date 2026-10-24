@@ -1,103 +1,93 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v42 — Tajweed word-identification hardening.
+   v43 — Silent-letter enforcement rewrite.
 
-   Ships the split-recombine + attempt-gated error-marking
-   rewrite of gradeFull() in index.html. No new network
-   endpoints, no new cache requirements — the only functional
-   change in the SW is the version bump, which forces every
-   qc-*-v41 cache to be discarded on activate so the updated
-   HTML reaches the client on next open.
+   Ships the corrected strict1SilentOk() + normNoSilent pipeline
+   of index.html. No new network endpoints, no new cache
+   requirements — the only functional change in the SW is the
+   version bump, which forces every qc-*-v42 cache to be
+   discarded on activate so the updated HTML reaches the client
+   on next open.
 
    Client-side changes shipped with this version:
 
-     1. Split-token recombination in Tajweed mode
-        gradeFull() now calls trySplitTokenMatch() — the same
-        recombination helper Follow mode already used — before
-        its lookahead step. When the ASR splits a word into
-        fragments (e.g. "بس" + "م" for the target "بسم"), the
-        buffered fragments are joined and matched against
-        words[ptr] before any error path is reached. A clean
-        split is committed as one correct word, with
-        runStrict1Checks() still run on the combined form so
-        rule validation is not bypassed.
+     1. Silent-letter check is now POSITIONAL and CORRECT
+        strict1SilentOk() no longer uses full.indexOf(sl) +
+        full.split(sl).join(''). That old code stripped the
+        FIRST matching character, not the annotated silent one,
+        so multi-alif words like أَنَا (norm "انا", silent final
+        alif) silently compared the wrong pair of strings and
+        either missed real violations or false-flagged correct
+        recitations.
 
-     2. Attempt-gated error marking
-        New helper isPlausiblePronunciationAttempt(heard,
-        hPhon, w) gates the red "error" class. It rejects
-        tokens that cannot plausibly be a try at words[ptr]:
-        wildly wrong length ratio (outside 0.35–2.5×), or
-        Levenshtein distance > tol + 2 on the normalised form,
-        or > tol + 1 on the phonetic form. Tokens that fail
-        this test are buffered (as potential prefixes of the
-        next split) and silently skipped — the word is neither
-        marked red, nor beeped, nor counted in `errors`, nor
-        pushed into the mistakes panel. Genuine
-        mispronunciations are still flagged, because they
-        always fall inside the wide attempt band.
+        The primary path now compares lev(heard, full) against
+        lev(heard, normNoSilent), where normNoSilent is the
+        normalised form with every tj-silent span stripped —
+        computed once per word from the Quran.com annotation
+        HTML. The reciter is flagged ONLY when heard is
+        strictly closer to the full form than to the
+        silent-stripped form. This is position-safe for
+        geminate mergers (first ل of الله) and multi-alif
+        words.
 
-     3. Extra net — truncated-prefix honouring on jump
-        When the ASR jumps to words[ptr+1] because it dropped
-        a token, the old code marked the intermediate word
-        `skipped` (amber). Now: if pendingHeard held a
-        truncation of words[ptr] at ≥ 40 % of the target
-        length, the truncated word is committed as *correct*
-        instead of skipped. Only the words that were truly
-        never attempted get amber. Nothing gets red.
+        The fallback (legacy cached data without normNoSilent)
+        now tries removing each occurrence of each silent letter
+        in turn and only flags when heard is closer to the full
+        form than to ALL variants — deliberately lenient so no
+        false positives.
 
-     4. Extra net — silent skips reset the red streak
-        consecutiveReds is now incremented only when a word is
-        actually marked `error`. Silent skips (unheard tokens,
-        drift) reset the counter to 0. Previously a run of
-        skipped words could trip the 2-red freeze and lock the
-        pointer indefinitely; now the pointer keeps flowing
-        through un-attempted words and only freezes on two
-        genuine mispronunciations in a row.
+     2. Silent-letter violations are ERRORS, not warnings
+        Previously they went through markStrict1Warning, which
+        painted the word yellow, never beeped, never touched the
+        mistakes panel, and only fired once per page (the
+        silentWarned latch). A user who repeated the violation
+        twice heard and saw nothing.
 
-     5. Loosened split-buffer threshold
-        isStrongPartialPrefix() now requires 40 % of the
-        target word (was 55 %). Mid-word splits that landed at
-        40–54 % of the target — common in words with consonant
-        clusters — are now buffered for recombination instead
-        of falling through to the error path. Affects both
-        Follow and Tajweed modes because both call the helper.
+        Now runStrict1Checks calls markStrict1Error for silent
+        violations: the word is beeped, added to the Mistakes
+        panel with the label "Silent letter — pronounced",
+        counted in `errors`, and reflected in Accuracy. No more
+        silent silent-letter failures.
 
-     6. Merge-before-lookahead ordering
-        tryMergedTokenMatch() now runs before the lookahead
-        step in gradeFull(). A merged token such as
-        "بسمالله" can no longer be misread as a jump to
-        "الله", which previously marked the head of the merge
-        as skipped. All targets inside the merge are committed
-        correct in one step and each still gets its own
-        runStrict1Checks call (with skipTiming for k > 0 so
-        the madd timer is not spuriously applied to internal
-        words).
+     3. normNoSilent computed in the parser and carried through
+        • splitTajweedIntoWords() and its fallback
+          fallbackSplitTajweedIntoWords() now compute
+          { norm, normNoSilent, html } for every word.
+        • parseTajweedWordRules() also computes rules.normNoSilent
+          directly from the decorated HTML as a belt-and-braces
+          guard for words where the splitter missed the span.
+        • applyTajweedColorsToCoach() stores
+          w.normNoSilent = tWord.normNoSilent on each word object,
+          and copies it to w.tjRules.normNoSilent.
+        • removeTajweedColorsFromCoach() clears both so a mode
+          switch does not leak stale silent-stripped forms.
 
-     7. Prefix buffering on final results
-        Prefix buffering in gradeFull() now applies to *final*
-        ASR results, not only interim ones, capped at 4
-        fragments per buffer. A reciter who pauses mid-word
-        finalises an incomplete token; previously that token
-        was treated as a mispronunciation. Now it is buffered
-        for the next token to complete.
+     4. New rule name in the Mistakes panel
+        TAJWEED_ERROR_NAMES gains 'silent': 'Silent letter —
+        pronounced'. This is what the pill shows in the mistakes
+        list and in the live feedback feed.
 
-     8. Skipped words never enter the mistakes list
-        Words jumped over during lookahead are marked `skipped`
-        (amber strikethrough) only. They are not counted in
-        `errors`, do not increment `mistakeCounter`, do not
-        appear in the Mistakes panel, and do not beep.
-        Accuracy is now (words_heard - words_misread) / words
-        rather than penalised by transient ASR drift.
+   Preserved unchanged from v42:
+
+     - Split-token recombination in Tajweed mode (trySplitTokenMatch
+       before lookahead).
+     - Attempt-gated error marking — isPlausiblePronunciationAttempt
+       gates red so noise / drift never becomes a mistake.
+     - Truncated-prefix honouring on ASR jump (≥ 40 % of target →
+       committed as correct, not skipped).
+     - Silent skips reset the red streak; consecutiveReds only
+       increments on real errors.
+     - Loosened split-buffer threshold (40 % of target word).
+     - Merge-before-lookahead ordering in gradeFull.
+     - Prefix buffering on final results, capped at 4 fragments.
+     - Skipped words never enter the mistakes list or errors count.
 
    Preserved unchanged from v41:
 
-     - Silent-letter enforcement (strict1SilentOk) — positional,
-       geminate-aware, wired as a warning rather than an error.
      - Ikhfāʾ shafawī support in strict1GhunnahOk (م before ب).
      - Per-rule batch-timing attribution via
-       batchTimingCtx.contributions[] — madd-batch vs
-       ghunnah-batch attribution is correct.
+       batchTimingCtx.contributions[].
      - Continuous-voice madd measurement
        (longestContinuousVoiceMs).
      - Adaptive MIN_RMS recalibration every four seconds.
@@ -118,17 +108,17 @@
      - All non-GET requests (feedback, subscribe, analytics)
        bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v42, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v43, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v41 are deleted
+   next open runs the new code path. Caches qc-*-v42 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v42';
+const VERSION = 'v43';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

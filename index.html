@@ -2807,10 +2807,6 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   return false;
 }
 
-// Was `heard` a plausible (possibly wrong) attempt at word `w`,
-// or is it noise / a token that drifted from another word?
-// Used to gate the red "error" marking so a word the reciter
-// never actually attempted is skipped silently instead.
 function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(!w || !heard || !w.norm) return false;
   const heardLen  = heard.length;
@@ -2824,10 +2820,8 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
 
-  // Wide "attempt band" — a clear try at this word even if mangled
   if(lev(heard, w.norm) <= tol + 2) return true;
 
-  // Phonetic fallback for confusable letters the ASR normalises away
   if(hPhon.length >= 2 && w.phon.length >= 2 &&
      lev(hPhon, w.phon) <= tol + 1) return true;
 
@@ -3604,12 +3598,11 @@ const SPEECH_KEEPALIVE_MS = 40000;
 let micStream = null;
 let lastMicError = null;
 
-// ── PATCH 6: adaptive MIN_RMS + PATCH 5: longestContinuousVoiceMs ───────
 const rmsAnalyser = (function(){
   const samples = [];
-  const MAX_AGE_MS = 8000;   // widened from 4000 to cover long murattal madd
+  const MAX_AGE_MS = 8000;
   const SAMPLE_MS  = 30;
-  let MIN_RMS      = 0.010;  // mutable now: recalibrated on the fly
+  let MIN_RMS      = 0.010;
   let running = false, ctx = null, source = null, analyser = null,
       buffer = null, timer = null;
   let _lastCalibrationAt = 0;
@@ -3683,9 +3676,6 @@ const rmsAnalyser = (function(){
     return ms;
   }
 
-  // Longest run of *consecutive* voiced samples in [t0, t1], allowing
-  // gaps up to maxGapMs. Used by the madd check — a reciter who pauses
-  // mid-madd has not held the madd even if the total voiced time sums up.
   function longestContinuousVoiceMs(t0, t1, maxGapMs){
     if (!(t1 > t0)) return 0;
     if (maxGapMs == null) maxGapMs = 120;
@@ -4207,7 +4197,7 @@ const coachTajweedCache = new Map();
 let coachTajweedGen = 0;
 let coachTajweedApplied = false;
 let coachTajweedReady = false;
-let coachTajweedDegraded = false;   // ── PATCH 9
+let coachTajweedDegraded = false;
 
 function decorateTajweedToSpans(html){
   let out = String(html || '');
@@ -4221,6 +4211,7 @@ function decorateTajweedToSpans(html){
   return out;
 }
 
+// ── FIXED: computes and stores normNoSilent for every word ────────────
 function splitTajweedIntoWords(tajweedHtml){
   const decorated = decorateTajweedToSpans(tajweedHtml);
   const tpl = document.createElement('template');
@@ -4233,7 +4224,16 @@ function splitTajweedIntoWords(tajweedHtml){
   const flush = () => {
     if (!curText) return;
     const n = normArCached(curText);
-    if (n) out.push({ norm: n, html: curHtml });
+    if (!n) { curText = ''; curHtml = ''; return; }
+    let normNoSilent = n;
+    if (curHtml.indexOf('tj-silent') !== -1) {
+      const noSilentHtml = curHtml.replace(
+        /<span[^>]*class="[^"]*tj-silent[^"]*"[^>]*>[\s\S]*?<\/span>/g, '');
+      const noSilentText = noSilentHtml.replace(/<[^>]*>/g, '');
+      const ns = normArCached(noSilentText);
+      if (ns) normNoSilent = ns;
+    }
+    out.push({ norm: n, normNoSilent: normNoSilent, html: curHtml });
     curText = '';
     curHtml = '';
   };
@@ -4283,12 +4283,22 @@ function splitTajweedIntoWords(tajweedHtml){
   return out;
 }
 
+// ── FIXED: computes and stores normNoSilent for every word ────────────
 function fallbackSplitTajweedIntoWords(decoratedHtml){
   const out = [];
   const pushWord = (html) => {
     const stripped = html.replace(/<[^>]*>/g, '');
     const n = normArCached(stripped);
-    if (n) out.push({ norm: n, html });
+    if (!n) return;
+    let normNoSilent = n;
+    if (html.indexOf('tj-silent') !== -1) {
+      const noSilentHtml = html.replace(
+        /<span[^>]*class="[^"]*tj-silent[^"]*"[^>]*>[\s\S]*?<\/span>/g, '');
+      const noSilentText = noSilentHtml.replace(/<[^>]*>/g, '');
+      const ns = normArCached(noSilentText);
+      if (ns) normNoSilent = ns;
+    }
+    out.push({ norm: n, normNoSilent: normNoSilent, html: html });
   };
   let cur = '', depth = 0;
   for (let i = 0; i < decoratedHtml.length; i++){
@@ -4328,8 +4338,6 @@ async function applyTajweedColorsToCoach(){
   try{
     verses = await fetchCoachTajweed(surahNum);
   }catch(e){
-    // ── PATCH 9: surface the failure in the UI + pill so users know
-    // rule checks are silently disabled until reload.
     console.warn('[Coach] Tajweed fetch failed:', e);
     if (gen === coachTajweedGen){
       coachTajweedDegraded = true;
@@ -4401,6 +4409,9 @@ async function applyTajweedColorsToCoach(){
       if (normArCached(w.raw) !== tWord.norm) return;
       w.el.innerHTML = tWord.html;
       w.tjRules = parseTajweedWordRules(tWord.html);
+      // FIXED: store normNoSilent so silent-letter check can compare correctly
+      w.normNoSilent = tWord.normNoSilent || w.norm;
+      if (w.tjRules) w.tjRules.normNoSilent = w.normNoSilent;
       appliedCount++;
     });
 
@@ -4432,7 +4443,7 @@ function removeTajweedColorsFromCoach(){
     tjPill.setAttribute('aria-label', 'Tajweed mode');
   }
   if (!coachTajweedApplied) return;
-  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; });
+  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; });
   coachTajweedApplied = false;
 }
 
@@ -4450,10 +4461,6 @@ const GHUNNAH_MIN_MS = {
   default:          350
 };
 
-// ── PATCH 7: pace-scaled thresholds. currentPaceWPS is maintained by
-// noteAdvance(); a calm murattal keeps the base values, a fast hadr
-// shortens them, a slow tartil lengthens them. Clamped so a burst of
-// fast tokens does not nuke the thresholds.
 function paceScale(){
   if (!currentPaceWPS || currentPaceWPS <= 0) return 1.0;
   return Math.max(0.75, Math.min(1.6, 1.0 / currentPaceWPS));
@@ -4475,8 +4482,6 @@ let lastCommitBatchId   = -1;
 let currentBatchId      = 0;
 let silentWarned        = false;
 
-// Batch-cumulative timing context. Populated during gradeFull(), finalised
-// at the end of that call. Null outside gradeFull().
 let batchTimingCtx = null;
 
 function parseTajweedWordRules(decoratedHtml){
@@ -4487,7 +4492,8 @@ function parseTajweedWordRules(decoratedHtml){
     hasGhunnah: false,
     hasSilent: false,
     ghunnahType: null,
-    hasGhunnahContext: false
+    hasGhunnahContext: false,
+    normNoSilent: null
   };
   if (!decoratedHtml) return rules;
 
@@ -4514,6 +4520,15 @@ function parseTajweedWordRules(decoratedHtml){
     if (n){ rules.silentLetters.push(n); rules.hasSilent = true; }
   }
 
+  // Compute the silent-stripped normalised form directly from the HTML
+  if (rules.hasSilent) {
+    const noSilentHtml = decoratedHtml.replace(
+      /<span[^>]*class="[^"]*tj-silent[^"]*"[^>]*>[\s\S]*?<\/span>/g, '');
+    const noSilentText = noSilentHtml.replace(/<[^>]*>/g, '');
+    const ns = normArCached(noSilentText);
+    if (ns) rules.normNoSilent = ns;
+  }
+
   return rules;
 }
 
@@ -4523,15 +4538,10 @@ function strict1MaddOk(prevW, deltaMs){
   return deltaMs >= need;
 }
 
-// ── PATCH 2: ghunnah check now handles ikhfa shafawi (meem) and does an
-// explicit presence assertion for each context instead of silently
-// returning true when no direct tj-ghunnah span exists.
 function strict1GhunnahOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
   const N = '\u0646', M = '\u0645';
 
-  // Direct ghunnah marks (نّ / مّ): strict — every marked nasal letter
-  // must appear in the heard text.
   if (w.tjRules.ghunnahLetters.length){
     const required = w.tjRules.ghunnahLetters.join('');
     for (let i = 0; i < required.length; i++){
@@ -4541,11 +4551,6 @@ function strict1GhunnahOk(w, heard){
     return true;
   }
 
-  // Contextual rules:
-  //   • iqlab           → written noon becomes heard meem
-  //   • ikhfa haqiqi    → written noon before an ikhfa letter
-  //   • ikhfa shafawi   → written meem before ب (NEW)
-  //   • idghaam_ghunnah → nasal is assimilated, no direct check possible
   if (w.tjRules.ghunnahType === 'iqlab'){
     return heard.indexOf(M) !== -1;
   }
@@ -4560,42 +4565,55 @@ function strict1GhunnahOk(w, heard){
   return true;
 }
 
-// ── PATCH 1: silent-letter check. Previously dead code with a broken
-// substring test. Now: skip geminate mergers (e.g. first ل of الله),
-// then flag only when the heard form is strictly closer to the full
-// written word than to the silent-dropped form.
+// ── FULLY FIXED silent-letter check ──────────────────────────────────
+// Primary path compares the heard token against:
+//   • the FULL normalised word (silent letter still present)
+//   • normNoSilent (silent letter stripped, computed from HTML spans)
+// If heard is strictly closer to the full form, the reciter pronounced
+// the silent letter → flag as error. This is position-safe: أَنَا
+// (norm "انا", silent final alif → normNoSilent "ان") behaves correctly
+// whether heard is "ana" (error) or "an" (correct).
+//
+// Fallback (no normNoSilent available — legacy cached data): try removing
+// each occurrence of each silent letter; the reciter is only flagged if
+// heard is strictly closer to the full form than to ALL silent-dropped
+// variants. This is deliberately lenient — we never false-positive on a
+// legitimate geminate merger such as the first ل of الله.
 function strict1SilentOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasSilent) return true;
   const full = w.norm;
+  const noSilent = w.normNoSilent || (w.tjRules && w.tjRules.normNoSilent);
 
+  if (noSilent && noSilent.length >= 1 && noSilent !== full){
+    const dFull = lev(heard, full);
+    const dNoSilent = lev(heard, noSilent);
+    return dFull >= dNoSilent;
+  }
+
+  // Fallback for legacy words without normNoSilent
+  const dFull = lev(heard, full);
+  let best = dFull;
   for (let i = 0; i < w.tjRules.silentLetters.length; i++){
     const sl = w.tjRules.silentLetters[i];
     if (!sl) continue;
-
-    const idx = full.indexOf(sl);
-    if (idx < 0) continue;
-    const before = idx > 0 ? full[idx - 1] : '';
-    const after  = idx + sl.length < full.length ? full[idx + sl.length] : '';
-    if (before === sl || after === sl) continue;
-    if (sl.length === 1 && (before === sl[0] || after === sl[0])) continue;
-
-    const withoutSilent = full.split(sl).join('');
-    if (!withoutSilent || withoutSilent === full) continue;
-
-    const dFull   = lev(heard, full);
-    const dSilent = lev(heard, withoutSilent);
-    if (dFull < dSilent) return false;
+    for (let pos = 0; pos <= full.length - sl.length; pos++){
+      if (full.substr(pos, sl.length) !== sl) continue;
+      const variant = full.slice(0, pos) + full.slice(pos + sl.length);
+      if (!variant || variant === full) continue;
+      const d = lev(heard, variant);
+      if (d < best) best = d;
+    }
   }
-  return true;
+  return dFull >= best;
 }
 
-// Human-readable names for each Tajweed rule violation kind.
 const TAJWEED_ERROR_NAMES = {
   'madd':           'Madd — too short',
-  'madd-batch':     'Madd — too short (fast batch)',   // ── PATCH 3
+  'madd-batch':     'Madd — too short (fast batch)',
   'ghunnah':        'Ghunnah — nasal missing',
   'ghunnah-length': 'Ghunnah — too short',
-  'ghunnah-batch':  'Ghunnah — too short (fast batch)'
+  'ghunnah-batch':  'Ghunnah — too short (fast batch)',
+  'silent':         'Silent letter — pronounced'
 };
 
 function markStrict1Error(w, kind, detail){
@@ -4652,7 +4670,6 @@ function runStrict1Checks(idx, heard, opts){
 
   const prevInSameBatch = (lastDirectCommitIdx >= 0) && (lastCommitBatchId === currentBatchId);
 
-  // ── PATCH 5: per-word timing uses continuous voice for madd.
   if (!opts.skipTiming &&
       lastDirectCommitIdx >= 0 &&
       idx === lastDirectCommitIdx + 1 &&
@@ -4688,8 +4705,6 @@ function runStrict1Checks(idx, heard, opts){
     }
   }
 
-  // ── PATCH 3: batch contributions tracked per rule so the final
-  // validation can attribute the shortfall correctly (madd vs ghunnah).
   if (prevInSameBatch && batchTimingCtx &&
       lastDirectCommitIdx >= 0 && idx === lastDirectCommitIdx + 1){
     const prevW = words[lastDirectCommitIdx];
@@ -4720,9 +4735,10 @@ function runStrict1Checks(idx, heard, opts){
     markStrict1Error(w, 'ghunnah', 'nasal letter missing (\u0646 / \u0645)');
   }
 
-  // ── PATCH 1: silent-letter warning now wired up.
+  // FIXED: silent-letter violations are now marked as ERRORS (beep,
+  // mistakes panel, accuracy count) not one-shot warnings.
   if (!strict1SilentOk(w, heard)){
-    markStrict1Warning(w, 'silent', 'silent letter pronounced');
+    markStrict1Error(w, 'silent', 'silent letter pronounced');
   }
 
   if (opts.breakChain){
@@ -7043,7 +7059,7 @@ function applyMutexUI(){
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
   if(matchChip) matchChip.hidden = !followOnly;
   if(hideTextChip) hideTextChip.hidden = !followOnly;
-  
+
   const tjNoiseChip = document.getElementById('tajweedNoiseChip');
   if(tjNoiseChip) tjNoiseChip.hidden = followOnly;
 
@@ -7135,9 +7151,6 @@ async function loadSurah(n, keepFeedback){
   STORE.mode = 'surah'; STORE.surah = surahNum;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
 
-  // ── PATCH 8: reset Tajweed state so a newly loaded surah re-colours
-  // and re-validates. Without this, coachTajweedReady stays true from
-  // the previous surah and the new one never gets annotations applied.
   coachTajweedApplied = false;
   coachTajweedReady   = false;
   coachTajweedDegraded = false;
@@ -7256,7 +7269,7 @@ function renderVerses(ayahs, translations){
     span.dataset.idx = String(myIndex);
     parent.appendChild(span);
     const nrm = normArCached(tok);
-    words.push({ raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null });
+    words.push({ raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null });
   }
 
   function pushDecoration(tok, parent){
@@ -7565,11 +7578,9 @@ function gradeFull(tokens, isFinal, startIdx){
       if(ptr >= words.length){ used++; continue; }
       const hPhon = phonArCached(rawTok);
 
-      // ── (a) self-repetition guard ─────────────────────────────
       if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
-      // ── (b) direct match at ptr ───────────────────────────────
       if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
         commitCorrect(ptr);
         runStrict1Checks(ptr, heard);
@@ -7578,8 +7589,6 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── (c) SPLIT: buffered prefix + this token == words[ptr] ─
-      // Runs BEFORE lookahead so a split never looks like a jump.
       if(trySplitTokenMatch(heard, rawTok)){
         const combined = normArCached(pendingHeard.join('') + rawTok);
         commitCorrect(ptr);
@@ -7589,10 +7598,6 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── (d) lookahead — token matches a word ahead ────────────
-      // EXTRA NET #1: if pendingHeard was a truncated attempt at
-      // words[ptr] and the ASR jumped to words[ptr+1], honour the
-      // truncated word as correct instead of falsely skipping it.
       let found = -1;
       const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
       for(let k = 1; k <= maxK; k++){
@@ -7604,7 +7609,6 @@ function gradeFull(tokens, isFinal, startIdx){
       if(found > 0){
         if(!followOnly){
           let skipStart = ptr;
-          // Extra net: honour truncated prefix as correct
           if(pendingHeard.length){
             const buffered = normArCached(pendingHeard.join(''));
             const target   = words[ptr].norm;
@@ -7614,8 +7618,6 @@ function gradeFull(tokens, isFinal, startIdx){
               skipStart = ptr + 1;
             }
           }
-          // Words between skipStart and ptr+found were never heard →
-          // amber (skipped) only, never red, never counted.
           for(let k = skipStart; k < ptr + found; k++){
             const sw = words[k];
             if(sw && !sw.el.classList.contains('error') &&
@@ -7632,7 +7634,6 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── (e) MERGE: one token == N target words ────────────────
       const mergedN = tryMergedTokenMatch(heard, hPhon);
       if(mergedN > 0){
         commitManyCorrect(ptr, ptr + mergedN);
@@ -7644,9 +7645,6 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── (f) prefix buffering — works on FINAL and interim ────
-      // Extra net: finalised splits (reciter paused mid-word) also
-      // get buffered now, with a cap of 4 fragments.
       if(isStrongPartialPrefix(heard)){
         if(pendingHeard.length === 1 &&
            heard.startsWith(normArCached(pendingHeard[0]))){
@@ -7657,10 +7655,6 @@ function gradeFull(tokens, isFinal, startIdx){
         used++; continue;
       }
 
-      // ── (g) DECISION: error vs buffer vs silent skip ─────────
-      // EXTRA NET #2: consecutiveReds only counts REAL errors —
-      // silent skips reset the counter, so the pointer never freezes
-      // from a run of unheard tokens.
       const w = words[ptr];
       const hasPending = pendingHeard.length > 0;
       const plausible  = w && !hasPending &&
@@ -7696,11 +7690,9 @@ function gradeFull(tokens, isFinal, startIdx){
       lastCommitBatchId   = -1;
 
       if(markedThisTime){
-        // Genuine error — count toward red streak, freeze at 2
         consecutiveReds++;
         if(consecutiveReds < 2) advancePast(1);
       } else {
-        // Silent skip or follow mode — reset streak, always advance
         consecutiveReds = 0;
         advancePast(1);
       }
@@ -7708,7 +7700,6 @@ function gradeFull(tokens, isFinal, startIdx){
       used++;
     }
 
-    // ── batch-cumulative Tajweed validation (unchanged) ───────
     const ctx = batchTimingCtx;
     if(ctx && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 &&
        ctx.contributions.length > 0){
@@ -8251,9 +8242,9 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
       '<li>Tajweed is <b>permanently locked to the Strict setting</b>. The <b>Match</b> selector is <b>hidden</b> in Tajweed mode and Tajweed never changes or inherits your Follow-mode choice.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
-      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ghunnah — too short</i>, <i>Madd — too short (fast batch)</i> — both in the mistakes panel and in the live feedback feed.</li>' +
+      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ghunnah — too short</i>, <i>Madd — too short (fast batch)</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check is positional — it compares the heard token against the full written word and the silent-dropped form, and only flags when the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) are skipped so a correct recitation is never flagged.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
