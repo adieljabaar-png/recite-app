@@ -1,89 +1,77 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v46 — Silent-letter false-positive fix.
+   v47 — Hamzat al-Wasl pause detection + colour-aware rule names.
 
-   Ships the updated index.html with the `heard === full` guard
-   added to strict1SilentOk(). The only functional change in the
-   SW is the version bump, which forces every qc-*-v45 cache to
-   be discarded on activate so the updated HTML reaches the
-   client on next open.
+   Ships the updated index.html containing:
 
-   Client-side change shipped with this version:
+     1. New hamzat al-wasl pause check (runStrict1Checks)
+        When the committed word carries a purple tj-ham_wasl span,
+        the coach measures the acoustic silence between the last
+        voiced letter of the previous word and the first voiced
+        letter after the silent alif, using the new helper
+        rmsAnalyser.longestSilenceGapMs().
+        - Continuous recitation (<180 ms, pace-scaled) → PASS.
+        - A deliberate pause ≥ threshold → FAIL, word marked red
+          with label "Hamzat al-Wasl — pause before joining".
+        - Trailing ASR-commit silence is never counted, so a
+          correctly recited word is never falsely flagged.
+        - Only the Tajweed (strict) engine runs this check — Follow
+          mode is untouched. Fires on consecutive direct-path
+          commits only, never on batched ASR results where timing
+          is unknowable.
 
-     1. Silent-letter check no longer fires on correctly recited
-        words
-        Arabic ASR always emits the standard orthographic form
-        of every word — including hamzat al-wasl, silent alif,
-        silent waw and silent lam. So `heard` is virtually
-        always identical to `w.norm` (the full written form with
-        silent letters intact), even when the reciter has
-        correctly *joined* the silent letter into the previous
-        syllable. The old check compared
-            lev(heard, full)      (= 0)
-          vs
-            lev(heard, noSilent)  (>= 1)
-        and required `dFull >= dNoSilent`, which is impossible
-        when heard === full. Every correctly recited word that
-        carries any silent letter — الكتاب after ذلك, أولئك,
-        داود, أنا, every word whose ال precedes a sun letter —
-        was therefore marked red on every commit, with the
-        label "Hamzat al-Wasl — pronounced instead of joined".
+     2. rmsAnalyser.longestSilenceGapMs(t0, t1)
+        New helper that measures only inter-voiced silence. It
+        deliberately ignores silence before the first voiced sample
+        and after the last voiced sample, so ASR commit lag can
+        never be mistaken for a recitation pause.
 
-        Fix: an early return at the top of strict1SilentOk():
+     3. Colour-aware Tajweed rule names
+        parseTajweedWordRules() now also extracts purple ham_wasl
+        spans (hamWaslLetters, hasHamWasl), and every
+        markStrict1Error() call derives its reported rule name from
+        the word's actual annotated rule type:
+           madd-normal / -permissible / -necessary
+           ghunnah-ghunnah / -ikhfa / -idghaam_ghunnah / -iqlab
+           ghunnah-length-<kind>
+           silent
+           ham-wasl
+        Batch summaries in gradeFull() likewise emit
+        madd-<kind>-batch / ghunnah-length-<kind>-batch. Every key
+        resolves to a colour-matched English label in
+        TAJWEED_ERROR_NAMES, so the mistakes panel and the live
+        feedback feed now report exactly which coloured rule was
+        broken instead of a generic "Tajweed — too short".
 
-            if (heard === full) return true;
+   The only functional change in this SW is the version bump, which
+   forces every qc-*-v46 cache to be discarded on activate so the
+   updated HTML reaches the client on next open — including offline
+   clients served from the shell cache.
 
-        When the ASR has simply echoed the orthographic form,
-        the transcript alone cannot distinguish "joined" from
-        "not joined" — so the check abstains rather than
-        misfire. The check still runs whenever the transcript
-        actually drifts from the written form, which is the
-        only case where it can meaningfully say anything.
-
-        This fixes:
-          - ذلك الكتاب recited correctly    → PASS (was FAIL)
-          - أولئك / داود / أنا recited       → PASS (was FAIL)
-          - Any word with ال before a sun
-            letter recited correctly          → PASS (was FAIL)
-
-        The continuous-recitation guard, the ibtidāʾ exemption,
-        the TAJWEED_ERROR_NAMES['ham_wasl'] label and the Coach
-        Info explanation introduced in v45 are all preserved
-        unchanged. They still fire in the (rare) genuine case
-        where the ASR output does not match the orthographic
-        form and the comparison can therefore say something
-        useful.
-
-   Preserved unchanged from v45:
-
-     - Hamzat al-Wasl treated as a silent letter in the
-       Tajweed pipeline.
-     - Continuous-recitation guard against false positives.
-     - ibtidāʾ exemption for wasla at the start of an utterance.
-     - "Hamzat al-Wasl — pronounced instead of joined" label.
-     - Extended Coach Info Tajweed section.
+   Preserved unchanged from v46:
+     - Silent-letter false-positive fix (heard === full → PASS,
+       abstain when the ASR has simply echoed the orthographic
+       form).
+     - Continuous-recitation guard, ibtidāʾ exemption, and the
+       "Hamzat al-Wasl — pronounced instead of joined" label from
+       v45.
+     - Extended Coach Info Tajweed section from v45.
 
    Preserved unchanged from v44:
-
      - ق / ك acceptance in isMatchWord().
      - .skipped neutral-tint styling (no yellow strike-through).
      - Conservative skip detection in gradeFull().
-     - Tajweed !important cascade fix (color: inherit
-       !important on word-state overrides).
+     - Tajweed !important cascade fix.
      - Silent-letter enforcement rewrite (positional
        strict1SilentOk, normNoSilent pipeline).
-     - Split-token recombination in Tajweed mode.
-     - Attempt-gated error marking.
-     - Truncated-prefix honouring on ASR jump.
-     - Silent skips reset the red streak.
-     - Loosened split-buffer threshold.
-     - Merge-before-lookahead ordering.
-     - Prefix buffering on final results.
-     - Skipped words never enter the mistakes list.
+     - Split-token recombination, attempt-gated error marking,
+       truncated-prefix honouring, silent-skips-reset-streak,
+       loosened split-buffer threshold, merge-before-lookahead
+       ordering, prefix buffering, and skipped words never enter
+       the mistakes list.
 
    Preserved unchanged from v42:
-
      - Ikhfāʾ shafawī support.
      - Per-rule batch-timing attribution.
      - Continuous-voice madd measurement.
@@ -93,27 +81,26 @@
      - Degraded-Tajweed pill banner.
 
    Preserved unchanged from v41–v40:
-
      - Tajweed annotations served networkFresh.
      - everyayah.com audio served from qc-audio.
      - Google Fonts pre-cache bounded to 20 s at install.
-     - Shell navigation with cache:'reload' — stale HTML can
-       never be served on a navigation.
+     - Shell navigation with cache:'reload' — stale HTML can never
+       be served on a navigation.
      - Manifest with a 2 s network budget.
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v46, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v47, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v45 are deleted
+   next open runs the new code path. Caches qc-*-v46 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v46';
+const VERSION = 'v47';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -310,7 +297,9 @@ self.addEventListener('fetch', event => {
   // This is the fix for "Tajweed colour coding doesn't update":
   // the client always receives live Tajweed data, and a stale
   // TEXT_CACHE or HTTP-cached response can never silently hide
-  // newly-shipped colour fields.
+  // newly-shipped colour fields. Also matters for the new
+  // hamzat al-wasl pause check, which relies on the purple
+  // tj-ham_wasl spans in the live annotation payload.
   if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
     event.respondWith(networkFresh(req));
     return;
