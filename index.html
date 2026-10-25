@@ -1058,6 +1058,7 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.located{animation:locatePulse .9s ease}
 body.hide-text-mode:not(.viewer-open) .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
 body.hide-text-mode:not(.viewer-open) .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
+body.hide-text-mode:not(.viewer-open) .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
 body.hide-text-mode:not(.viewer-open) .w.current{color: transparent !important;background: transparent !important;box-shadow: none !important;}
 body.hide-text-mode:not(.viewer-open) .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
 body.hide-text-mode:not(.viewer-open) .mushaf::after{content: "🙈 Text hidden — recite from memory. Words appear as you go.";display:block;direction:ltr;font-family:-apple-system,sans-serif;font-size:.72rem;color:var(--muted);text-align:center;padding:16px 8px 4px;letter-spacing:.02em;opacity:.75;}
@@ -4791,19 +4792,19 @@ function runStrict1Checks(idx, heard, opts){
       }
     }
 
-    /* ── NEW: hamzat al-wasl pause / volume-dip check ─────────────
+    /* ── Hamzat al-wasl pause / volume-dip check ──────────────────
        The purple alif is silent, so it must be crossed WITHOUT a pause
        and WITHOUT a volume drop. We measure, between the last voiced
        letter of the previous word and the first voiced letter after
        the alif:
          (a) the acoustic silence gap, AND
          (b) the volume dip below 50 % of the normal voiced level.
-       Either one lasting ≥ 200 ms is flagged as a Tajweed error on
+       Either one lasting ≥ 100 ms is flagged as a Tajweed error on
        the word that contains the purple alif.                    */
     if (w.tjRules && w.tjRules.hasHamWasl && rmsAvailable){
       const windowStart     = lastDirectCommitAt - 600;
       const windowEnd       = now;
-      const HAM_WASL_MIN_MS = 200;            // 0.2 s as requested
+      const HAM_WASL_MIN_MS = 100;            // 0.1 s as requested
 
       const silenceMs = rmsAnalyser.longestSilenceGapMs(windowStart, windowEnd);
       const dipMs     = rmsAnalyser.longestVolumeDipMs (windowStart, windowEnd);
@@ -7208,7 +7209,14 @@ if(chkHideText){ chkHideText.addEventListener('change', () => { hideText = chkHi
 function applyHideTextUI(){
   if(hideText && followOnly){
     document.body.classList.add('hide-text-mode');
-    words.forEach(w => { if(w.el.classList.contains('correct') || w.el.classList.contains('corrected')){ w.el.classList.add('revealed'); w.el.classList.remove('correct','corrected'); } });
+    words.forEach(w => {
+      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected')){
+        w.el.classList.add('revealed');
+        w.el.classList.remove('correct','corrected');
+      } else if(w.el.classList.contains('skipped')){
+        w.el.classList.add('revealed');
+      }
+    });
   } else {
     document.body.classList.remove('hide-text-mode');
     words.forEach(w => w.el.classList.remove('revealed'));
@@ -7596,6 +7604,14 @@ function commitManyCorrect(start, end){
   const cls = toReveal ? 'w revealed' : 'w correct';
   for(let i = start; i < stop; i++){ words[i].el.className = cls; }
 }
+function markSkippedWord(i){
+  const w = words[i]; if(!w) return;
+  const el = w.el;
+  if(el.classList.contains('error')) return;
+  el.classList.remove('current','correct','corrected','model','located','pressing');
+  el.classList.add('skipped');
+  if(hideText && followOnly) el.classList.add('revealed');
+}
 function recordMistake(i, kind, heardRaw){
   if(followOnly) return;
   const w = words[i]; if(!w) return;
@@ -7656,7 +7672,8 @@ function gradeFollowOnly(tokens, startIdx){
       if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
     }
     if(found > 0){
-      commitManyCorrect(ptr, ptr + found + 1);
+      for(let k = 0; k < found; k++) markSkippedWord(ptr + k);
+      commitCorrect(ptr + found);
       advancePast(found + 1);
       pendingHeard.length = 0; used++; continue;
     }
@@ -7722,26 +7739,17 @@ function gradeFull(tokens, isFinal, startIdx){
         if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
       }
       if(found > 0){
-        if(!followOnly){
-          let skipStart = ptr;
-          if(pendingHeard.length){
-            const buffered = normArCached(pendingHeard.join(''));
-            const target   = words[ptr].norm;
-            if(buffered.length >= target.length * 0.40 &&
-               target.startsWith(buffered)){
-              commitCorrect(ptr);
-              skipStart = ptr + 1;
-            }
-          }
-          for(let k = skipStart; k < ptr + found; k++){
-            const sw = words[k];
-            if(sw && !sw.el.classList.contains('error') &&
-               !sw.el.classList.contains('skipped')){
-              sw.el.classList.remove('current','correct','corrected','model','located');
-              sw.el.classList.add('skipped');
-            }
+        let skipStart = ptr;
+        if(pendingHeard.length){
+          const buffered = normArCached(pendingHeard.join(''));
+          const target   = words[ptr].norm;
+          if(buffered.length >= target.length * 0.40 &&
+             target.startsWith(buffered)){
+            commitCorrect(ptr);
+            skipStart = ptr + 1;
           }
         }
+        for(let k = skipStart; k < ptr + found; k++) markSkippedWord(k);
         commitCorrect(ptr + found);
         runStrict1Checks(ptr + found, heard);
         advancePast(found + 1);
@@ -7809,6 +7817,7 @@ function gradeFull(tokens, isFinal, startIdx){
         if(consecutiveReds < 2) advancePast(1);
       } else {
         consecutiveReds = 0;
+        if(followOnly) markSkippedWord(ptr);
         advancePast(1);
       }
       pendingHeard.length = 0;
