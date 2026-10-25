@@ -1,68 +1,59 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v44 — Word-state visual fixes + ق/ك acceptance.
+   v45 — Hamzat al-Wasl silent-letter enforcement.
 
-   Ships the corrected isMatchWord(), .skipped styling,
-   gradeFull() skip detection, and Tajweed !important cascade
-   of index.html. No new network endpoints, no new cache
-   requirements — the only functional change in the SW is the
-   version bump, which forces every qc-*-v43 cache to be
-   discarded on activate so the updated HTML reaches the client
-   on next open.
+   Ships the updated index.html with Hamzat al-Wasl treated as a
+   silent letter in Tajweed mode. The only functional change in
+   the SW is the version bump, which forces every qc-*-v44 cache
+   to be discarded on activate so the updated HTML reaches the
+   client on next open.
 
    Client-side changes shipped with this version:
 
-     1. ق / ك acceptance in isMatchWord()
-        A ك substituted for a ق is now accepted as correct
-        whenever (a) the target word contains ق, (b) the heard
-        token and target have the same length, and (c) the
-        heard form is exactly the target with every ق
-        replaced by ك. This covers short words like قُل → كُل
-        that the length-≥3 phonetic path used to skip, and
-        gives the reciter the benefit of the doubt in both
-        Follow and Tajweed modes. The word is still displayed
-        with its original Arabic (ق) — the substitution is
-        never written back.
+     1. Hamzat al-Wasl (tj-ham_wasl / purple) treated as a
+        silent letter
+        In the Quran.com Uthmani Tajweed annotations the wasla
+        (ٱ) is coloured purple with the class tj-ham_wasl. It is
+        silent in continuous recitation (wasl) but pronounced
+        when a word is started from scratch (ibtidāʾ). The coach
+        now collects it into silentLetters alongside tj-silent,
+        strips it from normNoSilent, and runs the same
+        "was it pronounced?" check.
 
-     2. .skipped no longer looks like a mistake
-        The old style was background:rgba(255,176,32,.16) +
-        color:#ffcf6b + text-decoration:line-through. That
-        made any word the ASR had dropped or merged look like
-        a yellow strike-through error. The new style is a
-        subtle neutral tint (rgba(143,155,179,.08)) with no
-        decoration, and the matching inner-tajweed rule is
-        softened the same way.
+     2. Continuous-recitation guard against false positives
+        Because the wasla is legitimately pronounced at the start
+        of an utterance, the check only fires when the word
+        immediately follows the previously committed word
+        (idx === lastDirectCommitIdx + 1). Ibtidāʾ at the start
+        of a surah, page, session, or after any chain break is
+        never flagged. This is the deliberate fix for
+        "thaalikal kitaab" (correct) vs "thaalika al kitaab"
+        (flagged as Hamzat al-Wasl — pronounced instead of
+        joined).
 
-     3. Conservative skip detection in gradeFull()
-        Before marking a range as .skipped, the engine now
-        checks whether the heard token is a plausible
-        pronunciation of the CURRENT word (same length class,
-        within tolerance + 2). If yes, the word is committed
-        as correct and skipStart is advanced past it, so the
-        recognizer dropping a token no longer paints the
-        word yellow in the first place.
+     3. New rule label in the mistakes list and live feed
+        TAJWEED_ERROR_NAMES['ham_wasl'] =
+          'Hamzat al-Wasl — pronounced instead of joined'
+        The label appears both in the ayah-by-ayah Mistakes
+        panel and in the live feedback line, so the reciter sees
+        exactly which rule was broken.
 
-     4. Tajweed !important cascade fixed
-        Every Tajweed rule class (.tj-madda_normal,
-        .tj-ikhfa, .tj-madda_permissible, …) uses
-        color: … !important. The word-state override rule
-        .w.correct [class^="tj-"], .w.current [class^="tj-"]
-        etc. was declared WITHOUT !important on color, so
-        author-!important always won — a correctly-recited
-        word that carried a Madd annotation stayed yellow
-        even though it was scored correct and had a green
-        underline. The override now uses
-        color: inherit !important, so the state colour
-        (green / blue / red) always shows through, and the
-        state distinction is carried by underline /
-        background as it was intended.
+     4. Coach Info text extended
+        The Tajweed section of the Coach Info modal now explains
+        the wasla check with the thaalika al kitaab worked
+        example and the ibtidāʾ exemption, so the rule is
+        discoverable without reading the source.
 
-   Preserved unchanged from v43:
+   Preserved unchanged from v44:
 
+     - ق / ك acceptance in isMatchWord().
+     - .skipped neutral-tint styling (no yellow strike-through).
+     - Conservative skip detection in gradeFull().
+     - Tajweed !important cascade fix (color: inherit
+       !important on word-state overrides).
      - Silent-letter enforcement rewrite (positional
-       strict1SilentOk, normNoSilent pipeline, silent
-       violations counted as errors).
+       strict1SilentOk, normNoSilent pipeline).
      - Split-token recombination in Tajweed mode.
      - Attempt-gated error marking.
      - Truncated-prefix honouring on ASR jump.
@@ -93,17 +84,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v44, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v45, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v43 are deleted
+   next open runs the new code path. Caches qc-*-v44 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v44';
+const VERSION = 'v45';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
