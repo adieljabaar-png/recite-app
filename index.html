@@ -4602,6 +4602,15 @@ function strict1GhunnahOk(w, heard){
 function strict1SilentOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasSilent) return true;
   const full = w.norm;
+
+  // Arabic ASR always outputs the orthographic form (with hamzat al-wasl
+  // and other silent letters present). When heard === full we cannot
+  // determine from the transcript whether the user actually pronounced
+  // the silent letter — so never flag it. Otherwise every correctly
+  // recited word that contains a silent letter (e.g. الكتاب after ذلك,
+  // أولئك, داود) would be marked red even when recited perfectly.
+  if (heard === full) return true;
+
   const noSilent = w.normNoSilent || (w.tjRules && w.tjRules.normNoSilent);
 
   if (noSilent && noSilent.length >= 1 && noSilent !== full){

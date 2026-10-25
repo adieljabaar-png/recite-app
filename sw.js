@@ -1,49 +1,68 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v45 — Hamzat al-Wasl silent-letter enforcement.
+   v46 — Silent-letter false-positive fix.
 
-   Ships the updated index.html with Hamzat al-Wasl treated as a
-   silent letter in Tajweed mode. The only functional change in
-   the SW is the version bump, which forces every qc-*-v44 cache
-   to be discarded on activate so the updated HTML reaches the
+   Ships the updated index.html with the `heard === full` guard
+   added to strict1SilentOk(). The only functional change in the
+   SW is the version bump, which forces every qc-*-v45 cache to
+   be discarded on activate so the updated HTML reaches the
    client on next open.
 
-   Client-side changes shipped with this version:
+   Client-side change shipped with this version:
 
-     1. Hamzat al-Wasl (tj-ham_wasl / purple) treated as a
-        silent letter
-        In the Quran.com Uthmani Tajweed annotations the wasla
-        (ٱ) is coloured purple with the class tj-ham_wasl. It is
-        silent in continuous recitation (wasl) but pronounced
-        when a word is started from scratch (ibtidāʾ). The coach
-        now collects it into silentLetters alongside tj-silent,
-        strips it from normNoSilent, and runs the same
-        "was it pronounced?" check.
+     1. Silent-letter check no longer fires on correctly recited
+        words
+        Arabic ASR always emits the standard orthographic form
+        of every word — including hamzat al-wasl, silent alif,
+        silent waw and silent lam. So `heard` is virtually
+        always identical to `w.norm` (the full written form with
+        silent letters intact), even when the reciter has
+        correctly *joined* the silent letter into the previous
+        syllable. The old check compared
+            lev(heard, full)      (= 0)
+          vs
+            lev(heard, noSilent)  (>= 1)
+        and required `dFull >= dNoSilent`, which is impossible
+        when heard === full. Every correctly recited word that
+        carries any silent letter — الكتاب after ذلك, أولئك,
+        داود, أنا, every word whose ال precedes a sun letter —
+        was therefore marked red on every commit, with the
+        label "Hamzat al-Wasl — pronounced instead of joined".
 
-     2. Continuous-recitation guard against false positives
-        Because the wasla is legitimately pronounced at the start
-        of an utterance, the check only fires when the word
-        immediately follows the previously committed word
-        (idx === lastDirectCommitIdx + 1). Ibtidāʾ at the start
-        of a surah, page, session, or after any chain break is
-        never flagged. This is the deliberate fix for
-        "thaalikal kitaab" (correct) vs "thaalika al kitaab"
-        (flagged as Hamzat al-Wasl — pronounced instead of
-        joined).
+        Fix: an early return at the top of strict1SilentOk():
 
-     3. New rule label in the mistakes list and live feed
-        TAJWEED_ERROR_NAMES['ham_wasl'] =
-          'Hamzat al-Wasl — pronounced instead of joined'
-        The label appears both in the ayah-by-ayah Mistakes
-        panel and in the live feedback line, so the reciter sees
-        exactly which rule was broken.
+            if (heard === full) return true;
 
-     4. Coach Info text extended
-        The Tajweed section of the Coach Info modal now explains
-        the wasla check with the thaalika al kitaab worked
-        example and the ibtidāʾ exemption, so the rule is
-        discoverable without reading the source.
+        When the ASR has simply echoed the orthographic form,
+        the transcript alone cannot distinguish "joined" from
+        "not joined" — so the check abstains rather than
+        misfire. The check still runs whenever the transcript
+        actually drifts from the written form, which is the
+        only case where it can meaningfully say anything.
+
+        This fixes:
+          - ذلك الكتاب recited correctly    → PASS (was FAIL)
+          - أولئك / داود / أنا recited       → PASS (was FAIL)
+          - Any word with ال before a sun
+            letter recited correctly          → PASS (was FAIL)
+
+        The continuous-recitation guard, the ibtidāʾ exemption,
+        the TAJWEED_ERROR_NAMES['ham_wasl'] label and the Coach
+        Info explanation introduced in v45 are all preserved
+        unchanged. They still fire in the (rare) genuine case
+        where the ASR output does not match the orthographic
+        form and the comparison can therefore say something
+        useful.
+
+   Preserved unchanged from v45:
+
+     - Hamzat al-Wasl treated as a silent letter in the
+       Tajweed pipeline.
+     - Continuous-recitation guard against false positives.
+     - ibtidāʾ exemption for wasla at the start of an utterance.
+     - "Hamzat al-Wasl — pronounced instead of joined" label.
+     - Extended Coach Info Tajweed section.
 
    Preserved unchanged from v44:
 
@@ -84,17 +103,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v45, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v46, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v44 are deleted
+   next open runs the new code path. Caches qc-*-v45 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v45';
+const VERSION = 'v46';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
