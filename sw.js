@@ -1,37 +1,56 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v47 — Hamzat al-Wasl pause detection + colour-aware rule names.
+   v48 — Hamzat al-Wasl silence + volume-dip detection (200 ms).
 
    Ships the updated index.html containing:
 
-     1. New hamzat al-wasl pause check (runStrict1Checks)
+     1. Hamzat al-Wasl silence + volume-dip check (runStrict1Checks)
         When the committed word carries a purple tj-ham_wasl span,
-        the coach measures the acoustic silence between the last
-        voiced letter of the previous word and the first voiced
-        letter after the silent alif, using the new helper
-        rmsAnalyser.longestSilenceGapMs().
-        - Continuous recitation (<180 ms, pace-scaled) → PASS.
-        - A deliberate pause ≥ threshold → FAIL, word marked red
-          with label "Hamzat al-Wasl — pause before joining".
-        - Trailing ASR-commit silence is never counted, so a
-          correctly recited word is never falsely flagged.
+        the coach measures, between the last voiced letter of the
+        previous word and the first voiced letter after the silent
+        alif, using live-microphone RMS:
+          (a) the acoustic silence gap
+              (rmsAnalyser.longestSilenceGapMs), AND
+          (b) the volume dip below 50 % of the normal voiced level
+              (new helper rmsAnalyser.longestVolumeDipMs).
+        Either one lasting ≥ 200 ms is flagged as a Tajweed error
+        on the word that contains the purple alif:
+        - Continuous recitation (<200 ms silence AND <200 ms dip)
+          → PASS.
+        - Silence ≥ 200 ms → FAIL, label "silence of N ms …".
+        - Volume dip 50–70 % (or more) ≥ 200 ms → FAIL, label
+          "volume dip of N ms …".
+        - Both are reported with the same
+          "Hamzat al-Wasl — pause before joining" rule name.
+        - Trailing ASR-commit silence (before the first voiced
+          sample, after the last voiced sample) is never counted,
+          so a correctly recited word is never falsely flagged.
         - Only the Tajweed (strict) engine runs this check — Follow
           mode is untouched. Fires on consecutive direct-path
           commits only, never on batched ASR results where timing
           is unknowable.
 
      2. rmsAnalyser.longestSilenceGapMs(t0, t1)
-        New helper that measures only inter-voiced silence. It
-        deliberately ignores silence before the first voiced sample
-        and after the last voiced sample, so ASR commit lag can
-        never be mistaken for a recitation pause.
+        Helper that measures only inter-voiced silence. Ignores
+        silence before the first voiced sample and after the last
+        voiced sample, so ASR commit lag can never be mistaken for
+        a recitation pause.
 
-     3. Colour-aware Tajweed rule names
-        parseTajweedWordRules() now also extracts purple ham_wasl
-        spans (hamWaslLetters, hasHamWasl), and every
-        markStrict1Error() call derives its reported rule name from
-        the word's actual annotated rule type:
+     3. rmsAnalyser.longestVolumeDipMs(t0, t1)
+        NEW helper. Measures the longest continuous run of samples
+        where the RMS stays below 50 % of the normal voiced level
+        (75th percentile of voiced samples in the window). This
+        catches BOTH a 50–70 % volume dip AND full silence (silence
+        is just a 100 % dip), and deliberately ignores the leading
+        and trailing non-voiced regions that correspond to ASR
+        commit lag rather than a recitation pause.
+
+     4. Colour-aware Tajweed rule names
+        parseTajweedWordRules() extracts purple ham_wasl spans
+        (hamWaslLetters, hasHamWasl), and every markStrict1Error()
+        call derives its reported rule name from the word's actual
+        annotated rule type:
            madd-normal / -permissible / -necessary
            ghunnah-ghunnah / -ikhfa / -idghaam_ghunnah / -iqlab
            ghunnah-length-<kind>
@@ -45,18 +64,18 @@
         broken instead of a generic "Tajweed — too short".
 
    The only functional change in this SW is the version bump, which
-   forces every qc-*-v46 cache to be discarded on activate so the
+   forces every qc-*-v47 cache to be discarded on activate so the
    updated HTML reaches the client on next open — including offline
    clients served from the shell cache.
 
-   Preserved unchanged from v46:
+   Preserved unchanged from v47:
+     - Hamzat al-Wasl continuous-recitation guard, ibtidāʾ
+       exemption, and the "Hamzat al-Wasl — pronounced instead of
+       joined" label from v45.
      - Silent-letter false-positive fix (heard === full → PASS,
        abstain when the ASR has simply echoed the orthographic
        form).
-     - Continuous-recitation guard, ibtidāʾ exemption, and the
-       "Hamzat al-Wasl — pronounced instead of joined" label from
-       v45.
-     - Extended Coach Info Tajweed section from v45.
+     - Extended Coach Info Tajweed section.
 
    Preserved unchanged from v44:
      - ق / ك acceptance in isMatchWord().
@@ -90,17 +109,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v47, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v48, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v46 are deleted
+   next open runs the new code path. Caches qc-*-v47 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v47';
+const VERSION = 'v48';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -298,8 +317,8 @@ self.addEventListener('fetch', event => {
   // the client always receives live Tajweed data, and a stale
   // TEXT_CACHE or HTTP-cached response can never silently hide
   // newly-shipped colour fields. Also matters for the new
-  // hamzat al-wasl pause check, which relies on the purple
-  // tj-ham_wasl spans in the live annotation payload.
+  // hamzat al-wasl silence + volume-dip check, which relies on
+  // the purple tj-ham_wasl spans in the live annotation payload.
   if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
     event.respondWith(networkFresh(req));
     return;

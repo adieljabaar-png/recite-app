@@ -3719,9 +3719,56 @@ const rmsAnalyser = (function(){
     return best;
   }
 
+  /* NEW: longest continuous period where the RMS drops below 50 % of the
+     normal voiced level. This covers BOTH a 50–70 % volume dip AND full
+     silence (silence is just a 100 % dip). Leading/trailing non-voiced
+     regions are ignored — those are ASR commit lag, not recitation pauses. */
+  function longestVolumeDipMs(t0, t1){
+    if (!(t1 > t0)) return 0;
+    const win = [];
+    for (let i = 0; i < samples.length; i++){
+      const s = samples[i];
+      if (s.t >= t0 && s.t <= t1) win.push(s);
+    }
+    if (win.length < 10) return 0;
+
+    const voicedLevels = win.filter(s => s.rms >= MIN_RMS)
+                            .map(s => s.rms)
+                            .sort((a, b) => a - b);
+    if (voicedLevels.length < 5) return 0;
+
+    // 75th percentile = normal speaking volume
+    const normalLevel  = voicedLevels[Math.floor(voicedLevels.length * 0.75)];
+    const dipThreshold = normalLevel * 0.5;   // 50 % of normal → covers 50–100 % dip
+
+    // Find first/last voiced timestamps so we ignore ASR-lag silence
+    let firstVoiceT = 0, lastVoiceT = 0;
+    for (let i = 0; i < win.length; i++){
+      if (win[i].rms >= MIN_RMS){
+        if (firstVoiceT === 0) firstVoiceT = win[i].t;
+        lastVoiceT = win[i].t;
+      }
+    }
+    if (firstVoiceT === 0 || lastVoiceT <= firstVoiceT) return 0;
+
+    // Longest continuous run of dip samples between the first and last voiced sample
+    let best = 0, cur = 0;
+    for (let i = 0; i < win.length; i++){
+      const s = win[i];
+      if (s.t < firstVoiceT || s.t > lastVoiceT) continue;
+      if (s.rms < dipThreshold){
+        cur += SAMPLE_MS;
+        if (cur > best) best = cur;
+      } else {
+        cur = 0;
+      }
+    }
+    return best;
+  }
+
   return {
     start, stop, voiceDurationMs, longestContinuousVoiceMs,
-    longestSilenceGapMs,
+    longestSilenceGapMs, longestVolumeDipMs,
     isRunning: () => running,
     sampleCount: () => samples.length
   };
@@ -4693,7 +4740,7 @@ function markStrict1Warning(w, kind, detail){
   }
 }
 
-/* CHANGED #4 — granular names + hamzat al-wasl pause check */
+/* CHANGED #4 — granular names + hamzat al-wasl pause / volume-dip check */
 function runStrict1Checks(idx, heard, opts){
   opts = opts || {};
   if (followOnly) return;
@@ -4744,23 +4791,30 @@ function runStrict1Checks(idx, heard, opts){
       }
     }
 
-    /* ── NEW: hamzat al-wasl pause check ──────────────────────────
-       The alif is silent, so the audible pause can only sit between
-       the last voiced letter of the previous word and the first
-       voiced letter after the alif. longestSilenceGapMs measures
-       exactly that acoustic gap; trailing silence after the last
-       voice (ASR lag) is ignored.                              */
+    /* ── NEW: hamzat al-wasl pause / volume-dip check ─────────────
+       The purple alif is silent, so it must be crossed WITHOUT a pause
+       and WITHOUT a volume drop. We measure, between the last voiced
+       letter of the previous word and the first voiced letter after
+       the alif:
+         (a) the acoustic silence gap, AND
+         (b) the volume dip below 50 % of the normal voiced level.
+       Either one lasting ≥ 200 ms is flagged as a Tajweed error on
+       the word that contains the purple alif.                    */
     if (w.tjRules && w.tjRules.hasHamWasl && rmsAvailable){
-      const windowStart   = lastDirectCommitAt - 600;
-      const windowEnd     = now;
-      const silenceMs     = rmsAnalyser.longestSilenceGapMs(windowStart, windowEnd);
-      const baseThreshold = 180;
-      const threshold     = Math.round(baseThreshold * paceScale());
-      if (silenceMs >= threshold){
+      const windowStart     = lastDirectCommitAt - 600;
+      const windowEnd       = now;
+      const HAM_WASL_MIN_MS = 200;            // 0.2 s as requested
+
+      const silenceMs = rmsAnalyser.longestSilenceGapMs(windowStart, windowEnd);
+      const dipMs     = rmsAnalyser.longestVolumeDipMs (windowStart, windowEnd);
+      const pauseMs   = Math.max(silenceMs, dipMs);
+
+      if (pauseMs >= HAM_WASL_MIN_MS){
+        const what = dipMs > silenceMs ? 'volume dip' : 'silence';
         markStrict1Error(
           w, 'ham-wasl',
-          'paused ' + Math.round(silenceMs) +
-          ' ms between the preceding letter and the letters after the silent alif'
+          what + ' of ' + Math.round(pauseMs) +
+          ' ms between the preceding letter and the letters after the silent alif — recite continuously'
         );
       }
     }
@@ -8308,7 +8362,7 @@ function openCoachInfoModal(){
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
       '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i>, <i>Hamzat al-Wasl — pause before joining</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies five key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.<br>• <b>Hamzat al-Wasl pause</b> — the purple silent alif must be reached <b>without a pause</b>. The alif itself makes no sound, so the coach measures the <b>acoustic silence between the last voiced letter of the previous word and the first voiced letter after the alif</b> using live-microphone RMS. A continuous recitation (inter-voiced gap under ~180 ms, pace-scaled) passes; any deliberate pause of that length is flagged red with <i>Hamzat al-Wasl — pause before joining</i>. Trailing ASR-commit silence after the second word is never counted, so a correctly recited word is never falsely flagged.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies five key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.<br>• <b>Hamzat al-Wasl pause / dip</b> — the purple silent alif must be reached <b>without a pause or a volume dip</b>. The alif itself makes no sound, so the coach measures, between the last voiced letter of the previous word and the first voiced letter after the alif, using live-microphone RMS: <b>(a)</b> the <b>acoustic silence</b> and <b>(b)</b> the <b>volume dip</b> below 50 % of the normal voiced level. A continuous recitation (no inter-voiced silence of ≥ 200 ms and no volume dip of ≥ 200 ms) passes; any such pause or dip is flagged red with <i>Hamzat al-Wasl — pause before joining</i>. Trailing ASR-commit silence after the second word is never counted, so a correctly recited word is never falsely flagged.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
