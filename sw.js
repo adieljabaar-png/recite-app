@@ -1,81 +1,76 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v50 — Strict-locked matching + multi-class Hamzat al-Wasl fix.
+   v51 — Follow-mode 3-miss guard + 20 s mic cooling window.
 
    Ships the updated index.html containing:
 
-     1. Follow mode and Tajweed mode both permanently locked to
-        STRICT word-matching.
-        The Match selector (Strict / Balanced / Lenient) has been
-        removed from the coach UI entirely — the chip is hidden in
-        both modes, and no matchLevel is ever read from storage or
-        changed at runtime.
-        - matchLevel is declared once as 'strict' and never
-          reassigned.
-        - matchStrictness() unconditionally returns 'strict'.
-        - TOL_TABLE / CONF_FLOOR_TABLE / NOISE_LIMIT_TABLE reduced
-          to a single 'strict' entry.
-        - The 'qc.followMatchLevel' and 'qc.matchLevel' localStorage
-          keys are no longer read or written — existing stored
-          values are simply ignored.
-        - The old selMatch 'change' event handler that read and
-          wrote matchLevel is removed; selMatch is now only set to
-          'strict' at boot and disabled in markup.
-        - resumeRecitationSession() no longer restores a saved
-          follow-match level.
-        - setRecitationMode() no longer saves or reads matchLevel.
-        - The Match chip in HTML now carries the hidden attribute
-          and its <select> is disabled, so neither mode can ever
-          reveal or change it.
-        - Coach Info mode: the Match-selector explanation has been
-          removed from the Follow section and replaced with a
-          one-line "strict with a tight 2-word lookahead" note; the
-          Tajweed section similarly notes strict matching without
-          referencing the Match chip.
+     1. FOLLOW MODE — 3-IN-A-ROW MISS GUARD.
+        The Follow-mode grader now tracks consecutive
+        unrecognised tokens with three new module-level pieces of
+        state:
+            followWrongTokens   — consecutive unmatched tokens
+            followPinTimer      — 7 s stop countdown
+            followPinPtr        — word index the timer belongs to
+        Behaviour:
+          • 1 miss  → pointer advances one word (the green one).
+          • 2 misses→ pointer still advances only past the one
+                      green word — no words skipped, stays in sync.
+          • 3 misses→ pointer is PINNED on the third word; a
+                      FOLLOW_PIN_STOP_MS (7000 ms) countdown starts;
+                      if the pinned word is still not recited when
+                      the countdown expires, stopReciting() is called
+                      and the status bar shows
+                      "Paused (word not recognised)".
+        Any successful match — direct, split, merged, or lookahead
+        skip — calls noteFollowProgress(), which resets the counter
+        and cancels the timer. recReset() and stopReciting() also
+        cancel the pin timer so a jump, restart or manual stop never
+        leaves a stale timeout armed.
+        Live feedback shows "waiting on <word> for 7 s…" when the
+        guard fires.
 
-     2. Multi-class Hamzat al-Wasl detection — critical bug fix.
-        parseTajweedWordRules() previously matched only spans whose
-        class attribute was EXACTLY "tj-ham_wasl", so real Quran.com
-        annotations like <span class="tj-ham_wasl tj-madda_normal">
-        were missed entirely and hasHamWasl stayed false. The three
-        extraction regexes (ghunnah, silent, ham_wasl) are now
-        multi-class safe:
-            class="(?:[^"]*\s)?tj-<rule>(?:\s[^"]*)?"
-        This makes hasHamWasl actually true whenever the purple alif
-        annotation is present, which in turn lets the Hamzat al-Wasl
-        silence / volume-dip check fire on the correct word and tag
-        the mistake with the "Hamzat al-Wasl — pause before joining"
-        label in the mistakes panel and live feedback feed.
-
-     3. Hamzat al-Wasl silence + volume-dip check — 100 ms threshold.
-        The check inside runStrict1Checks() measures, between the
-        last voiced letter of the previous word and the first
-        voiced letter after the alif:
-          (a) the longest acoustic silence gap
-              (rmsAnalyser.longestSilenceGapMs), AND
-          (b) the longest volume dip below 50 % of the normal voiced
-              level (rmsAnalyser.longestVolumeDipMs).
-        Either one lasting >= 100 ms marks the word red with the
-        "Hamzat al-Wasl — pause before joining" label. Leading and
-        trailing ASR-commit silence is still ignored so a correctly
-        recited word is never falsely flagged.
-
-     4. Coach Info modal wording tightened.
-        The Hamzat al-Wasl bullet no longer explains the internal
-        silence / volume-dip measurement formula. It simply states
-        the rule: the purple silent alif must be reached without a
-        pause; the coach flags the word red if a 100 ms pause or a
-        50 % volume dip occurs before it.
+     2. MICROPHONE COOLING — 20 s teardown after stop.
+        stopReciting() and finish() no longer tear down the
+        MediaStream and AudioContext immediately. Instead:
+          • muteMicStream() disables every audio track and stops
+            the RMS analyser at once — capture off instantly.
+          • scheduleMicCooldown() keeps the stream alive for
+            MIC_COOLDOWN_MS (20000 ms) and only then calls
+            releaseMicStream(), which stops all tracks and closes
+            the AudioContext for good.
+        If the user restarts within the 20 s window,
+        ensureMicStream() calls cancelMicCooldown(), re-enables the
+        existing tracks and reuses the stream — instant restart,
+        no permission prompt. After 20 s a fresh stream is created.
+        startReciting() also calls ensureMicStream() when permission
+        is already granted so a restart after cooldown always has a
+        live stream ready. pauseMic() uses muteMicStream() so the
+        capture is off while paused but the stream survives the
+        resume. beforeunload still calls releaseMicStream() so
+        closing the tab never leaves a live track.
 
    The only functional change in this SW is the version bump, which
-   forces every qc-*-v49 cache to be discarded on activate so the
+   forces every qc-*-v50 cache to be discarded on activate so the
    updated HTML reaches the client on next open — including offline
    clients served from the shell cache.
 
+   Preserved unchanged from v50:
+     - Follow mode and Tajweed mode permanently locked to STRICT
+       word-matching. The Match selector is hidden in both modes
+       and the 'qc.followMatchLevel' / 'qc.matchLevel' keys are no
+       longer read or written.
+     - Multi-class Hamzat al-Wasl detection — the ghunnah, silent
+       and ham_wasl extraction regexes are multi-class safe
+       (class="(?:[^"]*\s)?tj-<rule>(?:\s[^"]*)?") so annotations
+       like <span class="tj-ham_wasl tj-madda_normal"> are caught
+       and hasHamWasl becomes true on the correct word.
+     - Hamzat al-Wasl silence + volume-dip check with a 100 ms
+       threshold, measured over the inter-voiced window.
+     - Coach Info modal wording tightened.
+
    Preserved unchanged from v49:
-     - Follow-mode skipped words coloured yellow (all match levels
-       now unified to strict).
+     - Follow-mode skipped words coloured yellow.
      - markSkippedWord() helper (yellow + strike-through, never
        overrides an already-red Tajweed error word).
      - Hide-text + skipped-word reveal styling.
@@ -132,17 +127,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v50, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v51, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v49 are deleted
+   next open runs the new code path. Caches qc-*-v50 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v50';
+const VERSION = 'v51';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

@@ -3772,7 +3772,7 @@ function recPush(newToks){
   const overflow = recTokens.length - REC_BUF_MAX - recCursor;
   if(overflow > 0){ recTokens.splice(0, overflow); recCursor = Math.max(0, recCursor - overflow); }
 }
-function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); }
+function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); }
 
 function showScreen(name){
   currentScreenName = name;
@@ -6767,10 +6767,21 @@ document.addEventListener('pointermove', readerGestureMove, {passive:true});
 document.addEventListener('pointerup', readerGestureEnd);
 document.addEventListener('pointercancel', readerGestureCancel);
 
+/* ────────────────────────────────────────────────────────────────────────
+   MIC STREAM — mute instantly, release after a 20 s cooldown.
+   `stopReciting` mutes the live track but keeps the MediaStream and
+   AudioContext around for MIC_COOLDOWN_MS so a quick restart is instant.
+   After the cooldown expires, all resources are released for good.
+   ──────────────────────────────────────────────────────────────────────── */
+const MIC_COOLDOWN_MS = 20000;
+let micCooldownTimer = null;
+
 async function ensureMicStream(){
+  cancelMicCooldown();
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
     if(live){
+      try{ micStream.getAudioTracks().forEach(t => { t.enabled = true; }); }catch(_){}
       if(!rmsAnalyser.isRunning()) rmsAnalyser.start(micStream);
       return micStream;
     }
@@ -6784,10 +6795,35 @@ async function ensureMicStream(){
     return s;
   }catch(e){ lastMicError = e; micStream = null; rmsAnalyser.stop(); return null; }
 }
+
+function muteMicStream(){
+  if(micStream){
+    try{ micStream.getAudioTracks().forEach(t => { t.enabled = false; }); }catch(e){}
+  }
+  rmsAnalyser.stop();
+}
+
+function cancelMicCooldown(){
+  if(micCooldownTimer){ clearTimeout(micCooldownTimer); micCooldownTimer = null; }
+  if(micStream){
+    try{ micStream.getAudioTracks().forEach(t => { t.enabled = true; }); }catch(e){}
+  }
+}
+
+function scheduleMicCooldown(){
+  if(micCooldownTimer){ clearTimeout(micCooldownTimer); }
+  micCooldownTimer = setTimeout(() => {
+    micCooldownTimer = null;
+    releaseMicStream();
+  }, MIC_COOLDOWN_MS);
+}
+
 function releaseMicStream(){
+  if(micCooldownTimer){ clearTimeout(micCooldownTimer); micCooldownTimer = null; }
   rmsAnalyser.stop();
   if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
 }
+
 function startMicWatchdog(){
   clearTimeout(micWatchdogTimer); micAudioConfirmed = false;
   micWatchdogTimer = setTimeout(() => { if(!wantMic || micAudioConfirmed) return; if(micWarningShown) return; micWarningShown = true; showBrokenMicWarning(); }, 10000);
@@ -7183,6 +7219,7 @@ function setRecitationMode(modeName){
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
   pendingHeard.length = 0; consecutiveReds = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
+  followWrongTokens = 0; cancelFollowPinTimer();
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -7622,7 +7659,48 @@ function grade(tokens, isFinal, startIdx){
   return gradeFollowOnly(tokens, start);
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+   FOLLOW-MODE 3-IN-A-ROW MISS GUARD
+   1 miss  → pointer advances one word (the next green one).
+   2 misses→ pointer still advances only past the one green word.
+   3 misses→ pointer is PINNED on the third word; a 7 s countdown starts;
+             if the word is still not recited when it expires, the mic
+             stops. Reciting the pinned word (or any later word, via the
+             lookahead skip) cancels the countdown.
+   ──────────────────────────────────────────────────────────────────────── */
 const FOLLOW_LOOKAHEAD = 2;
+const FOLLOW_WRONG_LIMIT = 3;
+const FOLLOW_PIN_STOP_MS = 7000;
+
+let followWrongTokens = 0;
+let followPinTimer    = null;
+let followPinPtr      = -1;
+
+function cancelFollowPinTimer(){
+  if(followPinTimer){ clearTimeout(followPinTimer); followPinTimer = null; }
+  followPinPtr = -1;
+}
+function noteFollowProgress(){
+  followWrongTokens = 0;
+  cancelFollowPinTimer();
+}
+function noteFollowWrongToken(){
+  followWrongTokens++;
+  if(followWrongTokens < FOLLOW_WRONG_LIMIT) return;
+  if(followPinTimer) return;
+  followPinPtr = ptr;
+  const w = words[ptr];
+  const label = w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '';
+  addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 7 s…', false, true);
+  followPinTimer = setTimeout(() => {
+    followPinTimer = null;
+    if(!wantMic) return;
+    if(ptr !== followPinPtr) return;
+    addFeedback('⏹️ That word was not recited within 7 s — microphone stopped.', true);
+    stopReciting(true);
+    setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
+  }, FOLLOW_PIN_STOP_MS);
+}
 
 function gradeFollowOnly(tokens, startIdx){
   const start = startIdx || 0;
@@ -7638,19 +7716,19 @@ function gradeFollowOnly(tokens, startIdx){
 
     if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
       commitCorrect(ptr); advancePast(1);
-      pendingHeard.length = 0; used++; continue;
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
     if(trySplitTokenMatch(heard, rawTok)){
       commitCorrect(ptr); advancePast(1);
-      pendingHeard.length = 0; used++; continue;
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
     const mergedN = tryMergedTokenMatch(heard, hPhon);
     if(mergedN > 0){
       commitManyCorrect(ptr, ptr + mergedN);
       advancePast(mergedN);
-      pendingHeard.length = 0; used++; continue;
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
     let found = -1;
@@ -7665,9 +7743,10 @@ function gradeFollowOnly(tokens, startIdx){
       for(let k = 0; k < found; k++) markSkippedWord(ptr + k);
       commitCorrect(ptr + found);
       advancePast(found + 1);
-      pendingHeard.length = 0; used++; continue;
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
+    noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if(pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
@@ -7858,6 +7937,7 @@ async function startReciting(){
   if(!SPEECH_SUPPORTED){ addFeedback('⚠️ Browser speech recognition is not available here. Try <b>Chrome</b>, <b>Edge</b> or <b>Safari</b> on a device with internet.', true); setStatus('Speech not supported', 'error'); return; }
   if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
   if(micPermission !== 'granted'){ const ok = await promptForMic(); if(!ok) return; }
+  if(micPermission === 'granted'){ ensureMicStream().catch(() => {}); }
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
   recReset(); pendingJumpTarget = -1;
@@ -7887,10 +7967,13 @@ function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false; micPaused = false;
   disarmSpeechKeepalive(); pendingJumpTarget = -1;
+  cancelFollowPinTimer();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
   setMicButton(); recRunning = false; speechStarting = false;
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
-  releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog(); releaseMicStream();
+  releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
+  muteMicStream();
+  scheduleMicCooldown();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic on':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
 }
@@ -7899,11 +7982,13 @@ function pauseMic(){
   micPaused = true;
   recRunning = false;
   disarmSpeechKeepalive(); stopMicWatchdog();
+  muteMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} }
 }
 function resumeMic(){
   if(wantMic && !finished && !fsPaused){
     micPaused = false;
+    ensureMicStream().catch(() => {});
     recRunning = true; speechFatalError = false; micWarningShown = false;
     lastResultAt = performance.now();
     startMicWatchdog(); armSpeechKeepalive();
@@ -7918,7 +8003,10 @@ function stopEverything(silent){ stopPlayback(); stopReciting(true); if(!silent)
 function finish(){
   finished=true; wantMic=false;
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
-  clearSilenceTimer(); stopMicWatchdog(); releaseMicStream();
+  clearSilenceTimer(); stopMicWatchdog();
+  cancelFollowPinTimer();
+  muteMicStream();
+  scheduleMicCooldown();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;
@@ -8341,6 +8429,7 @@ function openCoachInfoModal(){
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite, so you keep your place even while learning.</li>' +
       '<li>Follow mode always uses a fixed <b>strict word-matching</b> with a tight <b>2-word lookahead</b>, so a breath, a filler or a small recognition error never stops the microphone.</li>' +
       '<li>Unmatched words are silently skipped without moving the highlight — the microphone never stops.</li>' +
+      '<li>If <b>three words in a row</b> are not recognised, the pointer is <b>pinned on the third word</b> and a <b>7-second</b> countdown starts. Recite the word (or any later word) to clear it; if the word is still not recited when the countdown expires, the <b>microphone is stopped</b> so you can re-centre and try again.</li>' +
       '<li><b>Nothing is marked red and no mistakes are counted</b> — the coach simply keeps following your recitation.</li>' +
       '<li>Follow mode never records mistakes or accuracy — its only job is to help you memorise.</li>' +
     '</ul>' +
