@@ -6768,16 +6768,13 @@ document.addEventListener('pointerup', readerGestureEnd);
 document.addEventListener('pointercancel', readerGestureCancel);
 
 /* ────────────────────────────────────────────────────────────────────────
-   MIC STREAM — mute instantly, release after a 20 s cooldown.
-   `stopReciting` mutes the live track but keeps the MediaStream and
-   AudioContext around for MIC_COOLDOWN_MS so a quick restart is instant.
-   After the cooldown expires, all resources are released for good.
+   MIC STREAM — the microphone is released immediately when a session
+   stops (`stopReciting`) or finishes (`finish`). A temporary pause
+   (tab hide / fullscreen pause) only mutes the live track so a resume
+   is instant.
    ──────────────────────────────────────────────────────────────────────── */
-const MIC_COOLDOWN_MS = 20000;
-let micCooldownTimer = null;
 
 async function ensureMicStream(){
-  cancelMicCooldown();
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
     if(live){
@@ -6803,23 +6800,7 @@ function muteMicStream(){
   rmsAnalyser.stop();
 }
 
-function cancelMicCooldown(){
-  if(micCooldownTimer){ clearTimeout(micCooldownTimer); micCooldownTimer = null; }
-  if(micStream){
-    try{ micStream.getAudioTracks().forEach(t => { t.enabled = true; }); }catch(e){}
-  }
-}
-
-function scheduleMicCooldown(){
-  if(micCooldownTimer){ clearTimeout(micCooldownTimer); }
-  micCooldownTimer = setTimeout(() => {
-    micCooldownTimer = null;
-    releaseMicStream();
-  }, MIC_COOLDOWN_MS);
-}
-
 function releaseMicStream(){
-  if(micCooldownTimer){ clearTimeout(micCooldownTimer); micCooldownTimer = null; }
   rmsAnalyser.stop();
   if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
 }
@@ -7972,8 +7953,7 @@ function stopReciting(silent){
   setMicButton(); recRunning = false; speechStarting = false;
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
-  muteMicStream();
-  scheduleMicCooldown();
+  releaseMicStream();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic on':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
 }
@@ -8005,8 +7985,7 @@ function finish(){
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer(); stopMicWatchdog();
   cancelFollowPinTimer();
-  muteMicStream();
-  scheduleMicCooldown();
+  releaseMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;

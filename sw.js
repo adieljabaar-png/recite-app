@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v51 — Follow-mode 3-miss guard + 20 s mic cooling window.
+   v52 — Follow-mode 3-miss guard + immediate mic release.
 
    Ships the updated index.html containing:
 
@@ -30,30 +30,36 @@
         Live feedback shows "waiting on <word> for 7 s…" when the
         guard fires.
 
-     2. MICROPHONE COOLING — 20 s teardown after stop.
-        stopReciting() and finish() no longer tear down the
-        MediaStream and AudioContext immediately. Instead:
-          • muteMicStream() disables every audio track and stops
-            the RMS analyser at once — capture off instantly.
-          • scheduleMicCooldown() keeps the stream alive for
-            MIC_COOLDOWN_MS (20000 ms) and only then calls
-            releaseMicStream(), which stops all tracks and closes
-            the AudioContext for good.
-        If the user restarts within the 20 s window,
-        ensureMicStream() calls cancelMicCooldown(), re-enables the
-        existing tracks and reuses the stream — instant restart,
-        no permission prompt. After 20 s a fresh stream is created.
-        startReciting() also calls ensureMicStream() when permission
-        is already granted so a restart after cooldown always has a
-        live stream ready. pauseMic() uses muteMicStream() so the
-        capture is off while paused but the stream survives the
-        resume. beforeunload still calls releaseMicStream() so
-        closing the tab never leaves a live track.
+     2. MICROPHONE — immediate release on session stop.
+        stopReciting() and finish() now call releaseMicStream()
+        directly. That stops the RMS analyser, stops every audio
+        track on the MediaStream (track.stop()), and closes the
+        AudioContext. The browser's microphone indicator turns off
+        the instant the session ends — no cooldown, no lingering
+        live track.
 
-   The only functional change in this SW is the version bump, which
-   forces every qc-*-v50 cache to be discarded on activate so the
+        • pauseMic() — used when the tab is hidden while the
+          session is still active, and by the fullscreen Pause
+          button — still calls muteMicStream() (disables every
+          track, stops the RMS analyser) but keeps the MediaStream
+          and AudioContext alive, so resuming within the same
+          session is instant and needs no permission prompt.
+        • ensureMicStream() always provisions a fresh stream when
+          no live one exists; getUserMedia is called again on the
+          next session start (permission is already granted so no
+          prompt appears).
+        • beforeunload still calls releaseMicStream() so closing
+          the tab never leaves a live track.
+
+   The functional change in this SW is the version bump, which
+   forces every qc-*-v51 cache to be discarded on activate so the
    updated HTML reaches the client on next open — including offline
    clients served from the shell cache.
+
+   Preserved unchanged from v51:
+     - Follow-mode 3-in-a-row miss guard (pinned word + 7 s stop).
+     - Recitation modes permanently locked to STRICT word-matching
+       (no Match selector, no per-mode override).
 
    Preserved unchanged from v50:
      - Follow mode and Tajweed mode permanently locked to STRICT
@@ -127,17 +133,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v51, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v52, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v50 are deleted
+   next open runs the new code path. Caches qc-*-v51 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v51';
+const VERSION = 'v52';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
