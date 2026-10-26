@@ -1,92 +1,77 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v54 — Hamzat al-Wasl detection removed entirely.
+   v55 — Silent-alif detection, continuous-voice measurement,
+         and all direct dependent code removed from index.html.
 
-   Ships the updated index.html with the silent-alif
-   (Hamzat al-Wasl) rule completely removed — no acoustic
-   pause check, no annotation parsing, no legend chip, no
-   error label, no rule in the coach. The feature was
-   producing false positives and has been dropped from the
-   client. This SW bump forces every qc-*-v53 cache to be
-   discarded on activate so the updated HTML reaches the
-   client on next open — including offline clients served
-   from the shell cache.
-
-   What was removed from index.html in this release:
-     1. runStrict1Checks() — the entire Hamzat al-Wasl
-        pause-detection block (silence gap measurement,
-        HAM_WASL_MIN_MS threshold).
-     2. TAJWEED_ERROR_NAMES — the 'ham-wasl' entry.
-     3. parseTajweedWordRules() — hamWaslLetters /
+   Removed from index.html in this release:
+     1. rmsAnalyser.longestContinuousVoiceMs()   — the helper
+        that measured the longest uninterrupted voiced run;
+        only ever used by the Hamzat al-Wasl pause check.
+     2. rmsAnalyser.longestSilenceGapMs()        — the helper
+        that measured the longest acoustic silence gap;
+        only ever used by the Hamzat al-Wasl pause check.
+     3. rmsAnalyser.longestVolumeDipMs()         — the helper
+        that measured the longest 50%-volume dip; only used
+        by the Hamzat al-Wasl pause check.
+     4. runStrict1Checks() — the entire Hamzat al-Wasl pause
+        block (silence gap measurement, HAM_WASL_MIN_MS).
+     5. Madd timing — no longer mixes in continuous-voice
+        measurement; only uses ASR inter-commit timing
+        (asrMs). This makes the madd check purely
+        commit-based and removes the last consumer of
+        longestContinuousVoiceMs().
+     6. parseTajweedWordRules() — hamWaslLetters /
         hasHamWasl fields and their multi-class regex.
-     4. rmsAnalyser.longestSilenceGapMs() — the helper
-        that only the ham-wasl check used.
-     5. TJ_ALL_RULES — 'ham_wasl' removed from the
-        list of toggleable tajweed rules.
-     6. Legend chip markup for "Hamzat al-Wasl".
-     7. .tj-ham_wasl CSS rules (dark + light).
-     8. Coach Info modal — the Hamzat al-Wasl bullet.
-     9. About modal — "12 tajweed rules" → "11 tajweed
-        rules" and the rule list no longer mentions
-        Hamzat al-Wasl.
+     7. TAJWEED_ERROR_NAMES — the 'ham-wasl' entry.
+     8. TJ_ALL_RULES — 'ham_wasl' removed.
+     9. Legend chip markup for "Hamzat al-Wasl".
+    10. .tj-ham_wasl CSS rules (dark + light).
+    11. Coach Info modal — Hamzat al-Wasl bullet and the
+        corresponding explanatory text.
 
    The rule-aware Tajweed checks now cover four rules:
-     • Madd duration (normal / permissible / necessary)
+     • Madd duration (normal / permissible / necessary) —
+       timing between consecutive word commits only.
      • Ghunnah nasal presence (ghunnah, ikhfa, iqlab,
-       idghaam with ghunnah)
-     • Ghunnah length
-     • Silent-letter not pronounced
+       idghaam with ghunnah) — voiceDurationMs() is still
+       used for length; only the continuous and silence-gap
+       helpers were removed.
+     • Ghunnah length — voiceDurationMs().
+     • Silent-letter not pronounced — positional
+       strict1SilentOk().
 
    The functional change in this SW is the version bump.
-   Caches qc-*-v53 are deleted on activate; qc-audio
-   (downloads) is preserved.
+   Caches qc-*-v54 are deleted on activate; qc-audio
+   (downloads) is preserved. Every client that reopens the
+   app after this deploy receives the updated index.html
+   with no silent-alif, no continuous-voice, and no
+   ham-wasl code paths active.
 
-   Preserved unchanged from v53:
+   Preserved unchanged from v54:
      - Follow-mode 3-in-a-row miss guard (pinned word + 7 s stop).
      - Immediate microphone release on session stop
        (stopReciting / finish call releaseMicStream directly;
        pauseMic keeps the stream alive for instant resume).
-     - Recitation modes permanently locked to STRICT word-matching
-       (no Match selector, no per-mode override).
+     - Recitation modes permanently locked to STRICT word-matching.
+
+   Preserved unchanged from v53:
+     - Multi-class rule detection (ghunnah and silent regexes).
 
    Preserved unchanged from v52:
-     - Follow-mode 3-in-a-row miss guard (pinned word + 7 s stop).
+     - Fresh Tajweed annotations on surah change.
 
    Preserved unchanged from v51:
-     - Multi-class rule detection — the ghunnah and silent
-       extraction regexes remain multi-class safe
-       (class="(?:[^"]*\s)?tj-<rule>(?:\s[^"]*)?") so
-       annotations like <span class="tj-silent tj-madda_normal">
-       are still caught.
-     - Coach Info modal wording tightened.
+     - Follow-mode skipped words coloured yellow
+       (markSkippedWord helper).
 
    Preserved unchanged from v50:
-     - Follow mode and Tajweed mode permanently locked to STRICT
-       word-matching.
+     - Colour-aware Tajweed rule names.
 
    Preserved unchanged from v49:
-     - Follow-mode skipped words coloured yellow.
-     - markSkippedWord() helper (yellow + strike-through, never
-       overrides an already-red Tajweed error word).
-     - Hide-text + skipped-word reveal styling.
+     - Silent-letter false-positive fix.
 
    Preserved unchanged from v48:
-     - Colour-aware Tajweed rule names: every markStrict1Error()
-       call derives its reported rule name from the word's actual
-       annotated rule type (madd-<kind>, ghunnah-<kind>,
-       ghunnah-length-<kind>, silent). Batch summaries in
-       gradeFull() emit madd-<kind>-batch /
-       ghunnah-length-<kind>-batch. Every key resolves to a
-       colour-matched English label in TAJWEED_ERROR_NAMES.
-
-   Preserved unchanged from v47:
-     - Silent-letter false-positive fix (heard === full → PASS,
-       abstain when the ASR has simply echoed the orthographic
-       form).
-     - Extended Coach Info Tajweed section.
-
-   Preserved unchanged from v44:
      - ق / ك acceptance in isMatchWord().
      - Conservative skip detection in gradeFull().
      - Tajweed !important cascade fix.
@@ -95,19 +80,17 @@
      - Split-token recombination, attempt-gated error marking,
        truncated-prefix honouring, silent-skips-reset-streak,
        loosened split-buffer threshold, merge-before-lookahead
-       ordering, prefix buffering, and skipped words never enter
+       ordering, prefix buffering, skipped words never enter
        the mistakes list.
 
-   Preserved unchanged from v42:
+   Preserved unchanged from v46:
      - Ikhfāʾ shafawī support.
      - Per-rule batch-timing attribution.
-     - Continuous-voice madd measurement.
      - Adaptive MIN_RMS recalibration.
      - Pace-scaled madd/ghunnah thresholds.
-     - Fresh Tajweed annotations on surah change.
      - Degraded-Tajweed pill banner.
 
-   Preserved unchanged from v41–v40:
+   Preserved unchanged from v44–v40:
      - Tajweed annotations served networkFresh.
      - everyayah.com audio served from qc-audio.
      - Google Fonts pre-cache bounded to 20 s at install.
@@ -117,17 +100,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v54, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v55, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v53 are deleted
+   next open runs the new code path. Caches qc-*-v54 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v54';
+const VERSION = 'v55';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
