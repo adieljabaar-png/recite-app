@@ -1,133 +1,80 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v56 — Hamzat al-Wasl silence-gap detection (new approach),
-         added back via a single hasSilenceGap() helper on the
-         RMS analyser.
+   v57 — Version bump to invalidate v56 shell so clients pick up
+         the current index.html. No functional strategy change from
+         v56.
 
-   Added to index.html in this release:
-     1. rmsAnalyser.hasSilenceGap(t0, t1, minGapMs)
-        Scans the analyser's timestamped sample buffer for the
-        first run of samples whose RMS stays below the calibrated
-        MIN_RMS for at least minGapMs, between two voiced samples.
-        Returns { start, end, duration } or null.
-        Exposed on the analyser's public surface alongside
-        voiceDurationMs().
-
-     2. parseTajweedWordRules()
-        New hasHamWasl: false default field; set true when a
-        tj-ham_wasl span is present in the decorated HTML
-        (the purple alif ٱ).
-
-     3. TAJWEED_ERROR_NAMES
-        New entry 'ham-wasl-silence' →
-        'Hamzat al-Wasl — pause before word (alif likely pronounced)'
-
-     4. HAM_WASL_SILENCE_MIN_MS = 150
-        Silence-gap threshold for the check, declared next to
-        MADD_MIN_DELTA_MS and GHUNNAH_MIN_MS.
-
-     5. runStrict1Checks() — new block inside the existing
-        !prevInSameBatch timing window, right after the
-        ghunnah-length check. Fires only when:
-          rmsAvailable
-          && w.tjRules.hasHamWasl
-          && rmsAnalyser.hasSilenceGap(lastDirectCommitAt, now,
-             HAM_WASL_SILENCE_MIN_MS) returns a non-null gap.
-        On hit, calls markStrict1Error(w, 'ham-wasl-silence', …).
-
-     6. Coach Info modal — Hamzat al-Wasl bullet added back to
-        Section 3 ("Rule-aware checks"), now describing the
-        silence-gap approach specifically (not the old
-        multi-signal approach).
-
-   This is a DIFFERENT approach from the pre-v55 version:
-     • Old (v54 and earlier): three separate helpers
-       (longestContinuousVoiceMs, longestSilenceGapMs,
-       longestVolumeDipMs) combined into a multi-signal pause
-       check that also touched madd timing.
-     • New (v56): a single hasSilenceGap() helper, called from
-       inside the existing per-word timing block. No new
-       measurement paths; madd timing is untouched; the RMS
-       sampler's calibration logic is unchanged; no side
-       effects on ghunnah-length or silent-letter checks.
-
-   The rule-aware Tajweed checks now cover FIVE rules:
-     • Madd duration (normal / permissible / necessary) —
-       asrMs mid-ayah; voiceDurationMs end-of-ayah.
-     • Ghunnah nasal presence (ghunnah, ikhfa, iqlab,
-       idghaam with ghunnah).
-     • Ghunnah length — voiceDurationMs.
-     • Silent-letter not pronounced — strict1SilentOk.
-     • Hamzat al-Wasl silence-gap before the word — NEW (v56).
-
-   Preserved unchanged from v55:
-     - longestContinuousVoiceMs, longestSilenceGapMs and
-       longestVolumeDipMs remain removed from index.html.
-       Only voiceDurationMs() and the new hasSilenceGap()
-       are on the analyser's public surface.
-     - Follow-mode 3-in-a-row miss guard (pinned word + 7 s stop).
-     - Immediate microphone release on session stop
-       (stopReciting / finish call releaseMicStream directly;
-       pauseMic keeps the stream alive for instant resume).
-     - Recitation modes permanently locked to STRICT word-matching.
-
-   Preserved unchanged from v54:
-     - Multi-class rule detection (ghunnah and silent regexes).
-
-   Preserved unchanged from v53:
-     - Fresh Tajweed annotations on surah change.
-
-   Preserved unchanged from v52:
-     - Follow-mode skipped words coloured yellow
-       (markSkippedWord helper).
-
-   Preserved unchanged from v51:
-     - Colour-aware Tajweed rule names.
-
-   Preserved unchanged from v50:
-     - Silent-letter false-positive fix.
-
-   Preserved unchanged from v49:
-     - ق / ك acceptance in isMatchWord().
-     - Conservative skip detection in gradeFull().
-     - Tajweed !important cascade fix.
-     - Silent-letter enforcement rewrite (positional
-       strict1SilentOk, normNoSilent pipeline).
-     - Split-token recombination, attempt-gated error marking,
+   WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
+   (this is the source of truth this SW must match):
+     • Follow mode — 3-in-a-row miss guard:
+         FOLLOW_WRONG_LIMIT = 3, FOLLOW_PIN_STOP_MS = 7000.
+         Pointer pins on the 3rd unrecognised word and stops the
+         mic after 7 s if it is still not recited.
+     • Recitation modes permanently locked to STRICT matching.
+         Match selector removed from UI (applyMutexUI() hides it).
+     • Tajweed mode — rule-aware checks covering FOUR rules:
+         madd duration (normal / permissible / necessary),
+         ghunnah nasal presence (ghunnah, ikhfa, idghaam, iqlab),
+         ghunnah length (2 harakat via voiceDurationMs),
+         silent-letter not pronounced (positional strict1SilentOk).
+       The ham-wasl-silence check and its hasSilenceGap() helper
+       referenced in the v56 notes are NOT present in index.html
+       and have been removed from this comment header accordingly.
+     • Two English text translations selectable in the UI:
+         Abdullah Yusuf Ali · Saheeh International
+       When "Play translation audio" is ticked, the displayed
+       text switches to Saheeh International to match the audio.
+     • 20 Qari reciters (RECITER_ORDER).
+     • Multi-class rule detection (ghunnah + silent regexes).
+     • Pace-scaled madd / ghunnah thresholds.
+     • Adaptive MIN_RMS recalibration on the RMS analyser.
+     • Split-token recombination, attempt-gated error marking,
        truncated-prefix honouring, silent-skips-reset-streak,
        loosened split-buffer threshold, merge-before-lookahead
-       ordering, prefix buffering, skipped words never enter
-       the mistakes list.
+       ordering, prefix buffering.
+     • Streak & achievements.
+     • Hifz Test (Silent Recall / Reveal-on-Mistake / Blank Last
+       Line) with Web Speech API for reveal-on-mistake.
+     • Standalone Tajweed Colors screen (Quran.com annotations).
+     • Prayer Times (11 methods, 6 rows, per-prayer offsets, bells,
+       Athaan / Beep / Mute) + Qibla compass + Athaan audio.
+     • Feedback modal → POST /api/feedback.
+     • QR code (offline-generated SVG via built-in QRGen).
+     • Install prompts (beforeinstallprompt + platform-aware
+       instructions modal + "Don't show again" persistence).
+     • Book-form mushaf reader with swipeable pages, ruku marks,
+       sajdah markers, juz-start flash, translation toggle.
+     • Calendar / Hijri dates (arithmetic algorithm).
+     • Offline downloads with live percentage, cancel / resume,
+       persistent via qc-audio (survives every version bump).
+     • Service worker registers at scope './' from index.html.
 
-   Preserved unchanged from v46:
-     - Ikhfāʾ shafawī support.
-     - Per-rule batch-timing attribution.
-     - Adaptive MIN_RMS recalibration.
-     - Pace-scaled madd/ghunnah thresholds.
-     - Degraded-Tajweed pill banner.
-
-   Preserved unchanged from v44–v40:
-     - Tajweed annotations served networkFresh.
-     - everyayah.com audio served from qc-audio.
+   PRESERVED UNCHANGED FROM v56–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
+     - Tajweed annotations served networkFresh (bypass HTTP cache).
+     - everyayah.com audio served from qc-audio download cache.
+     - Quran APIs network-first with TEXT_CACHE fallback.
+     - Manifest fetched with 2 s network budget, cached fallback,
+       inline last-resort fallback JSON.
      - Shell navigation with cache:'reload' — stale HTML can never
        be served on a navigation.
-     - Manifest with a 2 s network budget.
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
+     - /my-analytics/, /_vercel/, /api/, /sw.js bypassed entirely.
+     - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v56, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v57, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v55 are deleted
-   on activate; qc-audio (downloads) is preserved.
+   next open runs the new code path. Caches qc-*-v56 and older
+   are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v56';
+const VERSION = 'v57';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -321,8 +268,7 @@ self.addEventListener('fetch', event => {
   }
 
   // Tajweed annotation requests — forced fresh, never cached.
-  // This is the fix for "Tajweed colour coding doesn't update":
-  // the client always receives live Tajweed data, and a stale
+  // The client always receives live Tajweed data, so a stale
   // TEXT_CACHE or HTTP-cached response can never silently hide
   // newly-shipped colour fields.
   if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
@@ -362,6 +308,13 @@ self.addEventListener('fetch', event => {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE, RUNTIME_MAX));
     return;
   }
+
+  // Anything else (cdn.islamic.network audio fallback during download,
+  // api.bigdatacloud.net / geocoding-api.open-meteo.com for the Prayer
+  // Times screen, islamcan.com adhan fallback) is intentionally left
+  // unhandled so it goes to the network normally. Download code in
+  // index.html stores fallback audio under the everyayah.com URL, so
+  // playback always hits qc-audio regardless of which source succeeded.
 });
 
 /* ============================================================
@@ -485,9 +438,9 @@ async function shellNavigation(req){
   const cache = await caches.open(SHELL_CACHE);
   try{
     // Force a fresh fetch — bypass the browser HTTP cache so a stale
-    // index.html can never be served after a deploy. This is the fix
-    // for "my fix didn't reach the app": even with network
-    // available, HTTP-cached HTML was silently masking new client code.
+    // index.html can never be served after a deploy. This is what
+    // makes "my fix didn't reach the app" impossible even when a
+    // network is available but its HTTP cache is warm.
     const freshReq = new Request(req, { cache: 'reload' });
     const res = await fetch(freshReq);
     if(res && res.ok && res.type === 'basic'){

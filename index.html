@@ -3663,28 +3663,8 @@ const rmsAnalyser = (function(){
     return ms;
   }
 
-  /* Scans the samples between t0 and t1 for the first run of ≥ minGapMs
-     where the signal stays below MIN_RMS between two voiced samples.
-     Returns { start, end, duration } or null. Used by the Hamzat al-Wasl
-     check to detect a restart pause before a word beginning with ٱ. */
-  function hasSilenceGap(t0, t1, minGapMs){
-    const M = minGapMs || 150;
-    let lastVoicedAt = null;
-    for (let i = 0; i < samples.length; i++){
-      const s = samples[i];
-      if (s.t < t0 || s.t > t1) continue;
-      if (s.rms >= MIN_RMS){
-        if (lastVoicedAt !== null && (s.t - lastVoicedAt) >= M){
-          return { start: lastVoicedAt, end: s.t, duration: s.t - lastVoicedAt };
-        }
-        lastVoicedAt = s.t;
-      }
-    }
-    return null;
-  }
-
   return {
-    start, stop, voiceDurationMs, hasSilenceGap,
+    start, stop, voiceDurationMs,
     isRunning: () => running,
     sampleCount: () => samples.length
   };
@@ -4435,8 +4415,6 @@ const MADD_MIN_DELTA_MS = {
   necessary:    600
 };
 
-const HAM_WASL_SILENCE_MIN_MS = 150;
-
 const GHUNNAH_MIN_MS = {
   ghunnah:          350,
   ikhfa:            550,
@@ -4480,7 +4458,6 @@ function parseTajweedWordRules(decoratedHtml){
     silentLetters: [],
     hasGhunnah: false,
     hasSilent: false,
-    hasHamWasl: false,
     ghunnahType: null,
     hasGhunnahContext: false,
     normNoSilent: null
@@ -4522,13 +4499,6 @@ function parseTajweedWordRules(decoratedHtml){
       const ns = normArCached(noSilentText);
       if (ns) rules.normNoSilent = ns;
     }
-  }
-
-  // Hamzat al-Wasl — the purple alif (ٱ). A pause before this word,
-  // followed by a pronunciation of the alif, is a rule violation in
-  // continuous recitation.
-  if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) {
-    rules.hasHamWasl = true;
   }
 
   return rules;
@@ -4616,9 +4586,7 @@ const TAJWEED_ERROR_NAMES = {
   'ghunnah-length-idghaam_ghunnah-batch': 'Idghaam (with ghunnah) — too short (fast batch)',
   'ghunnah-length-iqlab-batch':           'Iqlab — too short (fast batch)',
 
-  'silent':   'Silent letter — pronounced',
-
-  'ham-wasl-silence': 'Hamzat al-Wasl — pause before word (alif likely pronounced)'
+  'silent':   'Silent letter — pronounced'
 };
 
 function markStrict1Error(w, kind, detail){
@@ -4723,23 +4691,6 @@ function runStrict1Checks(idx, heard, opts){
           (rmsAvailable ? 'voice' : 'timing') + ' nasalisation ' +
           Math.round(effectiveMs) + ' ms, needs \u2265 ' + required +
           ' ms (' + gType + ')');
-      }
-    }
-
-    /* ── Hamzat al-Wasl (purple alif) ─────────────────────────────
-       A purple alif (ٱ, tj-ham_wasl) is silent only in continuous
-       recitation (wasl). When the reciter pauses and then restarts
-       before a word containing this alif, they will normally
-       pronounce it — and the clearest signal of that restart is a
-       silent gap in the audio. A ≥ 150 ms silent run detected by
-       the RMS analyser inside the window [lastDirectCommitAt, now]
-       therefore strongly implies the alif was voiced, which in
-       continuous-recitation grading is a rule violation. */
-    if (rmsAvailable && w && w.tjRules && w.tjRules.hasHamWasl){
-      const gap = rmsAnalyser.hasSilenceGap(lastDirectCommitAt, now, HAM_WASL_SILENCE_MIN_MS);
-      if (gap){
-        markStrict1Error(w, 'ham-wasl-silence',
-          'silence gap of ' + Math.round(gap.duration) + ' ms before Hamzat al-Wasl word');
       }
     }
   }
@@ -8352,9 +8303,9 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
       '<li>Tajweed always uses <b>strict word-matching</b> with a tight lookahead so the recitation flow is never interrupted.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
-      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i>, <i>Hamzat al-Wasl — pause before word (alif likely pronounced)</i> — both in the mistakes panel and in the live feedback feed.</li>' +
+      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies five key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement, which excludes the silent waqf pause so a correctly-held madd at the end of an ayah is not falsely flagged.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.<br>• <b>Hamzat al-Wasl</b> (the purple alif ٱ) is silent in continuous recitation and is only pronounced after a pause. The RMS analyser therefore looks inside the window between the previous word commit and this word commit for a <b>≥ 150 ms silent gap</b>; if such a gap is found immediately before a word containing this purple alif, the word is flagged red — the pause is the reciter\'s own signal that they restarted and therefore pronounced the alif.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement, which excludes the silent waqf pause so a correctly-held madd at the end of an ayah is not falsely flagged.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
