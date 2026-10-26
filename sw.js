@@ -1,77 +1,94 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v55 — Silent-alif detection, continuous-voice measurement,
-         and all direct dependent code removed from index.html.
+   v56 — Hamzat al-Wasl silence-gap detection (new approach),
+         added back via a single hasSilenceGap() helper on the
+         RMS analyser.
 
-   Removed from index.html in this release:
-     1. rmsAnalyser.longestContinuousVoiceMs()   — the helper
-        that measured the longest uninterrupted voiced run;
-        only ever used by the Hamzat al-Wasl pause check.
-     2. rmsAnalyser.longestSilenceGapMs()        — the helper
-        that measured the longest acoustic silence gap;
-        only ever used by the Hamzat al-Wasl pause check.
-     3. rmsAnalyser.longestVolumeDipMs()         — the helper
-        that measured the longest 50%-volume dip; only used
-        by the Hamzat al-Wasl pause check.
-     4. runStrict1Checks() — the entire Hamzat al-Wasl pause
-        block (silence gap measurement, HAM_WASL_MIN_MS).
-     5. Madd timing — no longer mixes in continuous-voice
-        measurement; only uses ASR inter-commit timing
-        (asrMs). This makes the madd check purely
-        commit-based and removes the last consumer of
-        longestContinuousVoiceMs().
-     6. parseTajweedWordRules() — hamWaslLetters /
-        hasHamWasl fields and their multi-class regex.
-     7. TAJWEED_ERROR_NAMES — the 'ham-wasl' entry.
-     8. TJ_ALL_RULES — 'ham_wasl' removed.
-     9. Legend chip markup for "Hamzat al-Wasl".
-    10. .tj-ham_wasl CSS rules (dark + light).
-    11. Coach Info modal — Hamzat al-Wasl bullet and the
-        corresponding explanatory text.
+   Added to index.html in this release:
+     1. rmsAnalyser.hasSilenceGap(t0, t1, minGapMs)
+        Scans the analyser's timestamped sample buffer for the
+        first run of samples whose RMS stays below the calibrated
+        MIN_RMS for at least minGapMs, between two voiced samples.
+        Returns { start, end, duration } or null.
+        Exposed on the analyser's public surface alongside
+        voiceDurationMs().
 
-   The rule-aware Tajweed checks now cover four rules:
+     2. parseTajweedWordRules()
+        New hasHamWasl: false default field; set true when a
+        tj-ham_wasl span is present in the decorated HTML
+        (the purple alif ٱ).
+
+     3. TAJWEED_ERROR_NAMES
+        New entry 'ham-wasl-silence' →
+        'Hamzat al-Wasl — pause before word (alif likely pronounced)'
+
+     4. HAM_WASL_SILENCE_MIN_MS = 150
+        Silence-gap threshold for the check, declared next to
+        MADD_MIN_DELTA_MS and GHUNNAH_MIN_MS.
+
+     5. runStrict1Checks() — new block inside the existing
+        !prevInSameBatch timing window, right after the
+        ghunnah-length check. Fires only when:
+          rmsAvailable
+          && w.tjRules.hasHamWasl
+          && rmsAnalyser.hasSilenceGap(lastDirectCommitAt, now,
+             HAM_WASL_SILENCE_MIN_MS) returns a non-null gap.
+        On hit, calls markStrict1Error(w, 'ham-wasl-silence', …).
+
+     6. Coach Info modal — Hamzat al-Wasl bullet added back to
+        Section 3 ("Rule-aware checks"), now describing the
+        silence-gap approach specifically (not the old
+        multi-signal approach).
+
+   This is a DIFFERENT approach from the pre-v55 version:
+     • Old (v54 and earlier): three separate helpers
+       (longestContinuousVoiceMs, longestSilenceGapMs,
+       longestVolumeDipMs) combined into a multi-signal pause
+       check that also touched madd timing.
+     • New (v56): a single hasSilenceGap() helper, called from
+       inside the existing per-word timing block. No new
+       measurement paths; madd timing is untouched; the RMS
+       sampler's calibration logic is unchanged; no side
+       effects on ghunnah-length or silent-letter checks.
+
+   The rule-aware Tajweed checks now cover FIVE rules:
      • Madd duration (normal / permissible / necessary) —
-       timing between consecutive word commits only.
+       asrMs mid-ayah; voiceDurationMs end-of-ayah.
      • Ghunnah nasal presence (ghunnah, ikhfa, iqlab,
-       idghaam with ghunnah) — voiceDurationMs() is still
-       used for length; only the continuous and silence-gap
-       helpers were removed.
-     • Ghunnah length — voiceDurationMs().
-     • Silent-letter not pronounced — positional
-       strict1SilentOk().
+       idghaam with ghunnah).
+     • Ghunnah length — voiceDurationMs.
+     • Silent-letter not pronounced — strict1SilentOk.
+     • Hamzat al-Wasl silence-gap before the word — NEW (v56).
 
-   The functional change in this SW is the version bump.
-   Caches qc-*-v54 are deleted on activate; qc-audio
-   (downloads) is preserved. Every client that reopens the
-   app after this deploy receives the updated index.html
-   with no silent-alif, no continuous-voice, and no
-   ham-wasl code paths active.
-
-   Preserved unchanged from v54:
+   Preserved unchanged from v55:
+     - longestContinuousVoiceMs, longestSilenceGapMs and
+       longestVolumeDipMs remain removed from index.html.
+       Only voiceDurationMs() and the new hasSilenceGap()
+       are on the analyser's public surface.
      - Follow-mode 3-in-a-row miss guard (pinned word + 7 s stop).
      - Immediate microphone release on session stop
        (stopReciting / finish call releaseMicStream directly;
        pauseMic keeps the stream alive for instant resume).
      - Recitation modes permanently locked to STRICT word-matching.
 
-   Preserved unchanged from v53:
+   Preserved unchanged from v54:
      - Multi-class rule detection (ghunnah and silent regexes).
 
-   Preserved unchanged from v52:
+   Preserved unchanged from v53:
      - Fresh Tajweed annotations on surah change.
 
-   Preserved unchanged from v51:
+   Preserved unchanged from v52:
      - Follow-mode skipped words coloured yellow
        (markSkippedWord helper).
 
-   Preserved unchanged from v50:
+   Preserved unchanged from v51:
      - Colour-aware Tajweed rule names.
 
-   Preserved unchanged from v49:
+   Preserved unchanged from v50:
      - Silent-letter false-positive fix.
 
-   Preserved unchanged from v48:
+   Preserved unchanged from v49:
      - ق / ك acceptance in isMatchWord().
      - Conservative skip detection in gradeFull().
      - Tajweed !important cascade fix.
@@ -100,17 +117,17 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
 
-   NOTE ON DEPLOY: after shipping v55, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v56, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v54 are deleted
+   next open runs the new code path. Caches qc-*-v55 are deleted
    on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v55';
+const VERSION = 'v56';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
