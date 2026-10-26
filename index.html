@@ -1571,7 +1571,6 @@ body.light-mode .tajweed-mushaf .ayah-num-tj {
 }
 body.light-mode .mushaf-surah-header { color:#2a6fe0; border-bottom-color:rgba(42,111,224,.3); }
 
-.tj-ham_wasl           { color:#9b59b6 !important; font-weight:600 }
 .tj-laam_shamsiyah     { color:#e67e22 !important; font-weight:600 }
 .tj-madda_normal       { color:#f1c40f !important; font-weight:700 }
 .tj-madda_permissible  { color:#e67e22 !important; font-weight:700 }
@@ -1605,7 +1604,6 @@ body.light-mode .tajweed-mushaf.tj-fullscreen {
 }
 body.tj-fs-open { overflow: hidden; }
 
-body.light-mode .tj-ham_wasl           { color:#7d3c98 !important }
 body.light-mode .tj-laam_shamsiyah     { color:#b9651a !important }
 body.light-mode .tj-madda_normal       { color:#b7950b !important }
 body.light-mode .tj-madda_permissible  { color:#b9651a !important }
@@ -2188,7 +2186,6 @@ body.light-mode #tajweedNoiseChip {
   </div>
 
   <div class="tajweed-legend" id="tjLegend">
-    <button class="tj-chip active" data-rule="ham_wasl"       type="button"><span class="tj-dot" style="background:#9b59b6"></span>Hamzat al‑Wasl</button>
     <button class="tj-chip active" data-rule="laam_shamsiyah" type="button"><span class="tj-dot" style="background:#e67e22"></span>Laam Shamsiyyah</button>
     <button class="tj-chip active" data-rule="madda_normal"   type="button"><span class="tj-dot" style="background:#f1c40f"></span>Madd (normal)</button>
     <button class="tj-chip active" data-rule="madda_permissible" type="button"><span class="tj-dot" style="background:#e67e22"></span>Madd (permissible)</button>
@@ -3685,29 +3682,6 @@ const rmsAnalyser = (function(){
     return cur > best ? cur : best;
   }
 
-  /* Longest inter-voiced silence gap. Ignores silence before the first
-     voiced sample and after the last voiced sample — those are ASR commit
-     lag, not a recitation pause. */
-  function longestSilenceGapMs(t0, t1){
-    if (!(t1 > t0)) return 0;
-    let best = 0;
-    let lastVoiceT = 0;
-    let foundFirstVoice = false;
-    for (let i = 0; i < samples.length; i++){
-      const s = samples[i];
-      if (s.t < t0 || s.t > t1) continue;
-      if (s.rms >= MIN_RMS){
-        if (foundFirstVoice){
-          const gap = s.t - lastVoiceT;
-          if (gap > best) best = gap;
-        }
-        lastVoiceT = s.t;
-        foundFirstVoice = true;
-      }
-    }
-    return best;
-  }
-
   /* Longest continuous period where the RMS drops below 50 % of the
      normal voiced level. Covers BOTH a 50–70 % volume dip AND full
      silence. Leading/trailing non-voiced regions are ignored — those
@@ -3755,7 +3729,7 @@ const rmsAnalyser = (function(){
 
   return {
     start, stop, voiceDurationMs, longestContinuousVoiceMs,
-    longestSilenceGapMs, longestVolumeDipMs,
+    longestVolumeDipMs,
     isRunning: () => running,
     sampleCount: () => samples.length
   };
@@ -4214,7 +4188,7 @@ function finishHifzTest(){
 const TJ_API_BASE = 'https://api.quran.com/api/v4';
 
 const TJ_ALL_RULES = [
-  'ham_wasl','laam_shamsiyah',
+  'laam_shamsiyah',
   'madda_normal','madda_permissible','madda_necessary',
   'qalqalah','ghunnah','ikhfa',
   'idghaam_ghunnah','idghaam_no_ghunnah',
@@ -4551,9 +4525,7 @@ function parseTajweedWordRules(decoratedHtml){
     hasSilent: false,
     ghunnahType: null,
     hasGhunnahContext: false,
-    normNoSilent: null,
-    hamWaslLetters: [],
-    hasHamWasl: false
+    normNoSilent: null
   };
   if (!decoratedHtml) return rules;
 
@@ -4591,17 +4563,6 @@ function parseTajweedWordRules(decoratedHtml){
       const noSilentText = noSilentHtml.replace(/<[^>]*>/g, '');
       const ns = normArCached(noSilentText);
       if (ns) rules.normNoSilent = ns;
-    }
-  }
-
-  // Hamzat al-wasl — multi-class safe detection
-  if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) {
-    rules.hasHamWasl = true;
-    const hwRe = /<span[^>]*class="(?:[^"]*\s)?tj-ham_wasl(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g;
-    let m;
-    while ((m = hwRe.exec(decoratedHtml)) !== null){
-      const n = normArCached(m[1]);
-      if (n) rules.hamWaslLetters.push(n);
     }
   }
 
@@ -4690,8 +4651,7 @@ const TAJWEED_ERROR_NAMES = {
   'ghunnah-length-idghaam_ghunnah-batch': 'Idghaam (with ghunnah) — too short (fast batch)',
   'ghunnah-length-iqlab-batch':           'Iqlab — too short (fast batch)',
 
-  'silent':   'Silent letter — pronounced',
-  'ham-wasl': 'Hamzat al-Wasl — pause before joining'
+  'silent':   'Silent letter — pronounced'
 };
 
 function markStrict1Error(w, kind, detail){
@@ -4783,31 +4743,6 @@ function runStrict1Checks(idx, heard, opts){
           (rmsAvailable ? 'voice' : 'timing') + ' nasalisation ' +
           Math.round(effectiveMs) + ' ms, needs \u2265 ' + required +
           ' ms (' + gType + ')');
-      }
-    }
-
-    /* ── Hamzat al-wasl pause check ───────────────────────────────
-       The purple silent alif is silent by design — 50–120 ms of
-       natural silence sits inside every ham-wasl word, plus another
-       30–150 ms from the inter-word transition. A threshold of 100 ms
-       sat inside that natural range, so correct recitation was being
-       flagged. Raise it to 280 ms (a genuine breath before the alif
-       is typically 350–600 ms) and use the acoustic silence gap ONLY:
-       the volume-dip path can never distinguish a real pause from the
-       alif's own silence, so it was dropped. */
-    if (w.tjRules && w.tjRules.hasHamWasl && rmsAvailable){
-      const windowStart     = lastDirectCommitAt - 600;
-      const windowEnd       = now;
-      const HAM_WASL_MIN_MS = 280;
-
-      const silenceMs = rmsAnalyser.longestSilenceGapMs(windowStart, windowEnd);
-
-      if (silenceMs >= HAM_WASL_MIN_MS){
-        markStrict1Error(
-          w, 'ham-wasl',
-          'silence of ' + Math.round(silenceMs) +
-          ' ms before the silent alif — recite continuously'
-        );
       }
     }
   }
@@ -8416,9 +8351,9 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
       '<li>Tajweed always uses <b>strict word-matching</b> with a tight lookahead so the recitation flow is never interrupted.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
-      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i>, <i>Hamzat al-Wasl — pause before joining</i> — both in the mistakes panel and in the live feedback feed.</li>' +
-      '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies five key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.<br>• <b>Hamzat al-Wasl</b> — the purple silent alif must be reached <b>without a pause</b>. The coach flags the word red with <i>Hamzat al-Wasl — pause before joining</i> if a sustained acoustic silence gap of 280 ms or more is detected before the letters after the silent alif — tuned above the natural 50–120 ms of alif silence plus the 30–150 ms inter-word transition, so correct recitation is never falsely flagged.</li>' +
+      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
+      '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the <b>longest continuous voiced run</b> from the live microphone, so a madd that is broken by a pause is flagged red even if the total voiced time adds up. Batch requirements scale with your recitation pace.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
@@ -8454,7 +8389,7 @@ function openInfoModal(){
   '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> in the reader to bookmark it.</li><li>Tap a bookmark to jump back to that page.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li><li>Tick the <b>Play translation audio</b> checkbox to hear an English recitation of each verse after the Arabic recitation. The English text shown on-screen will then automatically match the Saheeh International audio.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Tap <b>Prayer Times</b> on the Home screen.</li><li>Tap the bell next to any prayer to turn its alarm on or off.</li><li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b>, <b>Beep</b> or <b>Mute</b>.</li><li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid.</li><li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Tap <b>Hifz Test</b> on the Home screen for a memorization test with 3 modes: Silent Recall, Reveal-on-Mistake, Blank Last Line.</li><li>Tap <b>Tajweed Colors</b> on the Home screen for an authoritative, surah-by-surah colored mushaf sourced from <b>Quran.com\'s Uthmani Tajweed</b> annotations (Hafs ʿan ʿAsim).</li><li>Choose any of the <b>114 surahs</b> from the dropdown, toggle 12 tajweed rules on/off, and tap <b>⛶</b> to read in full screen with a large font.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Tap <b>Hifz Test</b> on the Home screen for a memorization test with 3 modes: Silent Recall, Reveal-on-Mistake, Blank Last Line.</li><li>Tap <b>Tajweed Colors</b> on the Home screen for an authoritative, surah-by-surah colored mushaf sourced from <b>Quran.com\'s Uthmani Tajweed</b> annotations (Hafs ʿan ʿAsim).</li><li>Choose any of the <b>114 surahs</b> from the dropdown, toggle 11 tajweed rules on/off, and tap <b>⛶</b> to read in full screen with a large font.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>Recite, bookmark, or download something each day to grow your <b>daily streak</b>.</li><li>Tap the streak bar to see all 10 achievements you can unlock.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">11</span> 🌐 Which browser should I use?</h3><ul><li><b>Android — Google Chrome</b> or <b>Microsoft Edge</b>: everything works, including the live recitation coach.</li><li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works.</li><li><b>Desktop — Chrome, Edge or Safari</b>: everything works.</li><li><b>Firefox</b> and most <b>in-app browsers</b> do <b>not</b> implement the Web Speech API, so the live coach is unavailable there.</li></ul></div>' +
   '<div class="feature"><h3><span class="fnum">12</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3><ul><li>Most Chinese-market phones ship <b>without Google Play Services</b> and without Google Chrome.</li><li>Their built-in browsers do <b>not</b> implement the Web Speech API — the <b>Recitation Coach cannot work</b> in them.</li><li>Everything else works fine: the <b>Surah index, Juz index, Quran text, book-form pages, English translation, Prayer Times, Qibla, bookmarks, ayah-by-ayah audio, offline downloads, Hifz Test, Tajweed Colors</b>.</li><li><b>To get the coach:</b> install <b>Google Chrome</b> and open this page in Chrome.</li></ul></div>' +
