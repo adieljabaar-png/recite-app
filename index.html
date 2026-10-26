@@ -130,13 +130,16 @@ transform-origin:top left;
 padding:4px;
 }
 .home-menu-item{
-display:flex;align-items:center;gap:10px;width:100%;
+display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;
 padding:12px 16px;border:none;background:transparent;
 color:var(--text);text-align:left;font-family:inherit;
 cursor:pointer;
 transition:background .15s;height:auto;border-radius:10px;
 font-weight:600;font-size:.88rem;-webkit-appearance:none;
 margin-bottom:4px;
+}
+.home-menu-item > span:not(.hmi-ico):not(.hmi-badge){
+flex:1;text-align:left;
 }
 .home-menu-item:last-child{margin-bottom:0}
 .home-menu-item:hover{background:rgba(79,140,255,.08)}
@@ -1961,6 +1964,9 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
         <button class="home-menu-item" id="homeMenuNotify" type="button" role="menuitem">
           <span class="hmi-ico">🔔</span><span>Enable notifications</span>
         </button>
+        <button class="home-menu-item" id="homeMenuAbout" type="button" role="menuitem">
+          <span class="hmi-ico">ℹ️</span><span>About app</span>
+        </button>
         <button class="home-menu-item" id="homeMenuShare" type="button" role="menuitem">
           <span class="hmi-ico">↗</span><span>Share app</span>
         </button>
@@ -1972,9 +1978,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
         </button>
         <button class="home-menu-item" id="homeMenuCopyright" type="button" role="menuitem">
           <span class="hmi-ico">©</span><span>Copyright &amp; AI policy</span>
-        </button>
-        <button class="home-menu-item" id="homeMenuAbout" type="button" role="menuitem">
-          <span class="hmi-ico">ℹ️</span><span>About app</span>
         </button>
       </div>
     </div>

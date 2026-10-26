@@ -1,10 +1,10 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v58 — Version bump to invalidate v57 shell so clients pick up
-         the current index.html (which now includes the copyright
-         notice, AI-blocker script and copyright footer). No
-         functional strategy change from v57.
+   v59 — Version bump to invalidate v58 shell so clients pick up
+         the current index.html (which includes the newly reordered
+         home menu tabs and left-aligned layout). No functional
+         strategy change from v58.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
@@ -88,7 +88,7 @@
      1. /robots.txt  — bypassed below so it is never stale.
      2. index.html   — meta tags + pre-body blocker + overlay.
 
-   PRESERVED UNCHANGED FROM v57–v40 (functional strategies):
+   PRESERVED UNCHANGED FROM v58–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
      - Tajweed annotations served networkFresh (bypass HTTP cache).
      - everyayah.com audio served from qc-audio download cache.
@@ -103,17 +103,17 @@
        /robots.txt added to this bypass list in v58.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v58, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v59, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v57 and older
+   next open runs the new code path. Caches qc-*-v58 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v58';
+const VERSION = 'v59';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -165,10 +165,10 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker below guarantees the v58 worker
+    //    `cache:'reload'` marker below guarantees the v59 worker
     //    stores the *new* index.html that carries the copyright
-    //    footer, meta tags and AI-blocker script — never a stale
-    //    HTTP-cached copy.
+    //    footer, meta tags, AI-blocker script, and updated home menu
+    //    — never a stale HTTP-cached copy.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {
