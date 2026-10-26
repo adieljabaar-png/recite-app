@@ -1,12 +1,36 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v57 — Version bump to invalidate v56 shell so clients pick up
-         the current index.html. No functional strategy change from
-         v56.
+   v58 — Version bump to invalidate v57 shell so clients pick up
+         the current index.html (which now includes the copyright
+         notice, AI-blocker script and copyright footer). No
+         functional strategy change from v57.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
+     • Copyright + AI policy:
+         – <meta name="copyright"> and <meta name="rights"> tags.
+         – Per-bot <meta name="GPTBot" content="noindex, nofollow,
+           noai, noimageai"> etc. for 20+ AI crawlers.
+         – <meta name="robots" content="… noai, noimageai">.
+         – Pre-body JS blocker that whitelists Googlebot, Bingbot,
+           Vercel analytics, DuckDuckBot, Slurp, Applebot and
+           link-preview bots first, then blocks known AI-training
+           UAs, adds `ai-blocked` to <html> and calls window.stop().
+         – A full-screen #aiBlockOverlay shown to blocked crawlers.
+         – A visible .copyright-footer with a "Copyright & AI
+           policy" button on the home screen, plus an ☰ menu entry
+           and an in-app policy modal (openCopyrightModal()).
+         – The main script bails out immediately via
+           `if (window.__AI_BLOCKED__) throw …` so no app code
+           executes for a blocked crawler.
+       COMPANION FILE REQUIRED — /robots.txt:
+         Google-Extended and Applebot-Extended share their UA
+         strings with Googlebot and Applebot and cannot be
+         distinguished in JavaScript. They are blocked *only* in
+         robots.txt. This SW therefore bypasses /robots.txt so a
+         policy edit is never hidden behind a stale cache (see
+         the same-origin bypass list below).
      • Follow mode — 3-in-a-row miss guard:
          FOLLOW_WRONG_LIMIT = 3, FOLLOW_PIN_STOP_MS = 7000.
          Pointer pins on the 3rd unrecognised word and stops the
@@ -50,7 +74,21 @@
        persistent via qc-audio (survives every version bump).
      • Service worker registers at scope './' from index.html.
 
-   PRESERVED UNCHANGED FROM v56–v40 (functional strategies):
+   WHY THIS SW DOES *NOT* DO AI-CRAWLER BLOCKING
+   ---------------------------------------------
+   A service worker can only ever run in a browser that has
+   already registered one on a previous visit. AI crawlers
+   (GPTBot, CCBot, ClaudeBot, …) never register SWs. If one
+   somehow did, the navigation response it would receive from
+   SHELL_CACHE already contains the in-page blocker script, so
+   the blocker would still fire. Adding `navigator.userAgent`
+   checks to the SW would therefore only ever *affect real
+   users* — never bots. AI policy is enforced in two layers
+   that are strictly stronger than a SW check:
+     1. /robots.txt  — bypassed below so it is never stale.
+     2. index.html   — meta tags + pre-body blocker + overlay.
+
+   PRESERVED UNCHANGED FROM v57–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
      - Tajweed annotations served networkFresh (bypass HTTP cache).
      - everyayah.com audio served from qc-audio download cache.
@@ -62,19 +100,20 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
      - /my-analytics/, /_vercel/, /api/, /sw.js bypassed entirely.
+       /robots.txt added to this bypass list in v58.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v57, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v58, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v56 and older
+   next open runs the new code path. Caches qc-*-v57 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v57';
+const VERSION = 'v58';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -125,7 +164,11 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
    ============================================================ */
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    // 1. Shell — awaited (mandatory for offline open)
+    // 1. Shell — awaited (mandatory for offline open). The
+    //    `cache:'reload'` marker below guarantees the v58 worker
+    //    stores the *new* index.html that carries the copyright
+    //    footer, meta tags and AI-blocker script — never a stale
+    //    HTTP-cached copy.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {
@@ -265,6 +308,12 @@ self.addEventListener('fetch', event => {
     if(url.pathname.startsWith('/_vercel/'))       return;   // native Vercel Analytics / Speed Insights
     if(url.pathname.startsWith('/api/'))           return;   // serverless functions
     if(url.pathname === '/sw.js')                  return;   // the service worker itself
+    // robots.txt is the *only* file that can block Google-Extended and
+    // Applebot-Extended (they share their UA with Googlebot / Applebot
+    // and are indistinguishable in JS). It must always be served fresh
+    // from Vercel, never from any cache — otherwise an updated AI policy
+    // would be silently hidden behind a stale copy.
+    if(url.pathname === '/robots.txt')             return;
   }
 
   // Tajweed annotation requests — forced fresh, never cached.
@@ -456,11 +505,15 @@ async function shellNavigation(req){
          || await cache.match('./', { ignoreSearch: true });
     }catch(_){}
     if(hit) return hit;
+    // Offline + no cache — the fallback page. Only real users can
+    // ever see this (AI crawlers never register a service worker),
+    // so it is safe to include the copyright line.
     return new Response(
       '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
       '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +
       '<h2>You are offline</h2>' +
-      '<p>Open the app once while online to enable offline mode.</p>',
+      '<p>Open the app once while online to enable offline mode.</p>' +
+      '<p style="font-size:.75rem;opacity:.6;margin-top:2rem">&copy; 2025 Quran Recitation Coach. All rights reserved.</p>',
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
   }
