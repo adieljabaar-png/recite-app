@@ -1,10 +1,11 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v59 — Version bump to invalidate v58 shell so clients pick up
-         the current index.html (which includes the newly reordered
-         home menu tabs and left-aligned layout). No functional
-         strategy change from v58.
+   v60 — Version bump to invalidate v59 shell so clients pick up
+         the current index.html, which now *hides* the copyright
+         policy from all UI surfaces (home footer, ☰ menu) while
+         keeping the modal function and AI-blocker in the source.
+         No functional strategy change from v59.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
@@ -18,12 +19,19 @@
            link-preview bots first, then blocks known AI-training
            UAs, adds `ai-blocked` to <html> and calls window.stop().
          – A full-screen #aiBlockOverlay shown to blocked crawlers.
-         – A visible .copyright-footer with a "Copyright & AI
-           policy" button on the home screen, plus an ☰ menu entry
-           and an in-app policy modal (openCopyrightModal()).
          – The main script bails out immediately via
            `if (window.__AI_BLOCKED__) throw …` so no app code
            executes for a blocked crawler.
+       COPYRIGHT POLICY IS INTENTIONALLY HIDDEN FROM THE UI (v60):
+         – The old .copyright-footer on the home screen has been
+           removed from the DOM.
+         – The "Copyright & AI policy" item has been removed from
+           the ☰ menu.
+         – openCopyrightModal() and the .copyright-footer CSS are
+           still defined in index.html so the text remains part of
+           the source code — but no UI affordance opens it. The
+           only way to read the policy is to view source.
+         – The AI-blocker and <meta> tags remain fully enforced.
        COMPANION FILE REQUIRED — /robots.txt:
          Google-Extended and Applebot-Extended share their UA
          strings with Googlebot and Applebot and cannot be
@@ -88,7 +96,7 @@
      1. /robots.txt  — bypassed below so it is never stale.
      2. index.html   — meta tags + pre-body blocker + overlay.
 
-   PRESERVED UNCHANGED FROM v58–v40 (functional strategies):
+   PRESERVED UNCHANGED FROM v59–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
      - Tajweed annotations served networkFresh (bypass HTTP cache).
      - everyayah.com audio served from qc-audio download cache.
@@ -100,20 +108,20 @@
      - qc-audio survives every version bump.
      - Non-GET requests bypass the SW untouched.
      - /my-analytics/, /_vercel/, /api/, /sw.js bypassed entirely.
-       /robots.txt added to this bypass list in v58.
+       /robots.txt also bypassed so AI policy is always fresh.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v59, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v60, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v58 and older
+   next open runs the new code path. Caches qc-*-v59 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v59';
+const VERSION = 'v60';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -165,10 +173,10 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker below guarantees the v59 worker
-    //    stores the *new* index.html that carries the copyright
-    //    footer, meta tags, AI-blocker script, and updated home menu
-    //    — never a stale HTTP-cached copy.
+    //    `cache:'reload'` marker below guarantees the v60 worker
+    //    stores the *new* index.html that has the copyright footer
+    //    and ☰ menu entry removed, while keeping the AI-blocker
+    //    script, meta tags and hidden policy modal intact in source.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {
@@ -507,7 +515,8 @@ async function shellNavigation(req){
     if(hit) return hit;
     // Offline + no cache — the fallback page. Only real users can
     // ever see this (AI crawlers never register a service worker),
-    // so it is safe to include the copyright line.
+    // so it is safe to include the copyright line here even though
+    // the in-app copyright policy UI has been hidden.
     return new Response(
       '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
       '<body style="font-family:sans-serif;padding:2rem;text-align:center;background:#0d1119;color:#e8edf7">' +

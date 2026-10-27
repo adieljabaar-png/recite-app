@@ -1976,9 +1976,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
         <button class="home-menu-item" id="homeMenuFeedback" type="button" role="menuitem">
           <span class="hmi-ico">💬</span><span>Feedback</span>
         </button>
-        <button class="home-menu-item" id="homeMenuCopyright" type="button" role="menuitem">
-          <span class="hmi-ico">©</span><span>Copyright &amp; AI policy</span>
-        </button>
       </div>
     </div>
     <button class="hijri-card" id="hijriCard" type="button" aria-label="Open Hijri and Gregorian calendar">
@@ -2082,10 +2079,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     <ul class="islamic-dates-list" id="islamicDatesList"></ul>
   </section>
 
-  <footer class="copyright-footer" aria-label="Copyright notice">
-    © 2025 Quran Recitation Coach · All rights reserved ·
-    <button type="button" id="copyrightDetailsBtn">Copyright &amp; AI policy</button>
-  </footer>
 </div>
 
 <div class="app screen" id="screenSurahIndex" hidden>
@@ -2497,8 +2490,6 @@ const homeMenuShare  = document.getElementById('homeMenuShare');
 const homeMenuQr     = document.getElementById('homeMenuQr');
 const homeMenuAbout  = document.getElementById('homeMenuAbout');
 const homeMenuFeedback = document.getElementById('homeMenuFeedback');
-const homeMenuCopyright   = document.getElementById('homeMenuCopyright');
-const copyrightDetailsBtn = document.getElementById('copyrightDetailsBtn');
 const qrFullscreen   = document.getElementById('qrFullscreen');
 const qrCodeHost     = document.getElementById('qrCodeHost');
 const qrCloseBtn     = document.getElementById('qrCloseBtn');
@@ -8247,11 +8238,12 @@ btnBackHome.addEventListener('click', () => { if(readerFullscreen) exitReaderFul
   if(homeMenuShare) homeMenuShare.addEventListener('click', () => { closeMenu(); shareApp(); });
   if(homeMenuQr)    homeMenuQr.addEventListener('click',    () => { closeMenu(); openQrScreen(); });
   if(homeMenuFeedback) homeMenuFeedback.addEventListener('click', () => { closeMenu(); openFeedbackModal(); });
-  if(homeMenuCopyright) homeMenuCopyright.addEventListener('click', () => { closeMenu(); openCopyrightModal(); });
   if(homeMenuAbout) homeMenuAbout.addEventListener('click', () => { closeMenu(); openInfoModal(); });
 })();
 
 /* ── Copyright & AI policy modal ──────────────────────────── */
+/* The modal remains defined here for reference and can be opened programmatically
+   via openCopyrightModal(), but it is not exposed anywhere in the UI. */
 function openCopyrightModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -8292,11 +8284,6 @@ function openCopyrightModal(){
   const close = () => bg.remove();
   bg.addEventListener('click', e => { if(e.target === bg) close(); });
   bg.querySelector('#copyClose').addEventListener('click', close);
-}
-
-/* Footer button — always clickable from the home screen */
-if(copyrightDetailsBtn){
-  copyrightDetailsBtn.addEventListener('click', (e) => { e.preventDefault(); openCopyrightModal(); });
 }
 
 (function wireReciterDropdown(){
