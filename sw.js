@@ -1,10 +1,23 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v62 — Version bump to invalidate the v61 shell so clients pick
-         up the current index.html, which now adds a small *live
-         Tajweed readiness chip* (#tajweedStatusChip) to the coach
-         toggles row. No caching-strategy change from v61.
+   v63 — Version bump to invalidate the v62 shell so clients pick
+         up the current index.html, which:
+           • FIXES the madd/ghunnah-length timing check in
+             runStrict1Checks() — it was comparing prevW.tjRules
+             against a window that measures the CURRENT word's
+             utterance duration, so a short madd almost always
+             passed. Now the check reads w.tjRules against
+             `now - lastDirectCommitAt` (the same window, but
+             evaluated against the word it actually describes).
+           • RETARGETS the isEndOfAyah flag to `words[idx + 1]`
+             (i.e. "w is the last word of its ayah") instead of
+             the previous "prevW was in a different ayah" test.
+           • RAISES END_OF_AYAH_MADD_MIN_MS from 150 → 250 ms.
+           • SWAPS the toggles row so #tajweedStatusChip ("Rules
+             ready") renders BEFORE #tajweedNoiseChip ("Background
+             noise…").
+         No caching-strategy change from v62.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
@@ -49,28 +62,55 @@
          ghunnah nasal presence (ghunnah, ikhfa, idghaam, iqlab),
          ghunnah length (2 harakat via voiceDurationMs),
          silent-letter not pronounced (positional strict1SilentOk).
-       END-OF-AYAH MADD — SHIPPED IN v61, UNCHANGED IN v62:
-         End-of-ayah madds (normal / permissible / necessary) now
-         use a *single fixed* minimum of `END_OF_AYAH_MADD_MIN_MS =
-         150 ms` of voiced-RMS duration, and are NOT pace-scaled.
-         Rationale: at the end of an ayah the ASR commit gap is
-         dominated by the waqf pause, so the coach switches to
-         `rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)`,
-         which only counts samples above the calibrated noise
-         floor. That measurement is a clean voiced-time value, so
-         a single absolute floor is the correct comparison — a
-         normal 2-count madd easily exceeds 150 ms of voice, while
-         a skipped madd will not. Mid-ayah madds keep the existing
-         pace-scaled `maddRequiredMs()` path (ASR commit gap), and
-         the ASR-gap fallback still applies at the end of an ayah
-         when RMS samples are unavailable. The batch-timing path
-         is untouched because it only accumulates within a single
-         ayah (a batch that straddles a waqf is skipped).
-         The coach Info modal in index.html states the fixed
-         150 ms end-of-ayah minimum in the madd bullet.
-       TAJWEED READINESS CHIP — NEW IN v62:
+
+       MADD + GHUNNAH-LENGTH TIMING CHECK — FIXED IN v63:
+         Prior to v63, runStrict1Checks() computed:
+
+           const prevW = words[lastDirectCommitIdx];
+           const asrMs = now - lastDirectCommitAt;
+           if (prevW.tjRules.madd) { … if (asrMs < required) … }
+
+         Because `now - lastDirectCommitAt` is the gap between
+         prevW's commit and w's commit, `asrMs` actually measures
+         w's utterance duration — not prevW's. Comparing prevW's
+         madd requirement to w's duration meant a short madd on
+         prevW almost always passed (a normal Arabic word takes
+         300–600 ms, well above the pace-scaled 180–600 ms madd
+         requirement). The same mis-attribution affected the
+         ghunnah-length check.
+
+         In v63 both blocks now target w:
+
+           if (w.tjRules.madd) { … if (asrMs < required) markStrict1Error(w, …) }
+           if (w.tjRules.hasGhunnahContext) { … check w.tjRules.ghunnahType … }
+
+         isEndOfAyah was also retargeted:
+
+           // BEFORE (v62):  prevW.verse !== w.verse
+           // AFTER  (v63):  !nextW || nextW.verse !== w.verse
+
+         so the end-of-ayah RMS voiced-duration path is used for
+         the word that actually carries the madd, not for the word
+         *before* the ayah boundary. Mid-ayah madds still use the
+         ASR commit gap; the RMS fallback at end-of-ayah still
+         applies when the analyser has no samples.
+
+       END-OF-AYAH MADD MINIMUM — RAISED IN v63:
+         END_OF_AYAH_MADD_MIN_MS has been raised from 150 → 250 ms
+         of voiced-RMS duration. End-of-ayah madds are NOT pace-
+         scaled — the RMS measurement only counts samples above
+         the calibrated noise floor, so a single absolute floor is
+         the correct comparison. A normal 2-count madd easily
+         exceeds 250 ms of voice; a skipped or clipped madd will
+         not. The batch-timing path is untouched (it only
+         accumulates within a single ayah; a batch that straddles
+         a waqf is skipped).
+
+       TAJWEED READINESS CHIP — INTRODUCED IN v62, REPOSITIONED IN v63:
          A small #tajweedStatusChip sits in the coach .toggles
-         row, immediately after #tajweedNoiseChip. Three states
+         row. As of v63 it renders BEFORE #tajweedNoiseChip
+         ("⚠️ Background noise…"), so the readiness indicator is
+         the first visible chip after the mode pills. Three states
          driven by updateTajweedStatusChip(), which reads only
          coachTajweedReady / coachTajweedDegraded / followOnly:
            – "Loading rules…"  (muted, pulsing dot)   — while
@@ -88,8 +128,9 @@
          the current state. It is updated from every state
          transition: applyMutexUI(), applyTajweedColorsToCoach()
          (3 call sites), removeTajweedColorsFromCoach(), and
-         loadSurah(). A new bullet was added to the coach Info
-         modal describing the chip.
+         loadSurah(). A bullet was added to the coach Info modal
+         describing the chip.
+
        The ham-wasl-silence check and its hasSilenceGap() helper
        referenced in the v56 notes are NOT present in index.html
        and have been removed from this comment header accordingly.
@@ -100,7 +141,7 @@
      • 20 Qari reciters (RECITER_ORDER).
      • Multi-class rule detection (ghunnah + silent regexes).
      • Pace-scaled madd / ghunnah thresholds (mid-ayah only —
-       end-of-ayah madd uses the fixed 150 ms RMS minimum).
+       end-of-ayah madd uses the fixed 250 ms RMS minimum).
      • Adaptive MIN_RMS recalibration on the RMS analyser.
      • Split-token recombination, attempt-gated error marking,
        truncated-prefix honouring, silent-skips-reset-streak,
@@ -137,7 +178,7 @@
      1. /robots.txt  — bypassed below so it is never stale.
      2. index.html   — meta tags + pre-body blocker + overlay.
 
-   PRESERVED UNCHANGED FROM v61–v40 (functional strategies):
+   PRESERVED UNCHANGED FROM v62–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
      - Tajweed annotations served networkFresh (bypass HTTP cache).
      - everyayah.com audio served from qc-audio download cache.
@@ -152,17 +193,17 @@
        /robots.txt also bypassed so AI policy is always fresh.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v62, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v63, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v61 and older
+   next open runs the new code path. Caches qc-*-v62 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v62';
+const VERSION = 'v63';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -214,11 +255,12 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker below guarantees the v62 worker
-    //    stores the *new* index.html that now includes the live
-    //    Tajweed readiness chip (#tajweedStatusChip) in the coach
-    //    toggles row, while keeping the AI-blocker script, meta
-    //    tags and hidden policy modal intact in source.
+    //    `cache:'reload'` marker below guarantees the v63 worker
+    //    stores the *new* index.html that contains the madd-timing
+    //    fix (current-word attribution + END_OF_AYAH_MADD_MIN_MS =
+    //    250 ms) and the reordered Tajweed readiness chip, while
+    //    keeping the AI-blocker script, meta tags and hidden policy
+    //    modal intact in source.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {

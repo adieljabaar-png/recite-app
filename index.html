@@ -2266,11 +2266,11 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
         <option value="strict" selected>Strict</option>
       </select>
     </label>
+    <span class="toggle" id="tajweedStatusChip" hidden
+          role="status" aria-live="polite" aria-atomic="true"></span>
     <span class="toggle" id="tajweedNoiseChip" hidden>
       ⚠️ Background noise may affect Tajweed accuracy
     </span>
-    <span class="toggle" id="tajweedStatusChip" hidden
-          role="status" aria-live="polite" aria-atomic="true"></span>
     <label class="toggle hide-text" id="hideTextChip" hidden>
       <input type="checkbox" id="chkHideText"> 🙈 Hide text
     </label>
@@ -4652,7 +4652,7 @@ const MADD_MIN_DELTA_MS = {
    necessary) and is deliberately NOT pace-scaled — end-of-ayah madds are
    often followed by a waqf pause whose silence must be excluded, so the
    only sensible floor is an absolute voiced-time minimum. */
-const END_OF_AYAH_MADD_MIN_MS = 150;
+const END_OF_AYAH_MADD_MIN_MS = 250;
 
 const GHUNNAH_MIN_MS = {
   ghunnah:          350,
@@ -4886,11 +4886,16 @@ function runStrict1Checks(idx, heard, opts){
       lastDirectCommitIdx >= 0 &&
       idx === lastDirectCommitIdx + 1 &&
       !prevInSameBatch){
-    const prevW = words[lastDirectCommitIdx];
     const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5;
     const asrMs = now - lastDirectCommitAt;
+    const nextW = words[idx + 1];
+    const isEndOfAyah = !nextW || nextW.verse !== w.verse;
 
     /* ── Madd (yellow / orange / red) ──────────────────────────────
+       The window [lastDirectCommitAt, now] is the gap between the
+       PREVIOUS word's ASR commit and the CURRENT word's ASR commit,
+       which approximates how long the CURRENT word was uttered.
+       Check the CURRENT word's madd rule against that window.
        Mid-ayah: the ASR commit gap is a serviceable proxy for how
        long the madd was held, because the only silence in the window
        is the natural inter-word gap.
@@ -4901,10 +4906,8 @@ function runStrict1Checks(idx, heard, opts){
        silent waqf while still capturing the held madd and any tail
        of the word the ASR committed.
        Every end-of-ayah madd — normal, permissible or necessary —
-       uses a single fixed 150 ms voiced-RMS minimum. */
-    if (prevW && prevW.tjRules && prevW.tjRules.madd){
-      const sameAyah = prevW.verse === w.verse;
-      const isEndOfAyah = !sameAyah;
+       uses a single fixed 250 ms voiced-RMS minimum. */
+    if (w.tjRules && w.tjRules.madd){
       let required;
       let effectiveMs;
       let measurementKind;
@@ -4913,25 +4916,25 @@ function runStrict1Checks(idx, heard, opts){
         effectiveMs = rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now);
         measurementKind = 'voice';
       } else {
-        required = maddRequiredMs(prevW.tjRules.madd);
+        required = maddRequiredMs(w.tjRules.madd);
         effectiveMs = asrMs;
         measurementKind = 'timing';
       }
       if (effectiveMs < required){
-        const maddKind = prevW.tjRules.madd || 'normal';
-        markStrict1Error(prevW, 'madd-' + maddKind,
+        const maddKind = w.tjRules.madd || 'normal';
+        markStrict1Error(w, 'madd-' + maddKind,
           measurementKind + ' ' + Math.round(effectiveMs) + ' ms, needs \u2265 ' + required + ' ms');
       }
     }
 
     /* ── Ghunnah length — colour-aware rule name ───────────────── */
-    if (prevW && prevW.tjRules && prevW.tjRules.hasGhunnahContext){
-      const gType = prevW.tjRules.ghunnahType || 'ghunnah';
+    if (w.tjRules && w.tjRules.hasGhunnahContext){
+      const gType = w.tjRules.ghunnahType || 'ghunnah';
       const required = ghunnahRequiredMs(gType);
       const voiceMs = rmsAvailable ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now) : 0;
       const effectiveMs = rmsAvailable ? voiceMs : asrMs;
       if (effectiveMs < required){
-        markStrict1Error(prevW, 'ghunnah-length-' + gType,
+        markStrict1Error(w, 'ghunnah-length-' + gType,
           (rmsAvailable ? 'voice' : 'timing') + ' nasalisation ' +
           Math.round(effectiveMs) + ' ms, needs \u2265 ' + required +
           ' ms (' + gType + ')');
@@ -8615,7 +8618,7 @@ function openCoachInfoModal(){
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
       '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
-      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement, which excludes the silent waqf pause so a correctly-held madd at the end of an ayah is not falsely flagged. End-of-ayah madds use a single fixed <b>150 ms</b> voiced minimum for every madd kind.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement, which excludes the silent waqf pause so a correctly-held madd at the end of an ayah is not falsely flagged. End-of-ayah madds use a single fixed <b>250 ms</b> voiced minimum for every madd kind.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
       '<li><b>Live rule-ready chip:</b> a small chip next to the mode pills shows at a glance whether the Tajweed rule checks are actually armed — <b>● Loading rules…</b> while the Quran.com annotations are being fetched, <b>● Rules ready</b> in green once they have been aligned to the surah you are reciting, and <b>● Rules unavailable</b> in amber if the fetch fails. Tap the chip for a full explanation. In Follow mode the chip is hidden, because Tajweed rule checks do not apply there.</li>' +
     '</ul>' +
   '</div>' +
