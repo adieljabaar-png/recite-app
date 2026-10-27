@@ -1,11 +1,10 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v60 — Version bump to invalidate v59 shell so clients pick up
-         the current index.html, which now *hides* the copyright
-         policy from all UI surfaces (home footer, ☰ menu) while
-         keeping the modal function and AI-blocker in the source.
-         No functional strategy change from v59.
+   v61 — Version bump to invalidate the v60 shell so clients pick
+         up the current index.html, which now applies a *fixed
+         150 ms voiced-RMS minimum* to end-of-ayah madds in
+         Tajweed mode. No caching-strategy change from v60.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
@@ -22,7 +21,7 @@
          – The main script bails out immediately via
            `if (window.__AI_BLOCKED__) throw …` so no app code
            executes for a blocked crawler.
-       COPYRIGHT POLICY IS INTENTIONALLY HIDDEN FROM THE UI (v60):
+       COPYRIGHT POLICY IS INTENTIONALLY HIDDEN FROM THE UI:
          – The old .copyright-footer on the home screen has been
            removed from the DOM.
          – The "Copyright & AI policy" item has been removed from
@@ -50,6 +49,25 @@
          ghunnah nasal presence (ghunnah, ikhfa, idghaam, iqlab),
          ghunnah length (2 harakat via voiceDurationMs),
          silent-letter not pronounced (positional strict1SilentOk).
+       END-OF-AYAH MADD — NEW IN v61:
+         End-of-ayah madds (normal / permissible / necessary) now
+         use a *single fixed* minimum of `END_OF_AYAH_MADD_MIN_MS =
+         150 ms` of voiced-RMS duration, and are NOT pace-scaled.
+         Rationale: at the end of an ayah the ASR commit gap is
+         dominated by the waqf pause, so the coach switches to
+         `rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)`,
+         which only counts samples above the calibrated noise
+         floor. That measurement is a clean voiced-time value, so
+         a single absolute floor is the correct comparison — a
+         normal 2-count madd easily exceeds 150 ms of voice, while
+         a skipped madd will not. Mid-ayah madds keep the existing
+         pace-scaled `maddRequiredMs()` path (ASR commit gap), and
+         the ASR-gap fallback still applies at the end of an ayah
+         when RMS samples are unavailable. The batch-timing path
+         is untouched because it only accumulates within a single
+         ayah (a batch that straddles a waqf is skipped).
+         The coach Info modal in index.html was updated to state
+         the fixed 150 ms end-of-ayah minimum in the madd bullet.
        The ham-wasl-silence check and its hasSilenceGap() helper
        referenced in the v56 notes are NOT present in index.html
        and have been removed from this comment header accordingly.
@@ -59,7 +77,8 @@
        text switches to Saheeh International to match the audio.
      • 20 Qari reciters (RECITER_ORDER).
      • Multi-class rule detection (ghunnah + silent regexes).
-     • Pace-scaled madd / ghunnah thresholds.
+     • Pace-scaled madd / ghunnah thresholds (mid-ayah only —
+       end-of-ayah madd uses the fixed 150 ms RMS minimum).
      • Adaptive MIN_RMS recalibration on the RMS analyser.
      • Split-token recombination, attempt-gated error marking,
        truncated-prefix honouring, silent-skips-reset-streak,
@@ -96,7 +115,7 @@
      1. /robots.txt  — bypassed below so it is never stale.
      2. index.html   — meta tags + pre-body blocker + overlay.
 
-   PRESERVED UNCHANGED FROM v59–v40 (functional strategies):
+   PRESERVED UNCHANGED FROM v60–v40 (functional strategies):
      - Google Fonts pre-cache bounded to 20 s at install.
      - Tajweed annotations served networkFresh (bypass HTTP cache).
      - everyayah.com audio served from qc-audio download cache.
@@ -111,17 +130,17 @@
        /robots.txt also bypassed so AI policy is always fresh.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v60, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v61, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v59 and older
+   next open runs the new code path. Caches qc-*-v60 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v60';
+const VERSION = 'v61';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -173,10 +192,11 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker below guarantees the v60 worker
-    //    stores the *new* index.html that has the copyright footer
-    //    and ☰ menu entry removed, while keeping the AI-blocker
-    //    script, meta tags and hidden policy modal intact in source.
+    //    `cache:'reload'` marker below guarantees the v61 worker
+    //    stores the *new* index.html that now applies the fixed
+    //    150 ms voiced-RMS minimum to end-of-ayah madds in Tajweed
+    //    mode, while keeping the AI-blocker script, meta tags and
+    //    hidden policy modal intact in source.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {
