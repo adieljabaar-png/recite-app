@@ -1837,6 +1837,56 @@ body.light-mode #tajweedNoiseChip {
   background: rgba(198,138,0,.1);
 }
 
+/* ── Tajweed readiness chip ─────────────────────────────── */
+#tajweedStatusChip{
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  font-weight: 700;
+  letter-spacing: .01em;
+  transition: color .2s, border-color .2s, background .2s;
+}
+#tajweedStatusChip .tj-status-dot{
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+#tajweedStatusChip.tj-status-loading{
+  color: var(--muted);
+  border-color: var(--line);
+  background: rgba(255,255,255,.04);
+}
+#tajweedStatusChip.tj-status-loading .tj-status-dot{
+  animation: pulse 1.2s infinite;
+}
+#tajweedStatusChip.tj-status-ready{
+  color: var(--good);
+  border-color: rgba(47,208,122,.55);
+  background: rgba(47,208,122,.10);
+}
+#tajweedStatusChip.tj-status-error{
+  color: var(--warn);
+  border-color: rgba(255,176,32,.60);
+  background: rgba(255,176,32,.10);
+}
+
+body.light-mode #tajweedStatusChip.tj-status-loading{
+  background: rgba(0,0,0,.03);
+  border-color: rgba(0,0,0,.10);
+}
+body.light-mode #tajweedStatusChip.tj-status-ready{
+  color: #1f9a5a;
+  border-color: rgba(31,154,90,.55);
+  background: rgba(31,154,90,.10);
+}
+body.light-mode #tajweedStatusChip.tj-status-error{
+  color: #7a5500;
+  border-color: rgba(198,138,0,.60);
+  background: rgba(198,138,0,.10);
+}
+
 /* ── AI block overlay ─────────────────────────────────────── */
 #aiBlockOverlay { display: none; }
 html.ai-blocked body > *:not(#aiBlockOverlay) { display: none !important; }
@@ -2219,6 +2269,8 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     <span class="toggle" id="tajweedNoiseChip" hidden>
       ⚠️ Background noise may affect Tajweed accuracy
     </span>
+    <span class="toggle" id="tajweedStatusChip" hidden
+          role="status" aria-live="polite" aria-atomic="true"></span>
     <label class="toggle hide-text" id="hideTextChip" hidden>
       <input type="checkbox" id="chkHideText"> 🙈 Hide text
     </label>
@@ -4436,6 +4488,7 @@ async function fetchCoachTajweed(surahNumber){
 async function applyTajweedColorsToCoach(){
   const gen = ++coachTajweedGen;
   coachTajweedReady = false;
+  updateTajweedStatusChip();
   if (mode !== 'surah' || !words.length) return;
   if (followOnly) return;
 
@@ -4448,6 +4501,7 @@ async function applyTajweedColorsToCoach(){
     console.warn('[Coach] Tajweed fetch failed:', e);
     if (gen === coachTajweedGen){
       coachTajweedDegraded = true;
+      updateTajweedStatusChip();
       addFeedback('⚠️ Could not load Tajweed annotations. Rule checks are disabled until you reload.', true);
       const tjPill = document.getElementById('modeTajweedBtn');
       if (tjPill){
@@ -4528,6 +4582,7 @@ async function applyTajweedColorsToCoach(){
   coachTajweedApplied = true;
   coachTajweedReady = true;
   coachTajweedDegraded = false;
+  updateTajweedStatusChip();
   const tjPill = document.getElementById('modeTajweedBtn');
   if (tjPill){
     tjPill.textContent = '🎵 Tajweed';
@@ -4543,6 +4598,7 @@ function removeTajweedColorsFromCoach(){
   coachTajweedGen++;
   coachTajweedReady = false;
   coachTajweedDegraded = false;
+  updateTajweedStatusChip();
   const tjPill = document.getElementById('modeTajweedBtn');
   if (tjPill){
     tjPill.textContent = '🎵 Tajweed';
@@ -4551,6 +4607,38 @@ function removeTajweedColorsFromCoach(){
   if (!coachTajweedApplied) return;
   words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; });
   coachTajweedApplied = false;
+}
+
+/* Single source of truth for the Tajweed readiness chip. */
+function updateTajweedStatusChip(){
+  const chip = document.getElementById('tajweedStatusChip');
+  if(!chip) return;
+
+  // Hidden entirely in Follow mode — Tajweed checks do not apply there.
+  if(followOnly){
+    chip.hidden = true;
+    return;
+  }
+
+  chip.hidden = false;
+
+  if(coachTajweedDegraded){
+    chip.className = 'toggle tj-status-error';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Rules unavailable';
+    chip.title = 'Tajweed annotations could not be loaded — rule checks are disabled. ' +
+                 'Check your connection, then switch surahs or reload.';
+    chip.setAttribute('aria-label', 'Tajweed rule checks unavailable');
+  } else if(coachTajweedReady){
+    chip.className = 'toggle tj-status-ready';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready';
+    chip.title = 'Tajweed rule checks are active: madd length, ghunnah length & letters, silent letters.';
+    chip.setAttribute('aria-label', 'Tajweed rule checks active');
+  } else {
+    chip.className = 'toggle tj-status-loading';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Loading rules…';
+    chip.title = 'Fetching Tajweed annotations from Quran.com…';
+    chip.setAttribute('aria-label', 'Loading Tajweed rule checks');
+  }
 }
 
 const MADD_MIN_DELTA_MS = {
@@ -5105,6 +5193,25 @@ async function openTajweedScreen(){
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape' && document.body.classList.contains('tj-fs-open')){
       toggleTajweedFullscreen();
+    }
+  });
+})();
+
+(function wireTajweedStatusChip(){
+  const chip = document.getElementById('tajweedStatusChip');
+  if(!chip) return;
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if(followOnly) return;
+    if(coachTajweedDegraded){
+      showToast(
+        '⚠️ Tajweed annotations could not be loaded — rule checks are disabled. ' +
+        'Check your connection, then switch surah or reload.', 5000);
+    } else if(coachTajweedReady){
+      showToast(
+        '✓ Tajweed rules active: madd length, ghunnah length & letters, silent letters.', 4200);
+    } else {
+      showToast('⏳ Fetching Tajweed annotations from Quran.com…', 3000);
     }
   });
 })();
@@ -7231,6 +7338,7 @@ function applyMutexUI(){
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
   if(selMatch) selMatch.value = 'strict';
   applyHideTextUI();
+  updateTajweedStatusChip();
 }
 function setRecitationMode(modeName){
   const newFollow = (modeName === 'follow');
@@ -7325,6 +7433,7 @@ async function loadSurah(n, keepFeedback){
   coachTajweedReady   = false;
   coachTajweedDegraded = false;
   coachTajweedGen++;
+  updateTajweedStatusChip();
 
   applyModeUI();
   pageEl.classList.remove('mushaf-book');
@@ -8507,6 +8616,7 @@ function openCoachInfoModal(){
       '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
       '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
       '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement, which excludes the silent waqf pause so a correctly-held madd at the end of an ayah is not falsely flagged. End-of-ayah madds use a single fixed <b>150 ms</b> voiced minimum for every madd kind.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
+      '<li><b>Live rule-ready chip:</b> a small chip next to the mode pills shows at a glance whether the Tajweed rule checks are actually armed — <b>● Loading rules…</b> while the Quran.com annotations are being fetched, <b>● Rules ready</b> in green once they have been aligned to the surah you are reciting, and <b>● Rules unavailable</b> in amber if the fetch fails. Tap the chip for a full explanation. In Follow mode the chip is hidden, because Tajweed rule checks do not apply there.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
