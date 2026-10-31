@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v65 — SW-only bugfix. index.html is UNCHANGED from v64.
+   v66 — An almost correct word is now also coloured green and pointer moves on. Only change from v65.
 
          THE BUG
          -------

@@ -8015,7 +8015,7 @@ function gradeFull(tokens, startIdx){
          isPlausiblePronunciationAttempt(heard, hPhon, followAttemptWord)){
         // A close pronunciation is an attempt, not a skipped word. Lookahead
         // above gets priority so a recited following word still marks a skip.
-        followAttemptWord.el.className = hideText ? 'w revealed' : 'w';
+       commitCorrect(ptr);
         lastDirectCommitIdx = -1;
         lastDirectCommitAt = 0;
         lastCommitBatchId = -1;
