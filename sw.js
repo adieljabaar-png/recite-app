@@ -1,6 +1,44 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
+   v65 — SW-only bugfix. index.html is UNCHANGED from v64.
+
+         THE BUG
+         -------
+         networkFresh() — the Tajweed-annotation handler — cached
+         successful responses under their full URL (cache.put(req,
+         …) uses req.url as the key), but on the offline fallback
+         path looked them up with `cache.match(req, { ignoreSearch:
+         true })`. Because Tajweed pagination URLs differ ONLY by
+         query string — e.g.
+             …/verses/by_chapter/2?…&per_page=50&page=1
+             …/verses/by_chapter/2?…&per_page=50&page=2
+             … &page=6
+         — an offline request for page=2 could return page=6's
+         data (whichever page was cached last). fetchTajweedSurah()
+         then saw `verses.length < perPage` and bailed out, so a
+         long surah would only receive Tajweed colouring for its
+         last ~50 ayahs, with no degradation flag raised.
+
+         THE FIX
+         -------
+         networkFresh() now matches on the exact URL:
+             const hit = await cache.match(req, { ignoreVary: true });
+         `ignoreVary: true` is kept so the match still succeeds if
+         the response had a Vary header that differs between the
+         original PUT and the current GET. Pagination still caches
+         each page under its own key, so no new storage cost.
+
+         ONLINE BEHAVIOUR IS UNCHANGED — network is still tried
+         first with cache:'no-store', fresh data still re-caches.
+         Only the offline fallback lookup is corrected.
+
+         No API, cache-name, or route-handling change.
+         No shell / audio / fonts / manifest change.
+         No index.html change.
+
+   PREVIOUS RELEASE — v64 (kept for context, still accurate):
+   ============================================================
    v64 — Bugfix-only release matching the current index.html,
          which contains:
            • THE MADD / GHUNNAH-LENGTH TIMING FIX (per-word
@@ -35,46 +73,18 @@
            • audioFromDownloadCache() now respects
              req.cache === 'no-store' || 'reload'. This makes
              the app's playTranslationWithHealing() actually
-             able to refresh a broken cached audio file — the
-             heal fetch fires with `cache: 'no-store'` +
-             `?_heal=<ts>`, and previously the SW served the
-             same corrupt bytes from qc-audio, so healing was
-             a no-op. Now a bypassed fetch goes to network,
-             and the app re-puts the fresh bytes under the
-             clean URL.
+             able to refresh a broken cached audio file.
            • audioFromDownloadCache() now responds with a real
              206 Partial Content + Content-Range header when
              the request carries a Range header. iOS Safari
              is strict about receiving a genuine 206 for
-             <audio> files; the previous behaviour returned
-             200 with the full body, which works on Chrome /
-             Firefox but produced silent playback failures on
-             Safari. Yields huge reliability wins for cached
-             offline audio playback on iPhone / iPad.
+             <audio> files.
            • networkFresh() for Tajweed annotations now caches
              successful responses in TEXT_CACHE and falls back
-             to them on network failure. Previously it was a
-             hard networkFresh with no fallback — offline users
-             got coachTajweedDegraded = true and lost all four
-             Tajweed rule checks for the session. Now:
-               – Online: fresh data, re-cached
-               – Offline with cache: last-seen data (Tajweed
-                 colouring + rule checks still active)
-               – Offline without cache: 504 (degraded, same
-                 as v63)
-             Freshness guarantee for online users is unchanged.
+             to them on network failure.
            • notificationclick() now only calls
              client.navigate(target) when the notification
              carries a specific, non-default target URL.
-             Prayer-time notifications fire with no data.url
-             (defaults to './'), so tapping one used to
-             navigate an already-focused app back to Home —
-             killing any active recitation session mid-flow.
-             Now default-tap just focuses the window; only
-             notifications that explicitly carry a specific
-             path still navigate. App progress (saved every
-             600 ms via scheduleSaveProgress) is preserved
-             either way, but current screen is not lost.
 
    WHAT IS ACTUALLY SHIPPED IN THE CURRENT index.html
    (this is the source of truth this SW must match):
@@ -110,8 +120,8 @@
          the same-origin bypass list below).
      • Follow mode — 3-in-a-row miss guard:
          FOLLOW_WRONG_LIMIT = 3, FOLLOW_PIN_STOP_MS = 7000.
-         Pointer pins on the 3rd unrecognised word and stops the
-         mic after 7 s if it is still not recited.
+         Pointer pins on the 3rd unrecognised word and stops
+         the mic after 7 s if it is still not recited.
      • Recitation modes permanently locked to STRICT matching.
      • Tajweed mode — rule-aware checks covering FOUR rules:
          madd duration (normal / permissible / necessary),
@@ -176,17 +186,17 @@
        /robots.txt also bypassed so AI policy is always fresh.
      - Push notifications with inline SVG icon.
 
-   NOTE ON DEPLOY: after shipping v64, fully close the PWA (or
+   NOTE ON DEPLOY: after shipping v65, fully close the PWA (or
    close every tab showing the site) and reopen it. The browser
    fetches sw.js on navigation; the new worker's install calls
    skipWaiting() and its activate calls clients.claim(), so the
-   next open runs the new code path. Caches qc-*-v63 and older
+   next open runs the new code path. Caches qc-*-v64 and older
    are deleted on activate; qc-audio (downloads) is preserved.
    ============================================================ */
 
 'use strict';
 
-const VERSION = 'v64';
+const VERSION = 'v65';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -234,7 +244,7 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker below guarantees the v64 worker
+    //    `cache:'reload'` marker below guarantees the v65 worker
     //    stores the *new* index.html containing the madd/ghunnah
     //    timing fix, CSS !important change, and dead-code cleanup,
     //    while keeping the AI-blocker, meta tags and hidden policy
@@ -608,11 +618,25 @@ async function networkFirst(req, cacheName, maxEntries){
 }
 
 /* networkFresh — always goes to the network first (bypassing the
-   browser HTTP cache entirely). Unlike v63, it now also caches
-   successful responses in TEXT_CACHE and falls back to them when
-   the network fails. This enables offline Tajweed colouring + rule
-   checks for surahs the user has already opened online, while
-   preserving the "always fresh when online" guarantee. */
+   browser HTTP cache entirely). Caches successful responses in
+   TEXT_CACHE and falls back to them when the network fails. This
+   enables offline Tajweed colouring + rule checks for surahs the
+   user has already opened online, while preserving the "always
+   fresh when online" guarantee.
+
+   v65 FIX: the offline fallback lookup used to pass
+   `ignoreSearch: true`, which meant every paginated Tajweed page
+   for a given chapter (they differ only by `?…&page=N`) collided
+   on a single key — an offline request for page=2 could return
+   whichever page was cached last, and fetchTajweedSurah() would
+   bail out early on `verses.length < perPage`, leaving most of a
+   long surah uncoloured with no degradation flag raised.
+
+   We now match on the exact URL. `ignoreVary: true` is kept so
+   the lookup still succeeds if the response carried a Vary
+   header that differs between the original PUT and this GET.
+   Pagination still caches each page under its own key, so this
+   adds no storage cost. */
 async function networkFresh(req){
   try{
     const freshReq = new Request(req, { cache: 'no-store' });
@@ -630,10 +654,12 @@ async function networkFresh(req){
     }
     throw new Error('bad response');
   }catch(_){
-    // Offline / network failure — try the last-seen cached version
+    // Offline / network failure — try the last-seen cached version.
+    // Match on the EXACT URL (including pagination query params) so
+    // page=2 gets page=2's data, not whichever page was cached last.
     try{
       const cache = await caches.open(TEXT_CACHE);
-      const hit = await cache.match(req, { ignoreSearch: true });
+      const hit = await cache.match(req, { ignoreVary: true });
       if(hit) return hit;
     }catch(_){}
     return new Response('', { status: 504, statusText: 'Gateway Timeout' });

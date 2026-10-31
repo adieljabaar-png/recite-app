@@ -5690,12 +5690,14 @@ function createSpeechRecognition(){
     console.warn('[Speech] error:', err);
     if(err === 'no-speech' || err === 'aborted') return;
     if(err === 'service-not-allowed'){
+      releaseMicStream(); stopMicWatchdog();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton(); updateFsMicBtn(); syncFsButtons();
       notifySpeechServiceUnreachable();
       return;
     }
     if(err === 'not-allowed'){
+      releaseMicStream(); stopMicWatchdog();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton();
       setStatus('Microphone blocked', 'error');
@@ -5706,6 +5708,7 @@ function createSpeechRecognition(){
       return;
     }
     if(err === 'audio-capture'){
+      releaseMicStream(); stopMicWatchdog();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton();
       setStatus('No microphone', 'error');
@@ -7982,7 +7985,10 @@ function gradeFull(tokens, startIdx){
       for(let k = 1; k <= maxK; k++){
         const target = words[ptr + k];
         if(heard === target.norm){ found = k; break; }
-        if(k === 1 && isMatchWord(heard, hPhon, null, target)){ found = k; break; }
+        if(k === 1 && (isMatchWord(heard, hPhon, null, target) ||
+                       (followOnly && isPlausiblePronunciationAttempt(heard, hPhon, target)))){
+          found = k; break;
+        }
         if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
       }
       if(found > 0){
@@ -8002,6 +8008,23 @@ function gradeFull(tokens, startIdx){
         advancePast(found + 1);
         pendingHeard.length = 0; consecutiveReds = 0;
         used++; continue;
+      }
+
+      const followAttemptWord = words[ptr];
+      if(followOnly && !pendingHeard.length && followAttemptWord &&
+         isPlausiblePronunciationAttempt(heard, hPhon, followAttemptWord)){
+        // A close pronunciation is an attempt, not a skipped word. Lookahead
+        // above gets priority so a recited following word still marks a skip.
+        followAttemptWord.el.className = hideText ? 'w revealed' : 'w';
+        lastDirectCommitIdx = -1;
+        lastDirectCommitAt = 0;
+        lastCommitBatchId = -1;
+        advancePast(1);
+        pendingHeard.length = 0;
+        consecutiveReds = 0;
+        noteFollowProgress();
+        used++;
+        continue;
       }
 
       const mergedN = tryMergedTokenMatch(heard, hPhon);
@@ -8036,8 +8059,9 @@ function gradeFull(tokens, startIdx){
 
       const w = words[ptr];
       const hasPending = pendingHeard.length > 0;
-      const plausible  = w && !hasPending &&
-                         isPlausiblePronunciationAttempt(heard, hPhon, w);
+      const plausibleAttempt = w &&
+                               isPlausiblePronunciationAttempt(heard, hPhon, w);
+      const plausible = !hasPending && !!plausibleAttempt;
 
       if(!plausible && pendingHeard.length < 4){
         pendingHeard.push(rawTok);
@@ -8151,7 +8175,7 @@ async function startReciting(){
 
   try{
     if(!speechRecognition || speechRecognition.__dead) speechRecognition = createSpeechRecognition();
-    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; setMicButton(); return; }
+    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false; micWarningShown = false;
@@ -8162,7 +8186,7 @@ async function startReciting(){
   }catch(e){
     console.error('[Speech] start failed:', e);
     addFeedback('⚠️ Could not start listening: ' + (e.message || e), true);
-    wantMic = false; setMicButton(); updateFsMicBtn(); syncFsButtons();
+    wantMic = false; releaseMicStream(); stopMicWatchdog(); setMicButton(); updateFsMicBtn(); syncFsButtons();
   }
 }
 
@@ -8175,11 +8199,10 @@ function stopReciting(silent){
   setMicButton(); recRunning = false; speechStarting = false;
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
-  // Mute the stream instead of releasing it — this keeps the microphone
-  // permission "live" on iOS Safari so the next Start click does not
-  // re-prompt the user. Hard cleanup happens on pagehide / beforeunload.
-  muteMicStream();
-  if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic on':'Tap Start reciting to allow mic');
+  // A stopped listening session must release the capture tracks, not merely
+  // mute them, so the browser and operating system stop recording audio.
+  releaseMicStream();
+  if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
 }
 
@@ -8187,8 +8210,8 @@ function pauseMic(){
   micPaused = true;
   recRunning = false;
   disarmSpeechKeepalive(); stopMicWatchdog();
-  muteMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} }
+  releaseMicStream();
 }
 function resumeMic(){
   if(wantMic && !finished && !fsPaused){
@@ -8210,8 +8233,8 @@ function finish(){
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer(); stopMicWatchdog();
   cancelFollowPinTimer();
-  // Mute rather than release so a fast restart re-uses the live stream.
-  muteMicStream();
+  // Completion ends the listening session and releases the microphone device.
+  releaseMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;
