@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v66 — An almost correct word is now also coloured green and pointer moves on. Only change from v65.
+   v67 — An almost correct word is now also coloured green and pointer moves on. Only change from v65.
 
          THE BUG
          -------
