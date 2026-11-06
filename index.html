@@ -1821,7 +1821,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-radius: 4px;
 }
 
-/* ── NEW — tap-to-explain visual affordance ── */
 .w[title] { cursor: help; }
 .w[title]:active { filter: brightness(1.25); }
 body.light-mode .w[title]:active { filter: brightness(0.85); }
@@ -2964,7 +2963,8 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   }
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
-    const prefixThreshold = followOnly ? 0.85 : 0.70;
+    /* ── Priority 3: Follow mode is more forgiving on partial matches (0.60) ── */
+    const prefixThreshold = followOnly ? 0.60 : 0.70;
     if(S / L >= prefixThreshold){
       if(hNorm.startsWith(wNorm) || wNorm.startsWith(hNorm)) return true;
       if(hNorm.endsWith(wNorm)   || wNorm.endsWith(hNorm))   return true;
@@ -4068,7 +4068,7 @@ function recPush(newToks){
   const overflow = recTokens.length - REC_BUF_MAX - recCursor;
   if(overflow > 0){ recTokens.splice(0, overflow); recCursor = Math.max(0, recCursor - overflow); }
 }
-function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); }
+function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); lastFollowSkipAt = 0; }
 
 function showScreen(name){
   currentScreenName = name;
@@ -4763,7 +4763,6 @@ async function applyTajweedColorsToCoach(){
       w.tjRules = parseTajweedWordRules(tWord.html);
       w.normNoSilent = tWord.normNoSilent || w.norm;
       if (w.tjRules) w.tjRules.normNoSilent = w.normNoSilent;
-      /* ── NEW — expose the rule as a hover tooltip and screen-reader label ── */
       if (w.tjRules && w.tjRules.allRules && w.tjRules.allRules.length){
         const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
         if (tip){
@@ -4918,7 +4917,6 @@ let silentWarned        = false;
 
 let batchTimingCtx = null;
 
-/* ── NEW — Tajweed rule explanations, shown on tap / hover / proactive feedback ── */
 const TAJWEED_RULE_INFO = {
   ham_wasl:             { name: 'Hamzat al-Wasl',            desc: 'connecting hamza — silent when joining speech' },
   laam_shamsiyah:       { name: 'Laam Shamsiyyah',           desc: 'solar lām — assimilated into the following sun letter' },
@@ -4954,7 +4952,7 @@ function parseTajweedWordRules(decoratedHtml){
     laamShamsiyyahPositions: [],
     hamWasl: false,
     silentPositionsInNorm: [],
-    allRules: []                    /* ── NEW ── */
+    allRules: []
   };
   if (!decoratedHtml) return rules;
 
@@ -5005,7 +5003,6 @@ function parseTajweedWordRules(decoratedHtml){
 
   if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) rules.hamWasl = true;
 
-  /* ── NEW — collect every rule class present on the word, for tap-to-explain ── */
   const seen = new Set();
   const classRe = /class="([^"]*)"/g;
   let cm;
@@ -5019,7 +5016,6 @@ function parseTajweedWordRules(decoratedHtml){
   return rules;
 }
 
-/* ── NEW — proactive rule explanation (throttled — one every 2 s max) ── */
 let _lastRuleExplainAt = 0;
 const RULE_EXPLAIN_THROTTLE_MS = 2000;
 function maybeExplainRules(w){
@@ -5259,7 +5255,7 @@ function markStrict1Error(w, kind, detail){
     kind: 'tajweed-' + kind,
     tajweedType: kind,
     tajweedName: tajweedName,
-    tajweedExplanation: tajweedExplanation     /* ── NEW ── */
+    tajweedExplanation: tajweedExplanation
   };
   mistakes.push(m); appendMistake(m); scheduleHUD();
   if (beepOn) beepThrottled('error');
@@ -8004,10 +8000,9 @@ function installWordDelegates(){
   pageEl.addEventListener('selectstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
   pageEl.addEventListener('dragstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
 
-  /* ── NEW — tap a Tajweed-coloured word → show the rule name + explanation ── */
   pageEl.addEventListener('click', (e) => {
-    if(followOnly) return;                    // Tajweed mode only
-    if(longPressTriggered) return;            // long-press was for jump-to-word
+    if(followOnly) return;
+    if(longPressTriggered) return;
     const target = e.target.closest ? e.target.closest('.w') : null;
     if(!target || !pageEl.contains(target)) return;
     const idx = parseInt(target.dataset.idx, 10);
@@ -8210,7 +8205,6 @@ function appendMistake(m){
   mistakeCountBadge.textContent = String(mistakes.length);
   const li = document.createElement('li');
 
-  /* ── NEW — full explanation on the badge's title / aria-label ── */
   const kindBadge = m.tajweedName
     ? '<span class="tj-kind" title="' +
         escapeHtml(m.tajweedExplanation || m.tajweedName) +
@@ -8265,7 +8259,7 @@ function commitCorrect(i, seg){
   const warned = w.el.classList.contains('warned');
   const baseCls = (hideText && followOnly) ? 'w revealed' : 'w correct';
   w.el.className = baseCls + (warned ? ' warned' : '');
-  maybeExplainRules(w);                              /* ── NEW ── */
+  maybeExplainRules(w);
 }
 function commitManyCorrect(start, end, seg){
   const toReveal = hideText && followOnly;
@@ -8276,7 +8270,7 @@ function commitManyCorrect(start, end, seg){
     const warned = words[i].el.classList.contains('warned');
     words[i].el.className = baseCls + (warned ? ' warned' : '');
   }
-  if(stop > start) maybeExplainRules(words[stop - 1]);   /* ── NEW ── */
+  if(stop > start) maybeExplainRules(words[stop - 1]);
 }
 
 function markSkippedWord(i){
@@ -8304,17 +8298,22 @@ function recordMistake(i, kind, heardRaw){
 async function grade(tokens, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
-  if(matchStrictness() === 'strict') return await gradeFull(tokens, start);
-  return await gradeFollowOnly(tokens, start);
+  /* ── Priority 2: Follow mode uses the relaxed grader ── */
+  if(followOnly) return await gradeFollowOnly(tokens, start);
+  return await gradeFull(tokens, start);
 }
 
 const FOLLOW_LOOKAHEAD = 1;
 const FOLLOW_WRONG_LIMIT = 3;
 const FOLLOW_PIN_STOP_MS = 10000;
+/* ── Priority 4: skip-forward fallback after this many consecutive misses ── */
+const FOLLOW_SKIP_LIMIT = 4;
 
 let followWrongTokens = 0;
 let followPinTimer    = null;
 let followPinPtr      = -1;
+/* ── Priority 4: throttle the "skip-forward" feedback message ── */
+let lastFollowSkipAt  = 0;
 
 function cancelFollowPinTimer(){
   if(followPinTimer){ clearTimeout(followPinTimer); followPinTimer = null; }
@@ -8429,10 +8428,32 @@ async function gradeFollowOnly(tokens, startIdx){
         continue;
     }
 
+    /* ── Priority 1: unmatched tokens ARE accumulated for split-word recovery ── */
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if(pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
+
+    /* ── Priority 4: skip-forward fallback (advance after N consecutive misses) ── */
+    if(followWrongTokens >= FOLLOW_SKIP_LIMIT && ptr < words.length - 1){
+      const stuckW = words[ptr];
+      if(stuckW){
+        stuckW.el.classList.add('skipped');
+        stuckW.el.classList.remove('current');
+      }
+      const beforePtr = ptr;
+      advancePast(1);
+      if(ptr > beforePtr){
+        followWrongTokens = 0;
+        cancelFollowPinTimer();
+        pendingHeard.length = 0;
+        const now = performance.now();
+        if(now - lastFollowSkipAt > 2500){
+          lastFollowSkipAt = now;
+          addFeedback('⏭️ Too many unrecognised words — skipped forward to catch up with the reciter.', false, true);
+        }
+      }
+    }
   }
   return used;
 }
@@ -8562,13 +8583,6 @@ async function gradeFull(tokens, startIdx){
       }
       pendingHeard.length = 0;
 
-      /* ── NEW — Priority 7: plausible pronunciation — BOTH modes ──
-         When ASR and MFA both fail to recognise a word, but the audio
-         clearly contains a spoken utterance that approximately matches
-         the target, accept it and advance. This prevents Tajweed mode
-         from stalling on every ASR hiccup. Audio-driven rule checks
-         (ghunnah, laam, silent, extra-syllable) still run on the
-         accepted word via runStrict1Checks({skipTiming: true}). ── */
       {
         const curW = words[ptr];
         if(curW && isPlausiblePronunciationAttempt(heard, hPhon, curW)){
@@ -8595,7 +8609,10 @@ async function gradeFull(tokens, startIdx){
       const w = words[ptr];
 
       if (followOnly) {
+        /* ── Priority 1: defensive push so split-token recovery still works ── */
         noteFollowWrongToken();
+        pendingHeard.push(rawTok);
+        if(pendingHeard.length > 5) pendingHeard.length = 0;
         used++;
         continue;
       }
@@ -9219,6 +9236,7 @@ function openCoachInfoModal(){
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
       '<li>Follow mode uses a relaxed word-matching tolerance (+1) so a slight ASR mis-transcription of one letter does not stall the flow.</li>' +
       '<li><b>Nothing is marked red and no mistakes are counted</b>.</li>' +
+      '<li>If several words in a row are not recognised, Follow mode <b>skips forward one word</b> so the highlight keeps pace with the reciter instead of getting stuck.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
