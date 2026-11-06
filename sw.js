@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.0.1 — Version-only release (with icon pre-caching).
+   v2.0.2 — Version-only release (with icon pre-caching).
    ============================================================ */
 
 'use strict';
