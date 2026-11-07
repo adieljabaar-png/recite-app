@@ -273,7 +273,6 @@ font-variant-numeric:tabular-nums;
 .juz-row .juz-name{font-size:.85rem;font-weight:700;color:var(--text);
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .juz-row .juz-range{font-size:.66rem;color:var(--muted);margin-top:2px;letter-spacing:.02em;}
-
 .home-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .tile{
 display:flex;flex-direction:column;align-items:flex-start;
@@ -810,7 +809,6 @@ pointer-events:none;-webkit-user-select:none;user-select:none;direction:rtl;
 z-index:3;background:transparent;padding:0 .12em;border-radius:999px;
 }
 .mushaf-sajdah-mark{display:inline-block;font-size:.95em;margin:0 .15em;color:currentColor;vertical-align:middle;-webkit-text-stroke:0;opacity:.9;cursor:help;}
-
 .toast{
 position:fixed;top:calc(var(--safe-top) + 18px);left:50%;
 transform:translateX(-50%) translateY(-18px);
@@ -971,17 +969,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{background:rgba(12
 .toggle.hide-text.active{border-color:rgba(255,176,32,.7);background:rgba(255,176,32,.12);color:#fff;}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.6);color:#7a5500;}
 .toggle.disabled{opacity:.4;pointer-events:none}
-.toggle.match-select{cursor:default;padding-right:8px}
-.toggle.match-select select{
-background:#0d1421;color:var(--accent);
-font:inherit;font-size:.72rem;font-weight:700;
-border:1px solid rgba(79,140,255,.4);border-radius:8px;
-padding:3px 6px;margin:0;outline:none;-webkit-appearance:none;appearance:none;
-cursor:pointer;padding-right:18px;
-background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%234f8cff' d='M4 5L0 0h8z'/%3E%3C/svg%3E");
-background-repeat:no-repeat;background-position:right 5px center;
-}
-.toggle.match-select select option{background:#1b2436;color:#fff}
 .toggles{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
 .toggles::-webkit-scrollbar{display:none}
 
@@ -1088,7 +1075,6 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 @keyframes locatePulse{0%{background:rgba(79,140,255,.55);box-shadow:0 0 0 0 rgba(79,140,255,.6);color:#fff}100%{background:transparent;box-shadow:0 0 0 18px rgba(79,140,255,0);color:var(--text)}}
 .w.located{animation:locatePulse .9s ease}
 
-/* Hide-text mode now works everywhere (including fullscreen viewer). */
 body.hide-text-mode .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
 body.hide-text-mode .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
 body.hide-text-mode .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
@@ -1096,7 +1082,6 @@ body.hide-text-mode .w.current{color: transparent !important;background: transpa
 body.hide-text-mode .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
 body.hide-text-mode:not(.viewer-open) .mushaf::after{content: "🙈 Text hidden — recite from memory. Words appear as you go.";display:block;direction:ltr;font-family:-apple-system,sans-serif;font-size:.72rem;color:var(--muted);text-align:center;padding:16px 8px 4px;letter-spacing:.02em;opacity:.75;}
 
-/* Reveal-all-text override (works everywhere too) */
 body.hide-text-mode.reveal-all-text .w:not(.revealed){
   color: var(--text) !important;
   background: transparent !important;
@@ -1119,7 +1104,6 @@ body.hide-text-mode.reveal-all-text:not(.viewer-open) .mushaf::after{
   display:none !important;
 }
 
-/* Viewer-specific hide-text overrides (must out-rank viewer-read-mode's inherit rule) */
 body.viewer-read-mode.hide-text-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .w:not(.revealed){
   color:transparent !important;
   background:transparent !important;
@@ -1199,7 +1183,6 @@ body.light-mode .qr-fullscreen{background:radial-gradient(900px 500px at 50% -16
 .qr-hint{font-size:.72rem;color:#6b7280;font-weight:600;line-height:1.4}
 .qr-close{width:100%;height:50px;margin-top:2px;background:#111827;color:#fff;border:none;border-radius:14px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;transition:transform .12s, filter .15s;}
 .qr-close:active{transform:scale(.98);filter:brightness(1.15)}
-
 body.immersive .hide-immersive{display:none !important}
 body.immersive{padding-top:calc(var(--safe-top) + 6px)}
 body.immersive .mushaf{max-height:calc(100vh - 180px - var(--safe-top) - var(--safe-bottom));font-size:clamp(1.7rem,7.8vw,2.2rem);}
@@ -1229,7 +1212,6 @@ max-width:calc(100vw - 16px);
 .fs-controls #fsMic.active-mic{color:var(--good);background:rgba(47,208,122,.15);border-color:rgba(47,208,122,.5);animation: fsMicPulse 1.6s infinite;}
 @keyframes fsMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(47,208,122,.35)}50%{box-shadow:0 0 0 8px rgba(47,208,122,0)}}
 
-/* Reveal-text tab — sits inline with ⏸ ▶ ⏹ and hides after 3 s with the toolbar */
 .fs-controls .fs-text-tab{
   width:auto;min-width:0;padding:0 12px;height:36px;
   border-radius:999px;flex-shrink:0;white-space:nowrap;
@@ -1315,8 +1297,6 @@ body.light-mode .stat{background:#eef2f8}
 body.light-mode input[type=number]{background:#ffffff;color:var(--text)}
 body.light-mode .toggle{background:#eef2f8;color:var(--muted)}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);color:var(--warn)}
-body.light-mode .toggle.match-select select{background:#ffffff;color:var(--accent)}
-body.light-mode .toggle.match-select select option{background:#ffffff;color:var(--text)}
 body.light-mode button.ghost{background:#eef2f8}
 body.light-mode .mushaf{background:linear-gradient(180deg,#ffffff,#f0f4fb)}
 body.light-mode .mushaf::-webkit-scrollbar-thumb{background:#c8d3e6}
@@ -2175,7 +2155,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   </section>
 
 </div>
-
 <div class="app screen" id="screenSurahIndex" hidden>
   <div class="sub-header">
     <button id="backFromIndex" class="back-pill" type="button" aria-label="Back to home">Back</button>
@@ -2305,13 +2284,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   <div class="toggles hide-immersive">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
-    <label class="toggle match-select" id="matchChip" hidden>
-      🎯 Follow
-      <select id="selMatch" aria-label="Follow matching strictness">
-        <option value="strict" selected>Strict</option>
-        <option value="lenient">Lenient</option>
-      </select>
-    </label>
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
     <span class="toggle" id="tajweedNoiseChip" hidden>
@@ -2538,8 +2510,6 @@ const surahCountEl   = document.getElementById('surahCount');
 const fullscreenBtn  = document.getElementById('btnFullscreen');
 const themeBtn       = document.getElementById('btnTheme');
 const infoBtn        = document.getElementById('btnInfo');
-const selMatch       = document.getElementById('selMatch');
-const matchChip      = document.getElementById('matchChip');
 const chkHideText    = document.getElementById('chkHideText');
 const hideTextChip   = document.getElementById('hideTextChip');
 const fsRevealBtn    = document.getElementById('fsReveal');
@@ -2892,13 +2862,8 @@ function gregorianToHijri(date){
   return jdnToHijri(jdn);
 }
 
-let matchLevel = (function () {
-  try {
-    const v = localStorage.getItem('qc.matchLevel');
-    if (v === 'strict' || v === 'lenient') return v;
-  } catch (e) {}
-  return 'strict';
-})();
+/* ── Follow mode is now permanently locked to "strict" ─────── */
+const matchLevel = 'strict';
 
 let followOnly = localStorage.getItem('qc.followOnly') !== '0';
 let hideText   = localStorage.getItem('qc.hideText') === '1';
@@ -3021,23 +2986,15 @@ function lev(a, b){
   return r;
 }
 
-function matchStrictness(){ return matchLevel; }
-
 const TOL_TABLE = {
-  strict:  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
-  lenient: [0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
+  strict: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2]
 };
 function toleranceFor(L){
-  const key = followOnly ? matchLevel : 'strict';
-  const t = TOL_TABLE[key] || TOL_TABLE.strict;
+  const t = TOL_TABLE.strict;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
-const CONF_FLOOR_TABLE = { strict: 0.35, lenient: 0.20 };
-function confidenceFloor(){
-  const key = followOnly ? matchLevel : 'strict';
-  return CONF_FLOOR_TABLE[key] || 0.35;
-}
+function confidenceFloor(){ return 0.35; }
 
 const NOISE_LIMIT_TABLE = { strict: 2 };
 function noiseLimit(){ return NOISE_LIMIT_TABLE.strict; }
@@ -3049,10 +3006,10 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   if(hNorm === wNorm) return true;
   const L = la > lb ? la : lb;
   if(L < 2) return false;
-  
-  const extraTol = followOnly ? (matchLevel === 'lenient' ? 2 : 1) : 0;
+
+  const extraTol = followOnly ? 1 : 0;
   const tol = toleranceFor(L) + extraTol;
-  
+
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
   if(lev(hNorm, wNorm) <= tol) return true;
@@ -3808,7 +3765,6 @@ const QRGen = (function(){
 
   return { encode: encode, toSvg: toSvg };
 })();
-
 let words=[], ptr=0, errors=0, finished=false;
 let mode = 'page';
 let pageNum = 1;
@@ -4165,7 +4121,7 @@ function recPush(newToks){
   const overflow = recTokens.length - REC_BUF_MAX - recCursor;
   if(overflow > 0){ recTokens.splice(0, overflow); recCursor = Math.max(0, recCursor - overflow); }
 }
-function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; lenientSkipVerse = null; cancelFollowPinTimer(); }
+function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); }
 
 function showScreen(name){
   currentScreenName = name;
@@ -5372,7 +5328,7 @@ function markStrict1Error(w, kind, detail){
 function markStrict1Warning(w, kind, detail){
   if (!w) return;
   if (w.el.classList.contains('warned') || w.el.classList.contains('error')) return;
-  
+
   w.el.classList.add('warned');
   if (!w.el.classList.contains('correct') && !w.el.classList.contains('corrected')) {
       w.el.classList.add('correct');
@@ -5742,18 +5698,6 @@ async function openTajweedScreen(){
   });
 })();
 
-/* Match-strictness dropdown (Follow mode) */
-(function wireFollowMatch(){
-  if(selMatch){
-    selMatch.addEventListener('change', () => {
-      matchLevel = (selMatch.value === 'lenient') ? 'lenient' : 'strict';
-      try { localStorage.setItem('qc.matchLevel', matchLevel); } catch (e) {}
-      lenientSkipVerse = null;
-      showToast('🎯 Follow match: <b>' + (matchLevel === 'lenient' ? 'Lenient' : 'Strict') + '</b>');
-    });
-  }
-})();
-
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -5830,7 +5774,6 @@ async function resumeRecitationSession(modeKey){
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
     lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
     prevWordAudio = null;
-    lenientSkipVerse = null;
     applyMutexUI(); applyFollowOnlyUI();
     showScreen('coach'); coachLoaded = false; coachLoading = true;
     try{ await loadSurah(data.surah, true); coachLoaded = true; }
@@ -6079,7 +6022,7 @@ const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
   return score;
 }
 
-   function buildPhraseObjects(rec) {
+function buildPhraseObjects(rec) {
   if (!rec) return false;
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
   if (!PhraseCtor) return false;
@@ -6115,7 +6058,6 @@ const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
   }
 }
 
-/* ── Speech result pipeline (throttle + serialization) ──────── */
 let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
@@ -6131,7 +6073,6 @@ function resetSpeechPipeline() {
 function scheduleSpeechResult(event) {
   if (!event || !wantMic || fsPaused || micPaused) return;
 
-  // Snapshot the event so queued items remain valid after the handler returns.
   let hasFinal = false;
   const snapshot = [];
   for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -6153,7 +6094,6 @@ function scheduleSpeechResult(event) {
   const snap = { resultIndex: event.resultIndex, results: snapshot };
 
   if (hasFinal) {
-    // Flush any pending interim first, then process the final immediately.
     if (pendingSpeechEvent) {
       speechQueue.push(pendingSpeechEvent);
       pendingSpeechEvent = null;
@@ -6164,7 +6104,6 @@ function scheduleSpeechResult(event) {
     return;
   }
 
-  // Interim — throttle to once per 200 ms, keeping only the latest.
   pendingSpeechEvent = snap;
   if (speechResultTimer) return;
   speechResultTimer = setTimeout(() => {
@@ -6225,7 +6164,6 @@ async function runSpeechResultProcessing(snap) {
       const candToks = tr.split(/\s+/).filter(Boolean);
       if (!candToks.length) continue;
       const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
-      // Change F: phonetic alignment weighted more heavily than raw ASR confidence.
       const weighted = (rawScore * 3) + (conf * 1.5);
       if (weighted > bestWeighted) {
         bestWeighted = weighted;
@@ -6267,7 +6205,6 @@ async function runSpeechResultProcessing(snap) {
     }
   }
 
-  // Refresh contextual-biasing phrases as the reciter advances.
   if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
     buildPhraseObjects(speechRecognition);
   }
@@ -6287,14 +6224,10 @@ function createSpeechRecognition(){
   rec.continuous       = true;
   rec.interimResults   = true;
 
-
   const phrasesAttached = buildPhraseObjects(rec);
   rec.__hasPhrases = phrasesAttached;
 
- 
-      
-   
- rec.onstart = () => {
+  rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
@@ -7490,7 +7423,6 @@ async function playCurrentViewerAyah(){
   viewerAudio.ayahIdx++;
   playCurrentViewerAyah();
 }
-
 const SWIPE_MIN_X = 55;
 let readerGesture = null;
 let pageTurning = false;
@@ -7990,7 +7922,6 @@ fsStopBtn.addEventListener('click', () => { fsPaused = false; stopEverything(); 
 fsMinimizeBtn.addEventListener('click', () => exitReaderFullscreen());
 fsContinueBtn.disabled = true;
 
-/* Reveal-text tab inside the fullscreen toolbar */
 function syncRevealButtons(){
   if(!fsRevealBtn) return;
   const show = !!(hideText && followOnly);
@@ -8024,8 +7955,6 @@ function applyMutexUI(){
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
 
-  if(matchChip) matchChip.hidden = !followOnly;
-  if(selMatch)  selMatch.value  = matchLevel;
   if(hideTextChip) hideTextChip.hidden = !followOnly;
 
   const tjNoiseChip = document.getElementById('tajweedNoiseChip');
@@ -8046,7 +7975,7 @@ function setRecitationMode(modeName){
   pendingHeard.length = 0; consecutiveReds = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
-  followWrongTokens = 0; lenientSkipVerse = null; cancelFollowPinTimer();
+  followWrongTokens = 0; cancelFollowPinTimer();
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -8382,7 +8311,7 @@ function jumpToWordAndListen(idx){
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI(); scrollCurrentIntoView(true); scheduleSaveProgress();
   if(wantMic){ pendingJumpTarget = -1; setStatus('Listening', 'listening', contextLabel()); addFeedback('🎯 Jumped — listening from here.', false, true); }
   else { startReciting(); addFeedback('🎯 Jumped — listening from here.', false, true); }
-} 
+}
 
 function scheduleHUD(){
   if(hudPending) return;
@@ -8408,7 +8337,6 @@ function updateCurrent(){
   const el=words[ptr].el;
   el.classList.add('current');
   lastCurrentEl = el;
-  // Scrolling is folded into scheduleHUD's single rAF to avoid double repaint.
 }
 
 function jumpToCurrent(){
@@ -8544,7 +8472,6 @@ const FOLLOW_WRONG_LIMIT = 3;
 const FOLLOW_PIN_STOP_MS = 10000;
 
 let followWrongTokens = 0;
-let lenientSkipVerse  = null;
 let followPinTimer    = null;
 let followPinPtr      = -1;
 
@@ -8612,7 +8539,6 @@ function isFollowPlausible(heard, hPhon, w) {
 function gradeFollowFast(tokens, startIdx) {
   const start = startIdx || 0;
   let used = 0;
-  const isLenient = (matchLevel === 'lenient');
 
   for (let ti = start; ti < tokens.length; ti++) {
     if (ptr >= words.length) { used++; continue; }
@@ -8654,8 +8580,8 @@ function gradeFollowFast(tokens, startIdx) {
       used++; continue;
     }
 
-    /* 4. MFA phonetic match on the CURRENT word — SKIPPED in Lenient mode. */
-    if (!isLenient && isFollowMFAMatch(w, heard, hPhon)) {
+    /* 4. MFA phonetic match on the CURRENT word. */
+    if (isFollowMFAMatch(w, heard, hPhon)) {
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
@@ -8672,20 +8598,7 @@ function gradeFollowFast(tokens, startIdx) {
       used++; continue;
     }
 
-    /* 6. LENIENT: one graceful skip per ayah, always marked GREEN. */
-    if (isLenient) {
-      const verseKey = w.verse;
-      if (lenientSkipVerse !== verseKey) {
-        lenientSkipVerse = verseKey;
-        commitCorrect(ptr, null);
-        advancePast(1);
-        noteFollowProgress();
-        pendingHeard.length = 0;
-        used++; continue;
-      }
-    }
-
-    /* 7. Not this word — STAY on words[ptr] and wait. */
+    /* 6. Not this word — STAY on words[ptr] and wait. */
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if (pendingHeard.length > 5) pendingHeard.length = 0;
@@ -8704,7 +8617,7 @@ function isAcousticWordShapeMatch(w, seg) {
   const ratio = seg.durationMs / expectedMs;
   const minRatio = 0.2;
   const maxRatio = 4.0;
-  if (ratio < minRatio || ratio > maxRatio) return false; 
+  if (ratio < minRatio || ratio > maxRatio) return false;
 
   const vr = rmsAnalyser.vowelRun(seg.start, seg.end);
   const minVowelRatio = 0.15;
@@ -9009,7 +8922,6 @@ function stopReciting(silent){
   wantMic=false; micPaused = false;
 resetSpeechPipeline();
   disarmSpeechKeepalive(); pendingJumpTarget = -1;
-  lenientSkipVerse = null;
   cancelFollowPinTimer();
   pendingHeard.length = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
@@ -9512,7 +9424,7 @@ function openCoachInfoModal(){
     '<h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3>' +
     '<ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
-      '<li>A small dropdown next to the Follow pill lets you pick the matching strictness:<br>• <b>Strict</b> — balanced matching with MFA phonetic tolerance.<br>• <b>Lenient</b> — relaxed matching that skips the MFA check entirely, so the highlight moves faster. A close-enough word is accepted and marked green; if a word cannot be recognised at all, the system will skip <b>one word per ayah</b> to keep you moving. Nothing is ever marked yellow — skipped words stay green.</li>' +
+      '<li>Follow mode uses balanced matching with MFA phonetic tolerance to keep the highlight in sync with your recitation.</li>' +
       '<li><b>Nothing is marked red and no mistakes are counted</b> in Follow mode.</li>' +
     '</ul>' +
   '</div>' +
