@@ -6,7 +6,7 @@
 
 'use strict';
 
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
