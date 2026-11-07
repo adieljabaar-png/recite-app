@@ -2260,24 +2260,33 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     <span class="label" id="statusLabel">Loading…</span>
     <span class="hint" id="statusHint"></span>
   </div>
-  <section class="panel hide-immersive">
-    <div class="row" id="surahNavRow" hidden>
-      <button id="btnPrevSurah" class="ghost icon" aria-label="Previous surah">◀</button>
-      <div class="surah-info">
-        <span class="surah-en" id="surahEn">—</span>
-        <span class="surah-ar" id="surahAr">—</span>
-        <span class="surah-count" id="surahCount"></span>
+  
+  <section class="panel hide-immersive" style="padding: 8px 10px;">
+    <div class="row" id="surahNavRow" hidden style="gap: 8px; display: flex; align-items: stretch; flex-wrap: nowrap;">
+      
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px;">
+          <span class="surah-en" id="surahEn" style="font-size: 0.95rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text);">—</span>
+          <span class="surah-count" id="surahCount" style="font-size: 0.65rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;"></span>
+        </div>
+        
+        <div class="hud" style="display: flex; gap: 6px; margin: 0;">
+          <div class="stat" style="padding: 4px 2px; flex: 1; background: rgba(0,0,0,0.15); border: none;"><span id="statProgress" style="font-size: 0.9rem;">0%</span><small style="font-size: 0.55rem;">Progress</small></div>
+          <div class="stat" style="padding: 4px 2px; flex: 1; background: rgba(0,0,0,0.15); border: none;"><span id="statErrors" style="font-size: 0.9rem;">—</span><small style="font-size: 0.55rem;">Mistakes</small></div>
+          <div class="stat" style="padding: 4px 2px; flex: 1; background: rgba(0,0,0,0.15); border: none;"><span id="statAcc" style="font-size: 0.9rem;">—</span><small style="font-size: 0.55rem;">Accuracy</small></div>
+        </div>
       </div>
-      <button id="btnNextSurah" class="ghost icon" aria-label="Next surah">▶</button>
-      <button id="btnSurah" class="ghost" style="padding:0 12px">📖 Surah</button>
+      
+      <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: stretch;">
+        <button id="btnStop" class="ghost" style="padding: 0 12px; font-size: 0.85rem;">⏹ Stop</button>
+        <button id="btnReset" class="ghost" style="padding: 0 12px; font-size: 0.85rem;">↺ Restart</button>
+        <button id="btnSurah" class="ghost" style="padding: 0 14px; font-size: 0.85rem; font-weight: 700;">📖 Surah</button>
+      </div>
+      
     </div>
   </section>
-  <div class="btn-row three">
-    <button id="btnStop" class="ghost">⏹ Stop</button>
-    <button id="btnReset" class="ghost">↺ Restart</button>
-    <button id="btnJump" class="ghost">⤒ Current</button>
-  </div>
-  <div class="toggles hide-immersive">
+
+  <div class="toggles hide-immersive" style="margin-top: -4px;">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
     <span class="toggle" id="tajweedStatusChip" hidden
@@ -2290,11 +2299,7 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     </label>
   </div>
   <div class="barwrap"><div class="bar" id="bar"></div></div>
-  <section class="hud">
-    <div class="stat"><span id="statProgress">0%</span><small>Progress</small></div>
-    <div class="stat"><span id="statErrors">—</span><small>Mistakes</small></div>
-    <div class="stat"><span id="statAcc">—</span><small>Accuracy</small></div>
-  </section>
+  
   <section class="mistakes-panel hide-immersive" id="mistakesPanel" hidden>
     <div class="mistakes-header">
       <span>📋 Mistakes</span>
@@ -2496,13 +2501,9 @@ const statusHint     = document.getElementById('statusHint');
 const micButton      = document.getElementById('btnMic');
 const stopButton     = document.getElementById('btnStop');
 const resetButton    = document.getElementById('btnReset');
-const jumpButton     = document.getElementById('btnJump');
 const surahButton    = document.getElementById('btnSurah');
-const prevSurahBtn   = document.getElementById('btnPrevSurah');
-const nextSurahBtn   = document.getElementById('btnNextSurah');
 const surahNavRow    = document.getElementById('surahNavRow');
 const surahEnEl      = document.getElementById('surahEn');
-const surahArEl      = document.getElementById('surahAr');
 const surahCountEl   = document.getElementById('surahCount');
 const fullscreenBtn  = document.getElementById('btnFullscreen');
 const themeBtn       = document.getElementById('btnTheme');
@@ -6031,9 +6032,8 @@ function applyFollowOnlyUI(){
 function applyModeUI(){
   document.body.classList.add('surah-mode');
   surahNavRow.hidden = false;
-  if(surahMeta){ surahEnEl.textContent = surahMeta.englishName; surahArEl.textContent = surahMeta.name; surahCountEl.textContent = surahMeta.numberOfAyahs + ' ayahs'; }
-  else { surahEnEl.textContent = 'Surah ' + surahNum; surahArEl.textContent = ''; surahCountEl.textContent = ''; }
-  prevSurahBtn.disabled = (surahNum <= 1); nextSurahBtn.disabled = (surahNum >= 114);
+  if(surahMeta){ surahEnEl.textContent = surahMeta.englishName; surahCountEl.textContent = surahMeta.numberOfAyahs + ' ayahs'; }
+  else { surahEnEl.textContent = 'Surah ' + surahNum; surahCountEl.textContent = ''; }
 }
 
 /* ── Load surah / render words ──────────────────────────── */
@@ -8961,9 +8961,14 @@ function openCopyrightModal(){
   chip.addEventListener('click', (e) => {
     e.stopPropagation();
     if(followOnly) return;
-    if(coachTajweedDegraded){ showToast('⚠️ Tajweed annotations could not be fully aligned — some rule checks may be disabled. Check your connection, then switch surah or reload.', 5000); }
-    else if(coachTajweedReady){ showToast('✓ Tajweed rules active: madd length, ghunnah length & letters, qalqalah, silent letters.', 4200); }
-    else { showToast('⏳ Fetching Tajweed annotations from Quran.com…', 3000); }
+    
+    if (words.length > 0) {
+        showToast('🔄 Re-applying Tajweed rules…', 2500);
+        coachTajweedCache.delete(surahNum);
+        applyTajweedColorsToCoach();
+    } else {
+        showToast('⚠️ No active surah to apply rules to.', 3000);
+    }
   });
 })();
 function urlBase64ToUint8Array(base64String){
@@ -9004,9 +9009,6 @@ resetButton.addEventListener('click',()=>{
   fsPaused=false; syncFsButtons();
   feedbackEl.innerHTML='<div class="line">Restarted.</div>';
 });
-jumpButton.addEventListener('click',jumpToCurrent);
-prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSurah(-1); });
-nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSurah(1); });
 surahButton.addEventListener('click',openSurahPicker);
 
 /* ── Surah picker (modal) ─────────────────────────────── */
