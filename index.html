@@ -2999,7 +2999,7 @@ function confidenceFloor(){ return 0.35; }
 const NOISE_LIMIT_TABLE = { strict: 2 };
 function noiseLimit(){ return NOISE_LIMIT_TABLE.strict; }
 
-function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
+function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   const wNorm = w.norm;
   const la = hNorm.length, lb = wNorm.length;
   if(Math.abs(la - lb) > 4) return false;
@@ -3013,9 +3013,21 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
   if(lev(hNorm, wNorm) <= tol) return true;
-  if(hPhon.length >= 3 && w.phon.length >= 3){
+
+  const phonMinLen = followOnly ? 2 : 3;
+  if(hPhon.length >= phonMinLen && w.phon.length >= phonMinLen){
     if(lev(hPhon, w.phon) <= tol) return true;
   }
+
+  /* Tier 3 — loose phonetics (Follow mode only). Compensates for Google
+     STT substitutions that native-speech models rarely make:
+     ح → ه, خ → ه, غ → ق, ع → ء. */
+  if(followOnly && hPhonLoose && w.phonLoose &&
+     hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
+     lev(hPhonLoose, w.phonLoose) <= tol){
+    return true;
+  }
+
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
     const prefixThreshold = followOnly ? 0.85 : 0.70;
@@ -3025,6 +3037,23 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
     }
   }
   return false;
+}
+
+/* Follow-mode bridge for the Arabic definite article ال. Google frequently
+   inserts or drops it on fluent recitation ("الشَّمْس" ↔ "شمس"); this keeps
+   the highlight advancing without loosening Tajweed mode. */
+function followAlPrefixMatch(heard, w){
+  if(!followOnly) return false;
+  if(!heard || !w || !w.norm) return false;
+  const wNorm = w.norm;
+  const hHasAl = heard.startsWith('ال');
+  const wHasAl = wNorm.startsWith('ال');
+  if(hHasAl === wHasAl) return false;
+  const hBase = hHasAl ? heard.slice(2) : heard;
+  const wBase = wHasAl ? wNorm.slice(2) : wNorm;
+  if(hBase.length < 3 || wBase.length < 3) return false;
+  if(hBase.length > 10 || wBase.length > 10) return false;
+  return lev(hBase, wBase) <= toleranceFor(Math.max(hBase.length, wBase.length));
 }
 
 function isPlausiblePronunciationAttempt(heard, hPhon, w){
@@ -6000,8 +6029,9 @@ const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
     const heard = normArCached(rawTok);
     if(!heard){ ti++; continue; }
     const hPhon = phonArCached(rawTok);
+    const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w = words[wi];
-    if(heard === w.norm || isMatchWord(heard, hPhon, null, w)){
+    if(heard === w.norm || isMatchWord(heard, hPhon, hPhonLoose, w)){
       score += 3;
       ti++; wi++;
       continue;
@@ -6009,7 +6039,7 @@ const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
     let matched = false;
     for(let k = 1; k <= 2 && wi + k < startPtr + maxAhead; k++){
       const target = words[wi + k];
-      if(heard === target.norm || isMatchWord(heard, hPhon, null, target)){
+      if(heard === target.norm || isMatchWord(heard, hPhon, hPhonLoose, target)){
         score += 1;
         wi = wi + k + 1;
         ti++;
@@ -8501,7 +8531,7 @@ function noteFollowWrongToken(){
   }, FOLLOW_PIN_STOP_MS);
 }
 
-function isFollowMFAMatch(w, heard, hPhon) {
+function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
   if (!w || !heard) return false;
   if (heard === w.norm) return true;
 
@@ -8511,11 +8541,14 @@ function isFollowMFAMatch(w, heard, hPhon) {
   if (lev(heard, w.norm) <= tol) return true;
   if (w.phon.length >= 2 && hPhon.length >= 2 &&
       lev(hPhon, w.phon) <= tol) return true;
+  if (hPhonLoose && w.phonLoose &&
+      hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
+      lev(hPhonLoose, w.phonLoose) <= tol) return true;
 
   return false;
 }
 
-function isFollowPlausible(heard, hPhon, w) {
+function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
   if (!w || !heard || !w.norm) return false;
 
   const heardLen  = heard.length;
@@ -8532,6 +8565,9 @@ function isFollowPlausible(heard, hPhon, w) {
   if (lev(heard, w.norm) <= tol) return true;
   if (hPhon.length >= 2 && w.phon.length >= 2 &&
       lev(hPhon, w.phon) <= tol) return true;
+  if (hPhonLoose && w.phonLoose &&
+      hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
+      lev(hPhonLoose, w.phonLoose) <= tol) return true;
 
   return false;
 }
@@ -8547,11 +8583,17 @@ function gradeFollowFast(tokens, startIdx) {
     const heard  = normArCached(rawTok);
     if (!heard) { used++; continue; }
 
-    const hPhon = phonArCached(rawTok);
-    const w     = words[ptr];
+    const hPhon      = phonArCached(rawTok);
+    const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
+    const w          = words[ptr];
 
-    /* 1. ASR direct match on the CURRENT word → advance 1. */
-    if (heard === w.norm || isMatchWord(heard, hPhon, null, w)) {
+    /* 1. ASR direct / strict-phonetic / loose-phonetic match on the
+       CURRENT word → advance 1. Loose tier is what catches Google STT
+       substituting ح→ه, خ→ه, غ→ق, ع→ء. The ال-prefix bridge handles
+       Google dropping or inserting the definite article. */
+    if (heard === w.norm ||
+        isMatchWord(heard, hPhon, hPhonLoose, w) ||
+        followAlPrefixMatch(heard, w)) {
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
@@ -8580,8 +8622,8 @@ function gradeFollowFast(tokens, startIdx) {
       used++; continue;
     }
 
-    /* 4. MFA phonetic match on the CURRENT word. */
-    if (isFollowMFAMatch(w, heard, hPhon)) {
+    /* 4. MFA phonetic match on the CURRENT word (loose tier included). */
+    if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)) {
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
@@ -8590,7 +8632,7 @@ function gradeFollowFast(tokens, startIdx) {
     }
 
     /* 5. Plausible-enough — the main "close enough" fallback. */
-    if (isFollowPlausible(heard, hPhon, w)) {
+    if (isFollowPlausible(heard, hPhon, hPhonLoose, w)) {
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
