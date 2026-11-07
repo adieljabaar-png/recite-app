@@ -3007,8 +3007,8 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const L = la > lb ? la : lb;
   if(L < 2) return false;
 
-const extraTol = followOnly ? 1 : 0;   // ← change to
-const extraTol = 0;
+  const extraTol = 0;
+  const tol = toleranceFor(L) + extraTol;
 
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
