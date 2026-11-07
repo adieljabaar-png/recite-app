@@ -1,12 +1,12 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.0.5 — Version-only release (with icon pre-caching).
+   v2.0.6 — Version-only release (with icon pre-caching).
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.0.5';
+const VERSION = '2.0.6';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
