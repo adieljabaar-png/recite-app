@@ -3079,14 +3079,21 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   return false;
 }
 
-function tryMergedTokenMatch(heard, hPhon){
+/* Merged-token matcher — a single ASR token that spans 2–3 consecutive
+   words. Strict phonetics are always tried; the loose-phonetic tier is
+   added only when followOnly is true, so Tajweed mode keeps its strictness. */
+function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
   if(ptr >= words.length) return 0;
   if(heard.length <= words[ptr].norm.length + 1) return 0;
-  let combined     = words[ptr].norm;
-  let combinedPhon = words[ptr].phon;
+  let combined          = words[ptr].norm;
+  let combinedPhon      = words[ptr].phon;
+  let combinedPhonLoose = followOnly ? (words[ptr].phonLoose || '') : null;
   for(let k = 1; k < 3 && ptr + k < words.length; k++){
     combined     += words[ptr + k].norm;
     combinedPhon += words[ptr + k].phon;
+    if(followOnly && combinedPhonLoose !== null){
+      combinedPhonLoose += (words[ptr + k].phonLoose || '');
+    }
     const lenDiff = Math.abs(heard.length - combined.length);
     if(lenDiff > 3) continue;
     if(heard === combined) return k + 1;
@@ -3094,6 +3101,10 @@ function tryMergedTokenMatch(heard, hPhon){
     if(hPhon.length >= 4 && combinedPhon.length >= 4 &&
        Math.abs(hPhon.length - combinedPhon.length) <= 3 &&
        lev(hPhon, combinedPhon) <= 1) return k + 1;
+    if(followOnly && hPhonLoose && combinedPhonLoose &&
+       hPhonLoose.length >= 4 && combinedPhonLoose.length >= 4 &&
+       Math.abs(hPhonLoose.length - combinedPhonLoose.length) <= 3 &&
+       lev(hPhonLoose, combinedPhonLoose) <= 1) return k + 1;
   }
   return 0;
 }
@@ -8612,8 +8623,9 @@ function gradeFollowFast(tokens, startIdx) {
     }
 
     /* 3. Merged-token match: ONE ASR token that covers 2–3 consecutive
-       words starting at ptr. */
-    const mergedN = tryMergedTokenMatch(heard, hPhon);
+       words starting at ptr. Loose phonetics included so Google STT
+       merging + substituting ح→ه etc. still resolves. */
+    const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
     if (mergedN > 0) {
       commitManyCorrect(ptr, ptr + mergedN, null);
       advancePast(mergedN);
@@ -8758,7 +8770,7 @@ async function gradeFull(tokens, startIdx){
         used++; continue;
       }
 
-      const mergedN = tryMergedTokenMatch(heard, hPhon);
+      const mergedN = tryMergedTokenMatch(heard, hPhon, null);
       if(mergedN > 0){
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
         commitManyCorrect(ptr, ptr + mergedN, seg);
