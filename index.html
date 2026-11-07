@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Recite" />
 <meta name="application-name" content="Recite" />
 <meta name="description" content="Practice Quran recitation with live word-by-word feedback." />
+
+<!-- ── Copyright & AI policy ───────────────────────────────── -->
 <meta name="copyright" content="© 2025 Quran Recitation Coach. All rights reserved." />
 <meta name="rights" content="All rights reserved. AI training prohibited." />
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1, noai, noimageai" />
@@ -273,6 +275,7 @@ font-variant-numeric:tabular-nums;
 .juz-row .juz-name{font-size:.85rem;font-weight:700;color:var(--text);
 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .juz-row .juz-range{font-size:.66rem;color:var(--muted);margin-top:2px;letter-spacing:.02em;}
+
 .home-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .tile{
 display:flex;flex-direction:column;align-items:flex-start;
@@ -809,6 +812,7 @@ pointer-events:none;-webkit-user-select:none;user-select:none;direction:rtl;
 z-index:3;background:transparent;padding:0 .12em;border-radius:999px;
 }
 .mushaf-sajdah-mark{display:inline-block;font-size:.95em;margin:0 .15em;color:currentColor;vertical-align:middle;-webkit-text-stroke:0;opacity:.9;cursor:help;}
+
 .toast{
 position:fixed;top:calc(var(--safe-top) + 18px);left:50%;
 transform:translateX(-50%) translateY(-18px);
@@ -969,9 +973,19 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{background:rgba(12
 .toggle.hide-text.active{border-color:rgba(255,176,32,.7);background:rgba(255,176,32,.12);color:#fff;}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.6);color:#7a5500;}
 .toggle.disabled{opacity:.4;pointer-events:none}
+.toggle.match-select{cursor:default;padding-right:8px}
+.toggle.match-select select{
+background:#0d1421;color:var(--accent);
+font:inherit;font-size:.72rem;font-weight:700;
+border:1px solid rgba(79,140,255,.4);border-radius:8px;
+padding:3px 6px;margin:0;outline:none;-webkit-appearance:none;appearance:none;
+cursor:pointer;padding-right:18px;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%234f8cff' d='M4 5L0 0h8z'/%3E%3C/svg%3E");
+background-repeat:no-repeat;background-position:right 5px center;
+}
+.toggle.match-select select option{background:#1b2436;color:#fff}
 .toggles{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
 .toggles::-webkit-scrollbar{display:none}
-
 .barwrap{height:5px;background:#0b101b;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .bar{height:100%;width:0%;background:linear-gradient(90deg,#4f8cff,#2fd07a);transition:width .3s}
 .hud{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
@@ -1003,7 +1017,7 @@ font-size:.76rem;direction:ltr;animation:slide-in .22s ease;min-height:32px;
 .mistakes-list .correct{font-family:'Amiri','Amiri Quran',serif;font-size:1.15rem;color:#fff;direction:rtl;flex-shrink:0;}
 .mistakes-list .heard{color:var(--muted);font-family:'Amiri','Amiri Quran',serif;font-size:.95rem;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .mistakes-list .meta{margin-left:auto;color:var(--muted);font-size:.65rem;white-space:nowrap;flex-shrink:0;font-family:-apple-system,sans-serif;}
-.mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;cursor:help;}
+.mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;}
 body.light-mode .mistakes-list .tj-kind{background:rgba(120,80,220,.16);border-color:rgba(120,80,220,.55);color:#5b2d9e;}
 @keyframes slide-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
@@ -1069,58 +1083,17 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.error{background:rgba(255,90,106,.22);color:#ff9aa4;text-decoration:underline wavy var(--bad);text-underline-offset:8px;animation:shake .32s ease;}
 .w.skipped{background:rgba(255,176,32,.16);color:#ffcf6b;text-decoration:line-through;text-decoration-color:var(--warn);}
 .w.model{background:rgba(255,176,32,.3);color:#fff}
-.w.warned{text-decoration:underline dotted var(--warn);text-underline-offset:6px;background:rgba(255,176,32,.08);}
+.w.warned{color:var(--warn) !important;text-decoration:underline dotted var(--warn);text-underline-offset:6px;background:rgba(255,176,32,.08);}
 .w-deco{display:inline-block;padding:0 3px;opacity:.9;pointer-events:none;cursor:default;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @keyframes locatePulse{0%{background:rgba(79,140,255,.55);box-shadow:0 0 0 0 rgba(79,140,255,.6);color:#fff}100%{background:transparent;box-shadow:0 0 0 18px rgba(79,140,255,0);color:var(--text)}}
 .w.located{animation:locatePulse .9s ease}
-
-body.hide-text-mode .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
-body.hide-text-mode .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
-body.hide-text-mode .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
-body.hide-text-mode .w.current{color: transparent !important;background: transparent !important;box-shadow: none !important;}
-body.hide-text-mode .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
+body.hide-text-mode:not(.viewer-open) .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
+body.hide-text-mode:not(.viewer-open) .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
+body.hide-text-mode:not(.viewer-open) .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
+body.hide-text-mode:not(.viewer-open) .w.current{color: transparent !important;background: transparent !important;box-shadow: none !important;}
+body.hide-text-mode:not(.viewer-open) .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
 body.hide-text-mode:not(.viewer-open) .mushaf::after{content: "🙈 Text hidden — recite from memory. Words appear as you go.";display:block;direction:ltr;font-family:-apple-system,sans-serif;font-size:.72rem;color:var(--muted);text-align:center;padding:16px 8px 4px;letter-spacing:.02em;opacity:.75;}
-
-body.hide-text-mode.reveal-all-text .w:not(.revealed){
-  color: var(--text) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  text-decoration-color: transparent !important;
-  text-shadow: none !important;
-}
-body.hide-text-mode.reveal-all-text .w.current{
-  color: #fff !important;
-  background: linear-gradient(180deg,#5c96ff,#3a72e6) !important;
-  box-shadow: 0 0 0 3px rgba(79,140,255,.2), 0 4px 12px rgba(79,140,255,.3) !important;
-}
-body.hide-text-mode.reveal-all-text .w.skipped{
-  color:#ffcf6b !important;
-  background:rgba(255,176,32,.18) !important;
-  text-decoration:line-through !important;
-  text-decoration-color:var(--warn) !important;
-}
-body.hide-text-mode.reveal-all-text:not(.viewer-open) .mushaf::after{
-  display:none !important;
-}
-
-body.viewer-read-mode.hide-text-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .w:not(.revealed){
-  color:transparent !important;
-  background:transparent !important;
-  box-shadow:none !important;
-  text-decoration:none !important;
-  -webkit-text-stroke:0 !important;
-}
-body.viewer-read-mode.hide-text-mode.reveal-all-text .qv-slot .mushaf.mushaf-book .mushaf-book-content .w:not(.revealed){
-  color:inherit !important;
-  -webkit-text-stroke:0 !important;
-}
-body.viewer-read-mode.hide-text-mode.reveal-all-text .qv-slot .mushaf.mushaf-book .mushaf-book-content .w.current:not(.revealed){
-  color:#fff !important;
-  background:linear-gradient(180deg,#5c96ff,#3a72e6) !important;
-  box-shadow:0 0 0 3px rgba(79,140,255,.2), 0 4px 12px rgba(79,140,255,.3) !important;
-}
-
 .ayah-num{display:inline-block;font-family:-apple-system,sans-serif;font-size:.42em;vertical-align:middle;color:#cbd6ea;background:#1c2740;border:1px solid #2b3a55;border-radius:999px;padding:2px 9px;margin:0 8px;direction:ltr;}
 .loading{direction:ltr;text-align:center;color:var(--muted);font-family:-apple-system,sans-serif;font-size:.9rem;font-weight:400;padding:42px 20px;line-height:1.6;}
 .loading .err{color:var(--bad);font-weight:600;display:block;margin-bottom:8px}
@@ -1183,6 +1156,7 @@ body.light-mode .qr-fullscreen{background:radial-gradient(900px 500px at 50% -16
 .qr-hint{font-size:.72rem;color:#6b7280;font-weight:600;line-height:1.4}
 .qr-close{width:100%;height:50px;margin-top:2px;background:#111827;color:#fff;border:none;border-radius:14px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;transition:transform .12s, filter .15s;}
 .qr-close:active{transform:scale(.98);filter:brightness(1.15)}
+
 body.immersive .hide-immersive{display:none !important}
 body.immersive{padding-top:calc(var(--safe-top) + 6px)}
 body.immersive .mushaf{max-height:calc(100vh - 180px - var(--safe-top) - var(--safe-bottom));font-size:clamp(1.7rem,7.8vw,2.2rem);}
@@ -1211,42 +1185,6 @@ max-width:calc(100vw - 16px);
 .fs-controls .fs-sep{width:1px;height:24px;background:rgba(255,255,255,.12);margin:0 1px;flex-shrink:0;}
 .fs-controls #fsMic.active-mic{color:var(--good);background:rgba(47,208,122,.15);border-color:rgba(47,208,122,.5);animation: fsMicPulse 1.6s infinite;}
 @keyframes fsMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(47,208,122,.35)}50%{box-shadow:0 0 0 8px rgba(47,208,122,0)}}
-
-.fs-controls .fs-text-tab{
-  width:auto;min-width:0;padding:0 12px;height:36px;
-  border-radius:999px;flex-shrink:0;white-space:nowrap;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--gold,#d4af37);
-  background:rgba(212,175,55,.10);
-  border:1px solid rgba(212,175,55,.45);
-  transition:background .2s, border-color .2s, color .2s, transform .12s, box-shadow .2s;
-}
-.fs-controls .fs-text-tab:active{ transform:scale(.95) }
-.fs-controls .fs-text-tab.active{
-  background:rgba(212,175,55,.22);
-  border-color:rgba(212,175,55,.75);
-  color:#fff;
-  box-shadow:0 4px 14px rgba(212,175,55,.32);
-}
-body.light-mode .fs-controls .fs-text-tab{
-  color:#a67c00;background:rgba(166,124,0,.08);border-color:rgba(166,124,0,.40);
-}
-body.light-mode .fs-controls .fs-text-tab.active{
-  background:rgba(166,124,0,.20);border-color:rgba(166,124,0,.70);color:#1a2233;
-}
-@media (max-width:420px){
-  .fs-controls{gap:3px;padding:6px 8px}
-  .fs-controls button{width:40px;height:40px;font-size:.9rem}
-  .fs-controls .fs-text-tab{padding:0 9px;font-size:.58rem;height:32px;letter-spacing:.04em}
-  .fs-controls .fs-sep{height:20px;margin:0}
-}
-@media (max-width:360px){
-  .fs-controls{gap:2px;padding:5px 6px}
-  .fs-controls button{width:36px;height:36px;font-size:.85rem}
-  .fs-controls .fs-text-tab{padding:0 7px;font-size:.55rem;height:30px;letter-spacing:.03em}
-}
-
 .fs-badge{position:fixed;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%);z-index:200;background:rgba(17,24,39,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.03em;opacity:0;pointer-events:none;transition:opacity .3s;max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fs-badge.visible{opacity:1}
 .fs-badge .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle;}
@@ -1297,6 +1235,8 @@ body.light-mode .stat{background:#eef2f8}
 body.light-mode input[type=number]{background:#ffffff;color:var(--text)}
 body.light-mode .toggle{background:#eef2f8;color:var(--muted)}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);color:var(--warn)}
+body.light-mode .toggle.match-select select{background:#ffffff;color:var(--accent)}
+body.light-mode .toggle.match-select select option{background:#ffffff;color:var(--text)}
 body.light-mode button.ghost{background:#eef2f8}
 body.light-mode .mushaf{background:linear-gradient(180deg,#ffffff,#f0f4fb)}
 body.light-mode .mushaf::-webkit-scrollbar-thumb{background:#c8d3e6}
@@ -1883,10 +1823,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-radius: 4px;
 }
 
-.w[title] { cursor: help; }
-.w[title]:active { filter: brightness(1.25); }
-body.light-mode .w[title]:active { filter: brightness(0.85); }
-
 #tajweedNoiseChip {
   color: var(--warn);
   border-color: rgba(255,176,32,.6);
@@ -1901,6 +1837,7 @@ body.light-mode #tajweedNoiseChip {
   background: rgba(198,138,0,.1);
 }
 
+/* ── Tajweed readiness chip ─────────────────────────────── */
 #tajweedStatusChip{
   cursor: pointer;
   user-select: none;
@@ -1950,6 +1887,7 @@ body.light-mode #tajweedStatusChip.tj-status-error{
   background: rgba(198,138,0,.10);
 }
 
+/* ── AI block overlay ─────────────────────────────────────── */
 #aiBlockOverlay { display: none; }
 html.ai-blocked body > *:not(#aiBlockOverlay) { display: none !important; }
 html.ai-blocked #aiBlockOverlay {
@@ -1967,6 +1905,7 @@ html.ai-blocked #aiBlockOverlay p  { line-height: 1.6; color: #8f9bb3; margin: 0
 html.ai-blocked #aiBlockOverlay small { font-size: .8rem; color: #5a6884; }
 html.ai-blocked #aiBlockOverlay code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: .85em; }
 
+/* ── Copyright footer ─────────────────────────────────────── */
 .copyright-footer {
   text-align: center;
   padding: 14px 8px 6px;
@@ -1993,13 +1932,41 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
 </head>
 <body>
 
+<!-- ── AI crawler blocker ───────────────────────────────────── -->
 <script>
 (function () {
   'use strict';
-  var SAFE_BOTS = ['googlebot', 'google-inspectiontool', 'storebot-google', 'bingbot', 'msnbot', 'vercel', 'vercel-screenshot', 'vercel-analytics', 'vercelbot', 'duckduckbot', 'yandex', 'baiduspider', 'slurp', 'applebot', 'facebookexternalhit'];
-  var AI_BOTS = ['gptbot', 'chatgpt-user', 'oai-searchbot', 'ccbot', 'google-cloudvertexbot', 'googleother', 'anthropic-ai', 'claudebot', 'claude-web', 'perplexitybot', 'cohere-ai', 'cohere-ai-training', 'bytespider', 'imagesiftbot', 'img2dataset', 'omgilibot', 'omgili', 'diffbot', 'youbot', 'timpibot', 'amazonbot', 'meta-externalagent', 'meta-externalfetcher', 'facebookbot'];
+
+  var SAFE_BOTS = [
+    'googlebot', 'google-inspectiontool', 'storebot-google',
+    'bingbot', 'msnbot',
+    'vercel', 'vercel-screenshot', 'vercel-analytics', 'vercelbot',
+    'duckduckbot', 'yandex', 'baiduspider', 'slurp',
+    'applebot', 'facebookexternalhit'
+  ];
+
+  var AI_BOTS = [
+    'gptbot', 'chatgpt-user', 'oai-searchbot',
+    'ccbot',
+    'google-cloudvertexbot', 'googleother',
+    'anthropic-ai', 'claudebot', 'claude-web',
+    'perplexitybot',
+    'cohere-ai', 'cohere-ai-training',
+    'bytespider',
+    'imagesiftbot', 'img2dataset',
+    'omgilibot', 'omgili', 'diffbot', 'youbot',
+    'timpibot',
+    'amazonbot',
+    'meta-externalagent', 'meta-externalfetcher',
+    'facebookbot'
+  ];
+
   var ua = (navigator.userAgent || '').toLowerCase();
-  for (var i = 0; i < SAFE_BOTS.length; i++) if (ua.indexOf(SAFE_BOTS[i]) !== -1) return;
+
+  for (var i = 0; i < SAFE_BOTS.length; i++) {
+    if (ua.indexOf(SAFE_BOTS[i]) !== -1) return;
+  }
+
   for (var j = 0; j < AI_BOTS.length; j++) {
     if (ua.indexOf(AI_BOTS[j]) !== -1) {
       window.__AI_BLOCKED__ = true;
@@ -2155,6 +2122,7 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   </section>
 
 </div>
+
 <div class="app screen" id="screenSurahIndex" hidden>
   <div class="sub-header">
     <button id="backFromIndex" class="back-pill" type="button" aria-label="Back to home">Back</button>
@@ -2284,6 +2252,12 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   <div class="toggles hide-immersive">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
+    <label class="toggle match-select" id="matchChip" hidden>
+      🤝 Match
+      <select id="selMatch" aria-label="Pronunciation matching strictness" disabled>
+        <option value="strict" selected>Strict</option>
+      </select>
+    </label>
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
     <span class="toggle" id="tajweedNoiseChip" hidden>
@@ -2453,7 +2427,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   <button id="fsPause" aria-label="Pause">⏸</button>
   <button id="fsContinue" aria-label="Continue">▶</button>
   <button id="fsStop" aria-label="Stop">⏹</button>
-  <button id="fsReveal" class="fs-text-tab" type="button" style="display:none" aria-label="Reveal text">Reveal text</button>
   <span class="fs-sep"></span>
   <button id="fsMinimize" aria-label="Minimise fullscreen">⤡</button>
 </div>
@@ -2475,6 +2448,7 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     <button class="qr-close" id="qrCloseBtn" type="button">Close</button>
   </div>
 </div>
+
 <script>
 /* ── Copyright gate — bots never run app code ──────────────── */
 if (window.__AI_BLOCKED__) throw new Error('[Copyright] AI crawler detected — app initialisation skipped.');
@@ -2510,9 +2484,10 @@ const surahCountEl   = document.getElementById('surahCount');
 const fullscreenBtn  = document.getElementById('btnFullscreen');
 const themeBtn       = document.getElementById('btnTheme');
 const infoBtn        = document.getElementById('btnInfo');
+const selMatch       = document.getElementById('selMatch');
+const matchChip      = document.getElementById('matchChip');
 const chkHideText    = document.getElementById('chkHideText');
 const hideTextChip   = document.getElementById('hideTextChip');
-const fsRevealBtn    = document.getElementById('fsReveal');
 const modeFollowBtn  = document.getElementById('modeFollowBtn');
 const modeTajweedBtn = document.getElementById('modeTajweedBtn');
 const supportBox     = document.getElementById('support');
@@ -2720,18 +2695,8 @@ const SPEECH_LANG = 'ar-SA';
 
 const TASHKEEL = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\uFEFF\u0640]/g;
 
-const STRICT_FEATURES = {
-  madd:      () => localStorage.getItem('qc.strictMadd')           !== '0',
-  ghunnah:   () => localStorage.getItem('qc.strictGhunnah')        !== '0',
-  laam:      () => localStorage.getItem('qc.strictLaamShamsiyyah') !== '0',
-  emphatics: () => localStorage.getItem('qc.strictEmphatics')      !== '0',
-  silent:    () => localStorage.getItem('qc.strictSilent')         === '1',
-  hamWasl:   () => localStorage.getItem('qc.strictHamWasl')        !== '0'
-};
-
 function normAr(s){
-  return String(s).normalize('NFKC')
-    .replace(TASHKEEL,'')
+  return String(s).replace(TASHKEEL,'')
     .replace(/\u0671/g,'\u0627')
     .replace(/[\u0622\u0623\u0625\u0672\u0673]/g,'\u0627')
     .replace(/\u0629/g,'\u0647')
@@ -2760,18 +2725,6 @@ const PHON = {
 const PHON_LOOSE = Object.assign({}, PHON, {
   '\u062D':'\u0647','\u062E':'\u0647','\u063A':'\u0642','\u0639':'\u0621'
 });
-
-const EMPHATIC_FAMILY = {
-  '\u0635': '\u0633',
-  '\u0636': '\u062F',
-  '\u0637': '\u062A',
-  '\u0638': '\u0630',
-  '\u0642': '\u0643',
-  '\u062D': '\u0647',
-  '\u062E': '\u0647',
-  '\u0639': '\u0621',
-  '\u063A': '\u0642'
-};
 
 function phonNormAr(s){
   const n = normArCached(s);
@@ -2862,12 +2815,10 @@ function gregorianToHijri(date){
   return jdnToHijri(jdn);
 }
 
-/* ── Follow mode is now permanently locked to "strict" ─────── */
-const matchLevel = 'strict';
+let matchLevel = 'strict';
 
 let followOnly = localStorage.getItem('qc.followOnly') !== '0';
 let hideText   = localStorage.getItem('qc.hideText') === '1';
-let revealAllText = false;
 let beepOn     = !followOnly;
 let theme      = localStorage.getItem('qc.theme') || 'dark';
 
@@ -2981,86 +2932,49 @@ function lev(a, b){
   const hit = _levCache.get(key);
   if(hit !== undefined) return hit;
   const r = levBounded(a, b, LEV_CACHE_MAX);
-  if(_levCache.size >= _LEV_MAX){
-    let drop = _LEV_MAX >> 1;
-    let i = 0;
-    for(const k of _levCache.keys()){
-      if(i++ >= drop) break;
-      _levCache.delete(k);
-    }
-  }
+  if(_levCache.size >= _LEV_MAX) _levCache.clear();
   _levCache.set(key, r);
   return r;
 }
 
+function matchStrictness(){ return 'strict'; }
+
 const TOL_TABLE = {
-  strict: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2]
+  strict:   [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2]
 };
 function toleranceFor(L){
   const t = TOL_TABLE.strict;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
-function confidenceFloor(){ return 0.35; }
+const CONF_FLOOR_TABLE = { strict: 0.35 };
+function confidenceFloor(){ return CONF_FLOOR_TABLE.strict; }
 
 const NOISE_LIMIT_TABLE = { strict: 2 };
 function noiseLimit(){ return NOISE_LIMIT_TABLE.strict; }
 
-function isMatchWord(hNorm, hPhon, hPhonLoose, w){
+function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const wNorm = w.norm;
   const la = hNorm.length, lb = wNorm.length;
   if(Math.abs(la - lb) > 4) return false;
   if(hNorm === wNorm) return true;
   const L = la > lb ? la : lb;
   if(L < 2) return false;
-
-  const extraTol = 0;
-  const tol = toleranceFor(L) + extraTol;
-
+  const tol = toleranceFor(L);
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
   if(lev(hNorm, wNorm) <= tol) return true;
-
-  const phonMinLen = followOnly ? 2 : 3;
-  if(hPhon.length >= phonMinLen && w.phon.length >= phonMinLen){
+  if(hPhon.length >= 3 && w.phon.length >= 3){
     if(lev(hPhon, w.phon) <= tol) return true;
   }
-
-  /* Tier 3 — loose phonetics (Follow mode only). Compensates for Google
-     STT substitutions that native-speech models rarely make:
-     ح → ه, خ → ه, غ → ق, ع → ء. */
-  if(followOnly && hPhonLoose && w.phonLoose &&
-     hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
-     lev(hPhonLoose, w.phonLoose) <= tol){
-    return true;
-  }
-
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
-    const prefixThreshold = followOnly ? 0.85 : 0.70;
-    if(S / L >= prefixThreshold){
+    if(S / L >= 0.85){
       if(hNorm.startsWith(wNorm) || wNorm.startsWith(hNorm)) return true;
       if(hNorm.endsWith(wNorm)   || wNorm.endsWith(hNorm))   return true;
     }
   }
   return false;
-}
-
-/* Follow-mode bridge for the Arabic definite article ال. Google frequently
-   inserts or drops it on fluent recitation ("الشَّمْس" ↔ "شمس"); this keeps
-   the highlight advancing without loosening Tajweed mode. */
-function followAlPrefixMatch(heard, w){
-  if(!followOnly) return false;
-  if(!heard || !w || !w.norm) return false;
-  const wNorm = w.norm;
-  const hHasAl = heard.startsWith('ال');
-  const wHasAl = wNorm.startsWith('ال');
-  if(hHasAl === wHasAl) return false;
-  const hBase = hHasAl ? heard.slice(2) : heard;
-  const wBase = wHasAl ? wNorm.slice(2) : wNorm;
-  if(hBase.length < 3 || wBase.length < 3) return false;
-  if(hBase.length > 10 || wBase.length > 10) return false;
-  return lev(hBase, wBase) <= toleranceFor(Math.max(hBase.length, wBase.length));
 }
 
 function isPlausiblePronunciationAttempt(heard, hPhon, w){
@@ -3071,36 +2985,27 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(heardLen < 2 && targetLen > 1) return false;
 
   const ratio = heardLen / targetLen;
-  const minRatio = followOnly ? 0.35 : 0.25;
-  const maxRatio = followOnly ? 2.5 : 3.5;
-  if(ratio < minRatio || ratio > maxRatio) return false;
+  if(ratio < 0.35 || ratio > 2.5) return false;
 
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
 
-  if(lev(heard, w.norm) <= tol + (followOnly ? 2 : 3)) return true;
+  if(lev(heard, w.norm) <= tol + 2) return true;
 
   if(hPhon.length >= 2 && w.phon.length >= 2 &&
-     lev(hPhon, w.phon) <= tol + (followOnly ? 1 : 2)) return true;
+     lev(hPhon, w.phon) <= tol + 1) return true;
 
   return false;
 }
 
-/* Merged-token matcher — a single ASR token that spans 2–3 consecutive
-   words. Strict phonetics are always tried; the loose-phonetic tier is
-   added only when followOnly is true, so Tajweed mode keeps its strictness. */
-function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
+function tryMergedTokenMatch(heard, hPhon){
   if(ptr >= words.length) return 0;
   if(heard.length <= words[ptr].norm.length + 1) return 0;
-  let combined          = words[ptr].norm;
-  let combinedPhon      = words[ptr].phon;
-  let combinedPhonLoose = followOnly ? (words[ptr].phonLoose || '') : null;
+  let combined     = words[ptr].norm;
+  let combinedPhon = words[ptr].phon;
   for(let k = 1; k < 3 && ptr + k < words.length; k++){
     combined     += words[ptr + k].norm;
     combinedPhon += words[ptr + k].phon;
-    if(followOnly && combinedPhonLoose !== null){
-      combinedPhonLoose += (words[ptr + k].phonLoose || '');
-    }
     const lenDiff = Math.abs(heard.length - combined.length);
     if(lenDiff > 3) continue;
     if(heard === combined) return k + 1;
@@ -3108,10 +3013,6 @@ function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
     if(hPhon.length >= 4 && combinedPhon.length >= 4 &&
        Math.abs(hPhon.length - combinedPhon.length) <= 3 &&
        lev(hPhon, combinedPhon) <= 1) return k + 1;
-    if(followOnly && hPhonLoose && combinedPhonLoose &&
-       hPhonLoose.length >= 4 && combinedPhonLoose.length >= 4 &&
-       Math.abs(hPhonLoose.length - combinedPhonLoose.length) <= 3 &&
-       lev(hPhonLoose, combinedPhonLoose) <= 1) return k + 1;
   }
   return 0;
 }
@@ -3812,6 +3713,7 @@ const QRGen = (function(){
 
   return { encode: encode, toSvg: toSvg };
 })();
+
 let words=[], ptr=0, errors=0, finished=false;
 let mode = 'page';
 let pageNum = 1;
@@ -3842,7 +3744,7 @@ let hudPending = false;
 
 let advanceTimes = [];
 let currentPaceWPS = 0;
-let adaptiveSilenceMs = 10000;
+let adaptiveSilenceMs = 6000;
 let pendingJumpTarget = -1;
 
 const REC_BUF_MAX = 24;
@@ -3869,15 +3771,9 @@ const rmsAnalyser = (function(){
   const samples = [];
   const MAX_AGE_MS = 8000;
   const SAMPLE_MS  = 30;
-  const SEG_OPEN_RATIO  = 1.5;
-  const SEG_CLOSE_RATIO = 0.8;
-  const SEG_CLOSE_HOLD  = 3;
-  const SEG_GAP_MS      = 60;
-  let MIN_RMS = 0.010;
-  const bandNoiseFloor = new Float32Array(6);
-  let _calibrated = false;
+  let MIN_RMS      = 0.010;
   let running = false, ctx = null, ctxOwned = false, source = null, analyser = null,
-      timeBuf = null, freqBuf = null, timer = null;
+      buffer = null, timer = null;
   let _lastCalibrationAt = 0;
 
   function calibrateMinRms(){
@@ -3892,94 +3788,18 @@ const rmsAnalyser = (function(){
     MIN_RMS = MIN_RMS * 0.7 + target * 0.3;
   }
 
-  function calibrateBandNoise(){
-    if (samples.length < 100) return;
-    const recent = samples.slice(-150);
-    const sorted = recent.slice().sort((a, b) => a.rms - b.rms);
-    const quiet = sorted.slice(0, Math.floor(sorted.length * 0.3));
-    if (!quiet.length) return;
-    for (let b = 0; b < 6; b++){
-      let sum = 0;
-      for (let i = 0; i < quiet.length; i++) sum += (quiet[i].bands[b] || 0);
-      bandNoiseFloor[b] = sum / quiet.length;
-    }
-    _calibrated = true;
-  }
-
-  function computeBands(dbBuf){
-    const N = dbBuf.length;
-    const nyq = (ctx ? ctx.sampleRate : 44100) / 2;
-    const binHz = nyq / N;
-    const edges = [0, 250, 400, 1000, 2000, 4000, 8000];
-    const bands = [0, 0, 0, 0, 0, 0];
-    let totalLin = 0, weighted = 0;
-    for (let i = 0; i < N; i++){
-      const hz = i * binHz;
-      const db = dbBuf[i];
-      const lin = db < -100 ? 0 : Math.pow(10, db / 20);
-      for (let b = 0; b < 6; b++){
-        if (hz >= edges[b] && hz < edges[b+1]){ bands[b] += lin; break; }
-      }
-      totalLin += lin;
-      weighted += lin * hz;
-    }
-    const centroid = totalLin > 1e-9 ? weighted / totalLin : 0;
-    let logSum = 0, nValid = 0;
-    for (let b = 0; b < 6; b++){
-      if (bands[b] > 1e-9){ logSum += Math.log(bands[b]); nValid++; }
-    }
-    const geoMean = nValid > 0 ? Math.exp(logSum / nValid) : 0;
-    const arithMean = bands.reduce((a, b) => a + b, 0) / 6 + 1e-12;
-    const flatness = arithMean > 0 ? geoMean / arithMean : 0;
-    return { bands, centroid, flatness };
-  }
-
-  function computeHarmonicity(tb){
-    const N = tb.length;
-    const sr = ctx ? ctx.sampleRate : 44100;
-    const decim = 4;
-    const D = Math.floor(N / decim);
-    if (D < 8) return 0;
-    const ds = new Float32Array(D);
-    for (let i = 0; i < D; i++) ds[i] = tb[i * decim];
-    const srD = sr / decim;
-    const lagMin = Math.max(1, Math.floor(srD / 400));
-    const lagMax = Math.min(D - 1, Math.floor(srD / 80));
-    if (lagMax <= lagMin) return 0;
-    let r0 = 0;
-    for (let i = 0; i < D; i++) r0 += ds[i] * ds[i];
-    if (r0 < 1e-9) return 0;
-    let best = 0;
-    for (let lag = lagMin; lag <= lagMax; lag++){
-      let r = 0;
-      for (let i = 0; i < D - lag; i++) r += ds[i] * ds[i + lag];
-      if (r > best) best = r;
-    }
-    return Math.min(1, best / r0);
-  }
-
   function loop(){
     if (!running || !analyser) return;
     try{
-      analyser.getFloatTimeDomainData(timeBuf);
-      analyser.getFloatFrequencyData(freqBuf);
+      analyser.getFloatTimeDomainData(buffer);
       let sum = 0;
-      for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
-      const rms = Math.sqrt(sum / timeBuf.length);
+      for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
+      const rms = Math.sqrt(sum / buffer.length);
       const now = performance.now();
-      const b = computeBands(freqBuf);
-      const harm = computeHarmonicity(timeBuf);
-      samples.push({
-        t: now, rms,
-        bands: b.bands,
-        centroid: b.centroid,
-        flatness: b.flatness,
-        harmonicity: harm
-      });
+      samples.push({ t: now, rms });
       const cutoff = now - MAX_AGE_MS;
       while (samples.length && samples[0].t < cutoff) samples.shift();
       calibrateMinRms();
-      calibrateBandNoise();
     }catch(_){}
     timer = setTimeout(loop, SAMPLE_MS);
   }
@@ -3988,8 +3808,10 @@ const rmsAnalyser = (function(){
     if (running) return true;
     if (!stream) return false;
     try{
+      // Prefer the shared AudioContext from unlockAudio() — critical on iOS
+      // Safari where AudioContext.resume() must run inside a user gesture.
       const shared = window.__sharedAudioCtx;
-      if (shared && shared.state === 'running'){
+      if (shared && shared.state === 'running') {
         ctx = shared;
         ctxOwned = false;
       } else {
@@ -4005,18 +3827,17 @@ const rmsAnalyser = (function(){
       }
       source   = ctx.createMediaStreamSource(stream);
       analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0;
+      analyser.fftSize = 512;
       source.connect(analyser);
-      timeBuf = new Float32Array(analyser.fftSize);
-      freqBuf = new Float32Array(analyser.frequencyBinCount);
+      buffer = new Float32Array(analyser.fftSize);
       running = true;
       loop();
       return true;
     }catch(e){
       console.warn('[RMS] start failed:', e);
+      // Only close ctx if we own it — never close the shared AudioContext.
       if (ctxOwned && ctx){ try{ ctx.close(); }catch(_){} }
-      ctx = null; source = null; analyser = null; timeBuf = null; freqBuf = null;
+      ctx = null; source = null; analyser = null; buffer = null;
       ctxOwned = false;
       running = false;
       return false;
@@ -4029,7 +3850,8 @@ const rmsAnalyser = (function(){
     if (source){ try{ source.disconnect(); }catch(_){} source = null; }
     if (analyser){ try{ analyser.disconnect(); }catch(_){} analyser = null; }
     if (ctxOwned && ctx){ try{ ctx.close(); }catch(_){} }
-    ctx = null; ctxOwned = false;
+    ctx = null;
+    ctxOwned = false;
     samples.length = 0;
   }
 
@@ -4043,115 +3865,25 @@ const rmsAnalyser = (function(){
     return ms;
   }
 
+  // Returns true if the analyser is actually producing meaningful signal.
+  // Used to detect a dead analyser (e.g. iOS-suspended AudioContext, or a
+  // mic whose peak level never exceeds the noise floor) so callers can fall
+  // back to ASR-commit timing instead of getting all-zero durations and
+  // firing false Tajweed errors.
   function hasSignal(){
     if (!running) return false;
     const n = samples.length;
     if (n < 10) return false;
     const from = Math.max(0, n - 100);
     let maxRms = 0;
-    for (let i = from; i < n; i++) if (samples[i].rms > maxRms) maxRms = samples[i].rms;
+    for (let i = from; i < n; i++){
+      if (samples[i].rms > maxRms) maxRms = samples[i].rms;
+    }
     return maxRms >= MIN_RMS * 0.8;
-  }
-
-  function samplesIn(t0, t1){
-    if (!(t1 > t0)) return [];
-    const out = [];
-    for (let i = 0; i < samples.length; i++){
-      const s = samples[i];
-      if (s.t >= t0 && s.t <= t1) out.push(s);
-    }
-    return out;
-  }
-
-  function segments(t0, t1){
-    if (!(t1 > t0)) return [];
-    const list = samplesIn(t0, t1);
-    if (!list.length) return [];
-    const openT = MIN_RMS * SEG_OPEN_RATIO;
-    const closeT = MIN_RMS * SEG_CLOSE_RATIO;
-    const out = [];
-    let cur = null, closeCnt = 0;
-    for (let i = 0; i < list.length; i++){
-      const s = list[i];
-      if (!cur){
-        if (s.rms >= openT){ cur = { start: s.t, end: s.t, peakRms: s.rms }; closeCnt = 0; }
-      } else {
-        if (s.rms >= closeT){ cur.end = s.t; if (s.rms > cur.peakRms) cur.peakRms = s.rms; closeCnt = 0; }
-        else { closeCnt++; if (closeCnt >= SEG_CLOSE_HOLD){ out.push(cur); cur = null; closeCnt = 0; } }
-      }
-    }
-    if (cur) out.push(cur);
-    const merged = [];
-    for (let i = 0; i < out.length; i++){
-      const seg = out[i];
-      if (merged.length && seg.start - merged[merged.length-1].end < SEG_GAP_MS){
-        merged[merged.length-1].end = seg.end;
-        merged[merged.length-1].peakRms = Math.max(merged[merged.length-1].peakRms, seg.peakRms);
-      } else {
-        merged.push({ start: seg.start, end: seg.end, peakRms: seg.peakRms });
-      }
-    }
-    for (let i = 0; i < merged.length; i++) merged[i].durationMs = merged[i].end - merged[i].start;
-    return merged;
-  }
-
-  function segmentEndingBefore(t){
-    if (!samples.length) return null;
-    const segs = segments(0, t + 100);
-    return segs.length ? segs[segs.length - 1] : null;
-  }
-
-  function vowelRun(t0, t1){
-    if (!(t1 > t0)) return { durationMs: 0 };
-    const list = samplesIn(t0, t1);
-    if (!list.length) return { durationMs: 0 };
-    const threshold = MIN_RMS * 1.3;
-    let best = 0, run = 0;
-    for (let i = 0; i < list.length; i++){
-      const s = list[i];
-      if (s.rms > threshold && s.harmonicity > 0.5){ run += SAMPLE_MS; if (run > best) best = run; }
-      else run = 0;
-    }
-    return { durationMs: best };
-  }
-
-  function nasalRatio(t0, t1){
-    const list = samplesIn(t0, t1);
-    if (!list.length) return 0;
-    let sum = 0, n = 0;
-    for (let i = 0; i < list.length; i++){
-      const s = list[i];
-      if (s.rms < MIN_RMS * 1.2) continue;
-      const low = s.bands[1];
-      const tot = s.bands[0] + s.bands[1] + s.bands[2] + s.bands[3] + s.bands[4] + s.bands[5] + 1e-9;
-      if (tot > 0){ sum += low / tot; n++; }
-    }
-    return n > 0 ? sum / n : 0;
-  }
-
-  function onsetCentroid(t0, ms){
-    const list = samplesIn(t0, t0 + ms);
-    if (!list.length) return 0;
-    let sum = 0;
-    for (let i = 0; i < list.length; i++) sum += list[i].centroid;
-    return sum / list.length;
-  }
-
-  function meanCentroid(t0, t1){
-    const list = samplesIn(t0, t1);
-    if (!list.length) return 0;
-    let sum = 0;
-    for (let i = 0; i < list.length; i++) sum += list[i].centroid;
-    return sum / list.length;
   }
 
   return {
     start, stop, voiceDurationMs, hasSignal,
-    samplesIn, segments, segmentEndingBefore, vowelRun, nasalRatio,
-    onsetCentroid, meanCentroid,
-    bandNoiseFloor: () => bandNoiseFloor,
-    isCalibrated: () => _calibrated,
-    minRms: () => MIN_RMS,
     isRunning: () => running,
     sampleCount: () => samples.length
   };
@@ -4863,13 +4595,6 @@ async function applyTajweedColorsToCoach(){
       w.tjRules = parseTajweedWordRules(tWord.html);
       w.normNoSilent = tWord.normNoSilent || w.norm;
       if (w.tjRules) w.tjRules.normNoSilent = w.normNoSilent;
-      if (w.tjRules && w.tjRules.allRules && w.tjRules.allRules.length){
-        const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
-        if (tip){
-          w.el.title = tip;
-          w.el.setAttribute('aria-label', w.raw.replace(TASHKEEL, '') + ' — ' + tip);
-        }
-      }
       appliedCount++;
     });
 
@@ -4903,7 +4628,7 @@ function removeTajweedColorsFromCoach(){
     tjPill.setAttribute('aria-label', 'Tajweed mode');
   }
   if (!coachTajweedApplied) return;
-  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; w.el.removeAttribute('title'); w.el.removeAttribute('aria-label'); });
+  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; });
   coachTajweedApplied = false;
 }
 
@@ -4952,6 +4677,8 @@ const PACE_MIN_MS_PER_LETTER     = 60;
 const PACE_MAX_MS_PER_LETTER     = 800;
 const PACE_SAMPLE_MIN_MS         = 120;
 const PACE_SAMPLE_MAX_MS         = 5000;
+const END_OF_AYAH_MADD_CAP_MS    = 3500;
+const END_OF_AYAH_MADD_TOLERANCE = 0.90;
 
 const paceSamples = [];
 
@@ -4980,14 +4707,15 @@ function getBaseMsPerLetter(){
 
 function resetPaceSamples(){ paceSamples.length = 0; }
 
-function maddRequiredMs(kind){
-  const T_mora = getBaseMsPerLetter();
-  if (T_mora !== null){
-    const maddCount = MADD_COUNTS[kind] || 2;
-    return Math.round(T_mora * maddCount * 0.80);
-  }
-  const base = MADD_MIN_DELTA_MS[kind] || 0;
-  return Math.round(base * paceScale());
+function expectedEndOfAyahMaddMs(w){
+  const baseRate = getBaseMsPerLetter();
+  if (baseRate === null) return null;
+  const kind    = (w.tjRules && w.tjRules.madd) || 'normal';
+  const counts  = MADD_COUNTS[kind] || 2;
+  const letters = Math.max(1, w.norm ? w.norm.length : 1);
+  const expected = baseRate * (letters - 1 + counts);
+  const capped   = Math.min(END_OF_AYAH_MADD_CAP_MS, expected);
+  return Math.max(END_OF_AYAH_MADD_MIN_MS, capped * END_OF_AYAH_MADD_TOLERANCE);
 }
 
 const GHUNNAH_MIN_MS = {
@@ -5001,6 +4729,10 @@ const GHUNNAH_MIN_MS = {
 function paceScale(){
   if (!currentPaceWPS || currentPaceWPS <= 0) return 1.0;
   return Math.max(0.75, Math.min(1.6, 1.0 / currentPaceWPS));
+}
+function maddRequiredMs(kind){
+  const base = MADD_MIN_DELTA_MS[kind] || 0;
+  return Math.round(base * paceScale());
 }
 function ghunnahRequiredMs(kind){
   const base = (GHUNNAH_MIN_MS[kind] != null)
@@ -5017,28 +4749,6 @@ let silentWarned        = false;
 
 let batchTimingCtx = null;
 
-const TAJWEED_RULE_INFO = {
-  ham_wasl:             { name: 'Hamzat al-Wasl',            desc: 'connecting hamza — silent when joining speech' },
-  laam_shamsiyah:       { name: 'Laam Shamsiyyah',           desc: 'solar lām — assimilated into the following sun letter' },
-  madda_normal:         { name: 'Madd (normal)',             desc: 'elongated 2 morae' },
-  madda_permissible:    { name: 'Madd (permissible)',        desc: 'elongated 2, 4 or 6 morae' },
-  madda_necessary:      { name: 'Madd (necessary)',          desc: 'elongated 6 morae — obligatory' },
-  qalqalah:             { name: 'Qalqalah',                  desc: 'echo / bounce on ق ط ب ج د' },
-  ghunnah:              { name: 'Ghunnah',                   desc: 'nasalisation held ~2 counts on ن or م' },
-  ikhfa:                { name: 'Ikhfa',                     desc: 'partial nasalisation before certain letters' },
-  idghaam_ghunnah:      { name: 'Idghaam (with ghunnah)',    desc: 'merging with nasalisation' },
-  idghaam_no_ghunnah:   { name: 'Idghaam (no ghunnah)',      desc: 'merging without nasalisation' },
-  iqlab:                { name: 'Iqlab',                     desc: 'ن becomes م before ب' },
-  silent:               { name: 'Silent',                    desc: 'silent letter — not pronounced' }
-};
-function buildRuleTooltip(rules, sep){
-  if(!rules || !rules.length) return '';
-  return rules.map(r => {
-    const info = TAJWEED_RULE_INFO[r];
-    return info ? (info.name + ' — ' + info.desc) : r;
-  }).join(sep || '\n');
-}
-
 function parseTajweedWordRules(decoratedHtml){
   const rules = {
     madd: null,
@@ -5048,11 +4758,7 @@ function parseTajweedWordRules(decoratedHtml){
     hasSilent: false,
     ghunnahType: null,
     hasGhunnahContext: false,
-    normNoSilent: null,
-    laamShamsiyyahPositions: [],
-    hamWasl: false,
-    silentPositionsInNorm: [],
-    allRules: []
+    normNoSilent: null
   };
   if (!decoratedHtml) return rules;
 
@@ -5088,48 +4794,10 @@ function parseTajweedWordRules(decoratedHtml){
       const noSilentText = noSilentHtml.replace(/<[^>]*>/g, '');
       const ns = normArCached(noSilentText);
       if (ns) rules.normNoSilent = ns;
-      rules.silentPositionsInNorm = rules.silentLetters.slice();
     }
   }
-
-  if (decoratedHtml.indexOf('tj-laam_shamsiyah') !== -1) {
-    const lRe = /<span[^>]*class="(?:[^"]*\s)?tj-laam_shamsiyah(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g;
-    let m;
-    while ((m = lRe.exec(decoratedHtml)) !== null){
-      const n = normArCached(m[1]);
-      if (n) rules.laamShamsiyyahPositions.push(n);
-    }
-  }
-
-  if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) rules.hamWasl = true;
-
-  const seen = new Set();
-  const classRe = /class="([^"]*)"/g;
-  let cm;
-  while ((cm = classRe.exec(decoratedHtml)) !== null){
-    cm[1].split(/\s+/).forEach(c => {
-      if (c.startsWith('tj-') && TAJWEED_RULE_INFO[c.slice(3)]) seen.add(c.slice(3));
-    });
-  }
-  rules.allRules = Array.from(seen);
 
   return rules;
-}
-
-let _lastRuleExplainAt = 0;
-const RULE_EXPLAIN_THROTTLE_MS = 2000;
-function maybeExplainRules(w){
-  if(followOnly) return;
-  if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
-  const now = performance.now();
-  if(now - _lastRuleExplainAt < RULE_EXPLAIN_THROTTLE_MS) return;
-  _lastRuleExplainAt = now;
-  const explanation = buildRuleTooltip(w.tjRules.allRules, ' · ');
-  if(!explanation) return;
-  addFeedback(
-    '🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b> — ' + escapeHtml(explanation),
-    false, true
-  );
 }
 
 function strict1MaddOk(prevW, deltaMs){
@@ -5140,119 +4808,27 @@ function strict1MaddOk(prevW, deltaMs){
 
 function strict1GhunnahOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
-  if (!STRICT_FEATURES.ghunnah()) return true;
-
   const N = '\u0646', M = '\u0645';
-  const gType = w.tjRules.ghunnahType || 'ghunnah';
 
-  let textOk = true;
   if (w.tjRules.ghunnahLetters.length){
     const required = w.tjRules.ghunnahLetters.join('');
     for (let i = 0; i < required.length; i++){
       const ch = required[i];
-      if ((ch === N || ch === M) && heard.indexOf(ch) === -1){ textOk = false; break; }
+      if ((ch === N || ch === M) && heard.indexOf(ch) === -1) return false;
     }
-  } else if (gType === 'iqlab'){
-    textOk = heard.indexOf(M) !== -1;
-  } else if (gType === 'ikhfa'){
+    return true;
+  }
+
+  if (w.tjRules.ghunnahType === 'iqlab'){
+    return heard.indexOf(M) !== -1;
+  }
+  if (w.tjRules.ghunnahType === 'ikhfa'){
     const hasN = w.norm.indexOf(N) !== -1;
     const hasM = w.norm.indexOf(M) !== -1;
-    if (!hasN && !hasM) textOk = true;
-    else textOk = (hasN && heard.indexOf(N) !== -1) || (hasM && heard.indexOf(M) !== -1);
-  }
-
-  let spectralOk = true;
-  if (w.audio && rmsAnalyser.isRunning()){
-    const smp = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
-    spectralOk = nasalPresent(smp);
-  }
-
-  if (!spectralOk && !textOk){
-    markStrict1Error(w, 'ghunnah-' + gType, 'nasal murmur absent (text + spectrum)');
+    if (!hasN && !hasM) return true;
+    if (hasN && heard.indexOf(N) !== -1) return true;
+    if (hasM && heard.indexOf(M) !== -1) return true;
     return false;
-  }
-  if (!textOk && spectralOk){
-    markStrict1Warning(w, 'ghunnah-asr', 'ASR missed nasal, spectrum confirms');
-  }
-  return true;
-}
-
-function emphaticViolation(heardNorm, targetNorm){
-  const viol = [];
-  for (let i = 0; i < targetNorm.length; i++){
-    const ch = targetNorm[i];
-    const light = EMPHATIC_FAMILY[ch];
-    if (!light) continue;
-    if (heardNorm.indexOf(ch) !== -1) continue;
-    if (heardNorm.indexOf(light) !== -1) viol.push({ at: i, expected: ch, heard: light });
-  }
-  return viol;
-}
-
-function nasalPresent(samples){
-  if (!samples || samples.length < 4) return false;
-  let count = 0, total = 0;
-  const floor = rmsAnalyser.minRms();
-  const noiseBands = rmsAnalyser.bandNoiseFloor();
-  const hasCal = rmsAnalyser.isCalibrated();
-  for (let i = 0; i < samples.length; i++){
-    const s = samples[i];
-    if (s.rms < floor * 1.2) continue;
-    total++;
-    const lowNasal = s.bands[1];
-    const f1       = s.bands[2];
-    const highFreq = s.bands[4] + s.bands[5];
-    const totE     = lowNasal + f1 + highFreq + 1e-9;
-    const nasalDominance = lowNasal / totE;
-    const noiseFloorLow = hasCal ? (noiseBands[1] || 0) * 3 : 0;
-    if (nasalDominance > 0.45 && f1 / (lowNasal + 1e-9) < 1.4 && lowNasal > noiseFloorLow) count++;
-  }
-  return total > 3 && count / total > 0.55;
-}
-
-function countPeaks(samples, threshold, minSepMs){
-  if (!samples || !samples.length) return 0;
-  let peaks = 0;
-  let lastPeakT = -Infinity;
-  let prevRms = 0;
-  let rising = false;
-  for (let i = 0; i < samples.length; i++){
-    const s = samples[i];
-    if (s.rms > threshold && s.rms > prevRms) rising = true;
-    else if (rising && s.rms < prevRms){
-      if (s.t - lastPeakT >= minSepMs){ peaks++; lastPeakT = s.t; }
-      rising = false;
-    }
-    prevRms = s.rms;
-  }
-  return peaks;
-}
-
-function checkLaamShamsiyyah(w){
-  if (!w || !w.tjRules || !w.tjRules.laamShamsiyyahPositions.length) return true;
-  if (!STRICT_FEATURES.laam()) return true;
-  const seg = w.audio;
-  if (!seg || seg.durationMs < 120) return true;
-  const onsetC = rmsAnalyser.onsetCentroid(seg.start, 60);
-  const overallC = rmsAnalyser.meanCentroid(seg.start, seg.end);
-  if (onsetC > 0 && onsetC < 1500 && overallC > onsetC * 1.6){
-    markStrict1Error(w, 'silent-laam-shamsiyyah',
-      'solar laam voiced: onset centroid ' + Math.round(onsetC) + ' Hz');
-    return false;
-  }
-  return true;
-}
-
-function checkExtraSyllable(w){
-  if (!w || !w.tjRules || !w.tjRules.hasSilent) return true;
-  if (!STRICT_FEATURES.silent()) return true;
-  if (!w.audio) return true;
-  const env = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
-  const peaks = countPeaks(env, rmsAnalyser.minRms() * 0.5, 80);
-  const expected = w.norm.length >= 4 ? 2 : 1;
-  if (peaks > expected + 1){
-    markStrict1Warning(w, 'silent-extra-syllable',
-      peaks + ' energy peaks vs expected ' + expected);
   }
   return true;
 }
@@ -5288,12 +4864,6 @@ const TAJWEED_ERROR_NAMES = {
   'madd-normal':            'Madd (normal) — too short',
   'madd-permissible':       'Madd (permissible) — too short',
   'madd-necessary':         'Madd (necessary) — too short',
-  'madd-normal-end':        'Madd (normal) — end-of-ayah too short',
-  'madd-permissible-end':   'Madd (permissible) — end-of-ayah too short',
-  'madd-necessary-end':     'Madd (necessary) — end-of-ayah too short',
-  'madd-normal-timing':     'Madd (normal) — too short (timing)',
-  'madd-permissible-timing':'Madd (permissible) — too short (timing)',
-  'madd-necessary-timing':  'Madd (necessary) — too short (timing)',
   'madd-normal-batch':      'Madd (normal) — too short (fast batch)',
   'madd-permissible-batch': 'Madd (permissible) — too short (fast batch)',
   'madd-necessary-batch':   'Madd (necessary) — too short (fast batch)',
@@ -5311,41 +4881,17 @@ const TAJWEED_ERROR_NAMES = {
   'ghunnah-length-ikhfa-batch':           'Ikhfa — too short (fast batch)',
   'ghunnah-length-idghaam_ghunnah-batch': 'Idghaam (with ghunnah) — too short (fast batch)',
   'ghunnah-length-iqlab-batch':           'Iqlab — too short (fast batch)',
-  'ghunnah-asr':             'Ghunnah confirmed by spectrum (ASR missed it)',
 
-  'silent':                     'Silent letter — pronounced',
-  'silent-laam-shamsiyyah':     'Solar lām — voiced instead of assimilated',
-  'silent-extra-syllable':      'Extra syllable (silent letter voiced)',
-
-  'hamzat-al-wasl':   'Hamzat al-Wasl — re-attacked (glottal stop inserted)',
-  'nasal-dropped':    'Nasal letter dropped in transcript',
-
-  'emphatic-ص': 'Ṣād (ص) sounded as Sīn (س)',
-  'emphatic-ض': 'Ḍād (ض) sounded as Dāl (د)',
-  'emphatic-ط': 'Ṭāʾ (ط) sounded as Tāʾ (ت)',
-  'emphatic-ظ': 'Ẓāʾ (ظ) sounded as Dhāl (ذ)',
-  'emphatic-ق': 'Qāf (ق) sounded as Kāf (ك)',
-  'emphatic-ح': 'Ḥāʾ (ح) sounded as Hāʾ (ه)',
-  'emphatic-خ': 'Khāʾ (خ) sounded as Hāʾ (ه)',
-  'emphatic-ع': 'ʿAyn (ع) sounded as Hamza (ء)',
-  'emphatic-غ': 'Ghayn (غ) sounded as Qāf (ق)'
+  'silent':   'Silent letter — pronounced'
 };
 
 function markStrict1Error(w, kind, detail){
   if (!w) return;
-  if (w._tajweedErrs && w._tajweedErrs.has(kind)) return;
-  if (!w._tajweedErrs) w._tajweedErrs = new Set();
-  w._tajweedErrs.add(kind);
-
-  if (!w.el.classList.contains('error')) w.el.className = 'w error';
+  if (w.el.classList.contains('error')) return;
+  w.el.className = 'w error';
   errors++;
 
   const tajweedName = TAJWEED_ERROR_NAMES[kind] || ('Tajweed — ' + kind);
-  const rule = kind.split('-')[0];
-  const ruleInfo = TAJWEED_RULE_INFO[rule];
-  const tajweedExplanation = ruleInfo
-    ? (ruleInfo.name + ' — ' + ruleInfo.desc)
-    : tajweedName;
 
   const m = {
     idx: mistakeCounter++,
@@ -5354,8 +4900,7 @@ function markStrict1Error(w, kind, detail){
     verse: w.verse,
     kind: 'tajweed-' + kind,
     tajweedType: kind,
-    tajweedName: tajweedName,
-    tajweedExplanation: tajweedExplanation
+    tajweedName: tajweedName
   };
   mistakes.push(m); appendMistake(m); scheduleHUD();
   if (beepOn) beepThrottled('error');
@@ -5375,19 +4920,12 @@ function markStrict1Error(w, kind, detail){
 function markStrict1Warning(w, kind, detail){
   if (!w) return;
   if (w.el.classList.contains('warned') || w.el.classList.contains('error')) return;
-
-  w.el.classList.add('warned');
-  if (!w.el.classList.contains('correct') && !w.el.classList.contains('corrected')) {
-      w.el.classList.add('correct');
-  }
-
+  w.el.className = 'w warned';
   if (!silentWarned){
     silentWarned = true;
     addFeedback('⚠️ <b>' + w.raw.replace(TASHKEEL,'') + '</b> — ' + detail, false, true);
   }
 }
-
-let prevWordAudio = null;
 
 function runStrict1Checks(idx, heard, opts){
   opts = opts || {};
@@ -5405,63 +4943,62 @@ function runStrict1Checks(idx, heard, opts){
       lastDirectCommitIdx >= 0 &&
       idx === lastDirectCommitIdx + 1 &&
       !prevInSameBatch){
+    // rmsAvailable is TRUE only when the analyser is running AND has actually
+    // collected a non-zero signal. On iOS Safari a suspended AudioContext or
+    // a mic whose peak never crosses the noise floor would leave every sample
+    // at 0.0, so gate on hasSignal() to fall back to ASR timing in that case
+    // rather than emitting 0 ms durations (which fire false Tajweed errors).
     const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5 && rmsAnalyser.hasSignal();
     const asrMs = now - lastDirectCommitAt;
     const nextW = words[idx + 1];
     const isEndOfAyah = !nextW || nextW.verse !== w.verse;
 
-    if (w.tjRules && w.tjRules.madd && STRICT_FEATURES.madd()){
-      const kind = w.tjRules.madd;
-      const T_mora = getBaseMsPerLetter();
-      const maddCount = MADD_COUNTS[kind] || 2;
-
-      if (rmsAvailable && w.audio && w.audio.durationMs >= 40){
-        const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
-        const vowelMs = vr.durationMs;
-        let required;
-        if (isEndOfAyah){
-          required = T_mora !== null ? 2 * T_mora * 0.85 : END_OF_AYAH_MADD_MIN_MS;
+    if (w.tjRules && w.tjRules.madd){
+      let required;
+      let effectiveMs;
+      let measurementKind;
+      if (isEndOfAyah && rmsAvailable){
+        effectiveMs = rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now);
+        measurementKind = 'voice';
+        const autoRequired = expectedEndOfAyahMaddMs(w);
+        if (autoRequired !== null){
+          required = autoRequired;
+          measurementKind = 'voice+pace';
         } else {
-          required = T_mora !== null ? T_mora * maddCount * 0.80 : (MADD_MIN_DELTA_MS[kind] || 0);
-        }
-        const minSegMs = w.norm.length * (T_mora !== null ? T_mora : 100) * 0.6;
-        if (w.audio.durationMs < minSegMs){
-          // Segment likely split mid-word; skip madd check to avoid false positive.
-        } else if (vowelMs < required){
-          const tag = 'madd-' + kind + (isEndOfAyah ? '-end' : '');
-          markStrict1Error(w, tag,
-            'vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
-            (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : ''));
+          required = END_OF_AYAH_MADD_MIN_MS;
         }
       } else {
-        const required = maddRequiredMs(kind);
-        if (asrMs < required){
-          markStrict1Error(w, 'madd-' + kind + '-timing',
-            'timing ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
-        }
-      }
-    }
-
-    if (w.tjRules && w.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
-      const gType = w.tjRules.ghunnahType || 'ghunnah';
-      const required = ghunnahRequiredMs(gType);
-      let effectiveMs = 0, source = 'timing';
-      if (rmsAvailable && w.audio){
-        effectiveMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
-        source = 'voice';
-      } else {
-        effectiveMs = Math.round(asrMs);
+        required = maddRequiredMs(w.tjRules.madd);
+        effectiveMs = asrMs;
+        measurementKind = 'timing';
       }
       if (effectiveMs < required){
-        markStrict1Error(w, 'ghunnah-length-' + gType,
-          source + ' nasalisation ' + Math.round(effectiveMs) + ' ms < ' + Math.round(required) + ' ms');
+        const maddKind = w.tjRules.madd || 'normal';
+        markStrict1Error(w, 'madd-' + maddKind,
+          measurementKind + ' ' + Math.round(effectiveMs) +
+          ' ms, needs \u2265 ' + Math.round(required) + ' ms');
       }
     }
 
-    if (opts.timingReliable && rmsAvailable && w.audio){
+    if (w.tjRules && w.tjRules.hasGhunnahContext){
+      const gType = w.tjRules.ghunnahType || 'ghunnah';
+      const required = ghunnahRequiredMs(gType);
+      const voiceMs = rmsAvailable ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now) : 0;
+      const effectiveMs = rmsAvailable ? voiceMs : asrMs;
+      if (effectiveMs < required){
+        markStrict1Error(w, 'ghunnah-length-' + gType,
+          (rmsAvailable ? 'voice' : 'timing') + ' nasalisation ' +
+          Math.round(effectiveMs) + ' ms, needs \u2265 ' + required +
+          ' ms (' + gType + ')');
+      }
+    }
+
+    if (opts.timingReliable){
+      const sampleMs = rmsAvailable
+        ? rmsAnalyser.voiceDurationMs(lastDirectCommitAt, now)
+        : asrMs;
       const isMadd = !!(w.tjRules && w.tjRules.madd);
-      const sampleMs = rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs;
-      if (!isMadd && sampleMs > 0) recordPaceSample(sampleMs, Math.max(1, w.norm.length));
+      if (!isMadd) recordPaceSample(sampleMs, Math.max(1, w.norm.length));
     }
   }
 
@@ -5470,49 +5007,41 @@ function runStrict1Checks(idx, heard, opts){
     const prevW = words[lastDirectCommitIdx];
     const curW  = words[idx];
     if (prevW && curW && prevW.verse === curW.verse && prevW.tjRules){
-      if (prevW.tjRules.madd && STRICT_FEATURES.madd()){
+      if (prevW.tjRules.madd){
         const req = maddRequiredMs(prevW.tjRules.madd);
         if (req > 0){
           batchTimingCtx.cumulativeRequired += req;
-          batchTimingCtx.contributions.push({ idx: lastDirectCommitIdx, rule: 'madd', need: req });
+          batchTimingCtx.contributions.push({
+            idx: lastDirectCommitIdx, rule: 'madd', need: req
+          });
         }
       }
-      if (prevW.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
+      if (prevW.tjRules.hasGhunnahContext){
         const gType = prevW.tjRules.ghunnahType || 'ghunnah';
         const req = ghunnahRequiredMs(gType);
         if (req > 0){
           batchTimingCtx.cumulativeRequired += req;
-          batchTimingCtx.contributions.push({ idx: lastDirectCommitIdx, rule: 'ghunnah', need: req });
+          batchTimingCtx.contributions.push({
+            idx: lastDirectCommitIdx, rule: 'ghunnah', need: req
+          });
         }
       }
     }
   }
 
-  strict1GhunnahOk(w, heard);
-
-  if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w);
-
-  if (STRICT_FEATURES.hamWasl() && w.tjRules && w.tjRules.hamWasl && prevWordAudio && w.audio){
-    const gap = w.audio.start - prevWordAudio.end;
-    if (gap > 45){
-      markStrict1Warning(w, 'hamzat-al-wasl',
-        'glottal re-attack (gap ' + Math.round(gap) + ' ms)');
-    }
+  if (!strict1GhunnahOk(w, heard)){
+    const gType = (w.tjRules && w.tjRules.ghunnahType) || 'ghunnah';
+    markStrict1Error(w, 'ghunnah-' + gType, 'nasal letter missing (\u0646 / \u0645)');
   }
 
   if (!strict1SilentOk(w, heard)){
     markStrict1Error(w, 'silent', 'silent letter pronounced');
   }
 
-  if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
-
-  prevWordAudio = w.audio || prevWordAudio;
-
   if (opts.breakChain){
     lastDirectCommitIdx = -1;
     lastDirectCommitAt  = 0;
     lastCommitBatchId   = -1;
-    prevWordAudio = null;
   } else {
     lastDirectCommitIdx = idx;
     lastDirectCommitAt  = now;
@@ -5820,7 +5349,6 @@ async function resumeRecitationSession(modeKey){
     beepOn     = !followOnly;
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
     lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-    prevWordAudio = null;
     applyMutexUI(); applyFollowOnlyUI();
     showScreen('coach'); coachLoaded = false; coachLoading = true;
     try{ await loadSurah(data.surah, true); coachLoaded = true; }
@@ -6039,17 +5567,14 @@ function scoreAlternativeToks(toks, startPtr){
   let score = 0;
   let ti = 0;
   let wi = startPtr;
-
-  const maxAhead = followOnly ? 4 : Math.min(6, words.length - startPtr);
-
+  const maxAhead = Math.min(6, words.length - startPtr);
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
     const heard = normArCached(rawTok);
     if(!heard){ ti++; continue; }
     const hPhon = phonArCached(rawTok);
-    const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w = words[wi];
-    if(heard === w.norm || isMatchWord(heard, hPhon, hPhonLoose, w)){
+    if(heard === w.norm || isMatchWord(heard, hPhon, null, w)){
       score += 3;
       ti++; wi++;
       continue;
@@ -6057,7 +5582,7 @@ function scoreAlternativeToks(toks, startPtr){
     let matched = false;
     for(let k = 1; k <= 2 && wi + k < startPtr + maxAhead; k++){
       const target = words[wi + k];
-      if(heard === target.norm || isMatchWord(heard, hPhon, hPhonLoose, target)){
+      if(heard === target.norm || isMatchWord(heard, hPhon, null, target)){
         score += 1;
         wi = wi + k + 1;
         ti++;
@@ -6070,219 +5595,95 @@ function scoreAlternativeToks(toks, startPtr){
   return score;
 }
 
-function buildPhraseObjects(rec) {
-  if (!rec) return false;
-  const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
-  if (!PhraseCtor) return false;
-  if (!('phrases' in rec)) return false;
-  if (!words.length) return false;
-
-  const end = Math.min(words.length, ptr + 50);
-  const seen = new Set();
-  const phrases = [];
-
-  for (let i = ptr; i < end; i++) {
-    const clean = String(words[i].raw || '')
-      .normalize('NFKC')
-      .replace(TASHKEEL, '')
-      .replace(/[^\u0621-\u064A\s]/g, '')
-      .trim();
-    if (!clean || seen.has(clean)) continue;
-    seen.add(clean);
-    try {
-      phrases.push(new PhraseCtor(clean, 6.0));
-    } catch (_) {}
-  }
-
-  if (!phrases.length) return false;
-
-  try {
-    rec.phrases = phrases;
-    rec.__lastPhrasePtr = ptr;
-    return true;
-  } catch (e) {
-    console.warn('[Speech] Failed to set phrases:', e);
-    return false;
-  }
-}
-
-let pendingSpeechEvent = null;
-let speechResultTimer = null;
-let speechInFlight = false;
-const speechQueue = [];
-const SPEECH_THROTTLE_MS = 100;
-
-function resetSpeechPipeline() {
-  speechQueue.length = 0;
-  pendingSpeechEvent = null;
-  if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
-}
-
-function scheduleSpeechResult(event) {
-  if (!event || !wantMic || fsPaused || micPaused) return;
-
-  let hasFinal = false;
-  const snapshot = [];
-  for (let i = event.resultIndex; i < event.results.length; i++) {
-    const result = event.results[i];
-    if (!result) continue;
-    const alts = [];
-    for (let a = 0; a < result.length; a++) {
-      const alt = result[a];
-      alts.push({
-        transcript: alt.transcript || '',
-        confidence: (typeof alt.confidence === 'number' ? alt.confidence : 0)
-      });
-    }
-    snapshot.push({ index: i, isFinal: !!result.isFinal, alternatives: alts });
-    if (result.isFinal) hasFinal = true;
-  }
-  if (!snapshot.length) return;
-
-  const snap = { resultIndex: event.resultIndex, results: snapshot };
-
-  if (hasFinal) {
-    if (pendingSpeechEvent) {
-      speechQueue.push(pendingSpeechEvent);
-      pendingSpeechEvent = null;
-    }
-    if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
-    speechQueue.push(snap);
-    processSpeechQueue();
-    return;
-  }
-
-  pendingSpeechEvent = snap;
-  if (speechResultTimer) return;
-  speechResultTimer = setTimeout(() => {
-    speechResultTimer = null;
-    const ev = pendingSpeechEvent;
-    pendingSpeechEvent = null;
-    if (!ev || !wantMic || fsPaused || micPaused) return;
-    speechQueue.push(ev);
-    processSpeechQueue();
-  }, SPEECH_THROTTLE_MS);
-}
-
-async function processSpeechQueue() {
-  if (speechInFlight) return;
-  if (!speechQueue.length) return;
-  speechInFlight = true;
-  try {
-    while (speechQueue.length) {
-      const snap = speechQueue.shift();
-      if (!wantMic || fsPaused || micPaused) continue;
-      try { await runSpeechResultProcessing(snap); }
-      catch (e) { console.warn('[Speech] process error:', e); }
-    }
-  } finally {
-    speechInFlight = false;
-    if (speechQueue.length) processSpeechQueue();
-  }
-}
-
-async function runSpeechResultProcessing(snap) {
-  if (!snap || fsPaused || micPaused || !wantMic) return;
-  lastResultAt = performance.now();
-  sessionHadResult = true;
-  confirmMicAudio();
-  resetSilenceTimer(true);
-
-  currentBatchId++;
-
-  for (let ri = 0; ri < snap.results.length; ri++) {
-    const result = snap.results[ri];
-    const i = result.index;
-    const isFinal = result.isFinal;
-    const alternatives = result.alternatives;
-    if (!alternatives || !alternatives.length) continue;
-
-    const floor = confidenceFloor();
-    const useScoring = alternatives.length > 1;
-    let bestAlt = null;
-    let bestTranscript = '';
-    let bestWeighted = -1;
-
-    for (let ai = 0; ai < alternatives.length; ai++) {
-      const cand = alternatives[ai];
-      const tr = (cand.transcript || '').trim();
-      if (!tr) continue;
-      const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
-      if (isFinal && conf > 0 && conf < floor) continue;
-      const candToks = tr.split(/\s+/).filter(Boolean);
-      if (!candToks.length) continue;
-      const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
-      const weighted = (rawScore * 3) + (conf * 1.5);
-      if (weighted > bestWeighted) {
-        bestWeighted = weighted;
-        bestAlt = cand;
-        bestTranscript = tr;
-      }
-    }
-
-    if (!bestAlt || !bestTranscript) continue;
-    const toks = bestTranscript.split(/\s+/).filter(Boolean);
-    if (!toks.length) continue;
-
-    if (isFinal) {
-      const already = interimProgress.get(i) || 0;
-      interimProgress.delete(i);
-      if (i <= lastSpeechResultIndex) continue;
-      lastSpeechResultIndex = i;
-      const newToks = toks.slice(already);
-      if (!newToks.length) continue;
-      recPush(newToks);
-      const used = await grade(recTokens, recCursor);
-      recCursor = Math.min(recCursor + used, recTokens.length);
-      if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
-      scheduleHUD();
-    } else {
-      const already = interimProgress.get(i) || 0;
-      const safeEnd = Math.max(already, toks.length - 1);
-      const newToks = toks.slice(already, safeEnd);
-      if (newToks.length) {
-        interimProgress.set(i, safeEnd);
-        recPush(newToks);
-        const used = await grade(recTokens, recCursor);
-        recCursor = Math.min(recCursor + used, recTokens.length);
-        if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
-        scheduleHUD();
-      }
-      const tail = toks.slice(-4).join(' ');
-      if (statusHint && tail) statusHint.textContent = '… ' + tail;
-    }
-  }
-
-  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
-    buildPhraseObjects(speechRecognition);
-  }
-}
-
 function createSpeechRecognition(){
   if(!SPEECH_SUPPORTED) return null;
-
-  if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
-  if(speechRecognition){
-    try{ speechRecognition.abort(); }catch(_){}
-    speechRecognition = null;
-  }
-
+  if(speechRecognition) return speechRecognition;
   const rec = new SpeechRecognitionCtor();
-  rec.lang             = SPEECH_LANG;
-  rec.continuous       = true;
-  rec.interimResults   = true;
-
-  const phrasesAttached = buildPhraseObjects(rec);
-  rec.__hasPhrases = phrasesAttached;
+  rec.lang = SPEECH_LANG;
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.maxAlternatives = 3;
 
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
   };
 
-  rec.onresult = (event) => scheduleSpeechResult(event);
+  rec.onresult = (event) => {
+    // Also gate on micPaused — some engines (older Android Chrome) deliver
+    // one final onresult after stop() is called, which we must ignore.
+    if(fsPaused || micPaused || !wantMic) return;
+    lastResultAt = performance.now();
+    sessionHadResult = true;
+    confirmMicAudio();
+    resetSilenceTimer(true);
+
+    currentBatchId++;
+
+    for(let i = event.resultIndex; i < event.results.length; i++){
+      const result = event.results[i];
+      if(!result || result.length === 0) continue;
+
+      const floor = confidenceFloor();
+      const useScoring = result.length > 1;
+      let bestAlt = null;
+      let bestTranscript = '';
+      let bestWeighted = -1;
+
+      for(let a = 0; a < result.length; a++){
+        const cand = result[a];
+        if(!cand) continue;
+        const tr = (cand.transcript || '').trim();
+        if(!tr) continue;
+        const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
+        if(result.isFinal && conf > 0 && conf < floor) continue;
+        const candToks = tr.split(/\s+/).filter(Boolean);
+        if(!candToks.length) continue;
+        const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
+        const weighted = rawScore * 2 + conf;
+        if(weighted > bestWeighted){
+          bestWeighted = weighted;
+          bestAlt = cand;
+          bestTranscript = tr;
+        }
+      }
+
+      if(!bestAlt || !bestTranscript) continue;
+      const transcript = bestTranscript;
+
+      const toks = transcript.split(/\s+/).filter(Boolean);
+      if(!toks.length) continue;
+
+      if(result.isFinal){
+        const already = interimProgress.get(i) || 0;
+        interimProgress.delete(i);
+        if(i <= lastSpeechResultIndex) continue;
+        lastSpeechResultIndex = i;
+        const newToks = toks.slice(already);
+        if(!newToks.length) continue;
+        recPush(newToks);
+        const used = grade(recTokens, recCursor);
+        recCursor = Math.min(recCursor + used, recTokens.length);
+        if(recCursor >= recTokens.length){ recTokens.length = 0; recCursor = 0; }
+        scheduleHUD();
+      } else {
+        const already = interimProgress.get(i) || 0;
+        const safeEnd = Math.max(already, toks.length - 1);
+        const newToks = toks.slice(already, safeEnd);
+        if(newToks.length){
+          interimProgress.set(i, safeEnd);
+          recPush(newToks);
+          const used = grade(recTokens, recCursor);
+          recCursor = Math.min(recCursor + used, recTokens.length);
+          if(recCursor >= recTokens.length){ recTokens.length = 0; recCursor = 0; }
+          scheduleHUD();
+        }
+        const tail = toks.slice(-4).join(' ');
+        if(statusHint && tail) statusHint.textContent = '… ' + tail;
+      }
+    }
+  };
 
   rec.onerror = (event) => {
     const err = event && event.error ? event.error : 'unknown';
@@ -6326,6 +5727,8 @@ function createSpeechRecognition(){
       if(!speechRecognition) return;
       try{ speechStarting = true; speechRecognition.start(); }
       catch(e){
+        // Reset speechStarting even on failure so armSpeechKeepalive()
+        // can still fire its stop() safety cycle later.
         speechStarting = false;
         if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e);
       }
@@ -7471,6 +6874,7 @@ async function playCurrentViewerAyah(){
   viewerAudio.ayahIdx++;
   playCurrentViewerAyah();
 }
+
 const SWIPE_MIN_X = 55;
 let readerGesture = null;
 let pageTurning = false;
@@ -7696,6 +7100,7 @@ function showPermissionHelp(msg){
   bg.querySelector('#permClose').addEventListener('click', close);
   bg.querySelector('#permRetry').addEventListener('click', async () => { close(); const ok = await promptForMic(); if(ok && !wantMic) startReciting(); });
 }
+
 let audioCtx=null, audioUnlocked=false;
 function unlockAudio(){
   if(audioUnlocked){ return audioCtx; }
@@ -7705,6 +7110,9 @@ function unlockAudio(){
     const b=audioCtx.createBuffer(1,1,22050); const s=audioCtx.createBufferSource();
     s.buffer=b; s.connect(audioCtx.destination); s.start(0);
     audioUnlocked=true;
+    // Share with the RMS analyser so it can attach the MediaStreamSource to
+    // an AudioContext that was created and resumed inside a user gesture —
+    // required for real signal on iOS Safari.
     window.__sharedAudioCtx = audioCtx;
   }catch(e){}
   return audioCtx;
@@ -7884,14 +7292,14 @@ function noteAdvance(n){
 }
 function updateAdaptiveParams(){
   const p = currentPaceWPS;
-  if(p <= 0){ adaptiveSilenceMs = 10000; return; }
-  if     (p < 0.6){ adaptiveSilenceMs = 12000; }
-  else if(p < 1.2){ adaptiveSilenceMs = 11000; }
-  else if(p < 2.0){ adaptiveSilenceMs = 10000; }
-  else if(p < 3.2){ adaptiveSilenceMs = 10000; }
-  else            { adaptiveSilenceMs = 10000; }
+  if(p <= 0){ adaptiveSilenceMs = 6000; return; }
+  if     (p < 0.6){ adaptiveSilenceMs = 9000; }
+  else if(p < 1.2){ adaptiveSilenceMs = 8000; }
+  else if(p < 2.0){ adaptiveSilenceMs = 7000; }
+  else if(p < 3.2){ adaptiveSilenceMs = 6000; }
+  else            { adaptiveSilenceMs = 6000; }
 }
-function resetPace(){ advanceTimes = []; currentPaceWPS = 0; adaptiveSilenceMs = 10000; pendingJumpTarget = -1; }
+function resetPace(){ advanceTimes = []; currentPaceWPS = 0; adaptiveSilenceMs = 6000; pendingJumpTarget = -1; }
 
 function enterReaderFullscreen(){
   if(readerFullscreen) return;
@@ -7910,7 +7318,7 @@ function exitReaderFullscreen(){
   if(nativeFullscreenElement()){ try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){} }
   updateFullscreenIcon(); scrollCurrentIntoView(true);
 }
-function showFsControls(){ if(viewerOpen) return; fsControls.classList.add('visible'); showFsBadge(); clearTimeout(fsControlsTimer); fsControlsTimer = setTimeout(hideFsControls, 3000); }
+function showFsControls(){ if(viewerOpen) return; fsControls.classList.add('visible'); showFsBadge(); clearTimeout(fsControlsTimer); fsControlsTimer = setTimeout(hideFsControls, 2800); }
 function hideFsControls(){ fsControls.classList.remove('visible'); clearTimeout(fsControlsTimer); }
 let fsBadgeTimer = null;
 function showFsBadge(){ if(viewerOpen) return; fsBadge.classList.add('visible'); clearTimeout(fsBadgeTimer); fsBadgeTimer = setTimeout(hideFsBadge, 2800); }
@@ -7969,31 +7377,10 @@ fsContinueBtn.addEventListener('click', () => {
 fsStopBtn.addEventListener('click', () => { fsPaused = false; stopEverything(); setStatus('Ready','idle'); fsPauseBtn.disabled = false; fsContinueBtn.disabled = true; updateFsMicBtn(); showFsControls(); });
 fsMinimizeBtn.addEventListener('click', () => exitReaderFullscreen());
 fsContinueBtn.disabled = true;
-
-function syncRevealButtons(){
-  if(!fsRevealBtn) return;
-  const show = !!(hideText && followOnly);
-  fsRevealBtn.style.display = show ? '' : 'none';
-  fsRevealBtn.textContent = revealAllText ? 'Hide text' : 'Reveal text';
-  fsRevealBtn.classList.toggle('active', revealAllText);
-  fsRevealBtn.setAttribute('aria-label', revealAllText ? 'Hide revealed text' : 'Reveal text');
-  fsRevealBtn.title = revealAllText ? 'Hide text again' : 'Reveal the next ayah';
-}
-if(fsRevealBtn){
-  fsRevealBtn.addEventListener('click', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    revealAllText = !revealAllText;
-    document.body.classList.toggle('reveal-all-text', revealAllText);
-    syncRevealButtons();
-    if(navigator.vibrate) navigator.vibrate(12);
-    showFsControls();
-  });
-}
 function syncFsButtons(){
   if(fsPaused || (!wantMic && !playing)){ fsPauseBtn.disabled = true; fsContinueBtn.disabled = !fsPaused; }
   else { fsPauseBtn.disabled = false; fsContinueBtn.disabled = true; }
   updateFsMicBtn();
-  syncRevealButtons();
 }
 
 let updatingMutex = false;
@@ -8002,7 +7389,7 @@ function applyMutexUI(){
   beepOn = !followOnly;
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
-
+  if(matchChip) matchChip.hidden = true;
   if(hideTextChip) hideTextChip.hidden = !followOnly;
 
   const tjNoiseChip = document.getElementById('tajweedNoiseChip');
@@ -8010,9 +7397,9 @@ function applyMutexUI(){
 
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
+  if(selMatch) selMatch.value = 'strict';
   applyHideTextUI();
   updateTajweedStatusChip();
-  syncRevealButtons();
 }
 function setRecitationMode(modeName){
   const newFollow = (modeName === 'follow');
@@ -8022,7 +7409,6 @@ function setRecitationMode(modeName){
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
   pendingHeard.length = 0; consecutiveReds = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-  prevWordAudio = null;
   followWrongTokens = 0; cancelFollowPinTimer();
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
@@ -8041,20 +7427,17 @@ function applyHideTextUI(){
   if(hideText && followOnly){
     document.body.classList.add('hide-text-mode');
     words.forEach(w => {
-      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){
+      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected')){
         w.el.classList.add('revealed');
-        w.el.classList.remove('correct','corrected','warned');
+        w.el.classList.remove('correct','corrected');
       } else if(w.el.classList.contains('skipped')){
         w.el.classList.add('revealed');
       }
     });
   } else {
     document.body.classList.remove('hide-text-mode');
-    revealAllText = false;
-    document.body.classList.remove('reveal-all-text');
     words.forEach(w => w.el.classList.remove('revealed'));
   }
-  syncRevealButtons();
 }
 function applyFollowOnlyUI(){
   if(followOnly){
@@ -8106,7 +7489,6 @@ async function loadSurah(n, keepFeedback){
   mode = 'surah'; surahNum = Math.min(114, Math.max(1, Math.round(n)||1));
   STORE.mode = 'surah'; STORE.surah = surahNum;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-  prevWordAudio = null;
 
   coachTajweedApplied = false;
   coachTajweedReady   = false;
@@ -8201,21 +7583,6 @@ function installWordDelegates(){
   pageEl.addEventListener('contextmenu', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
   pageEl.addEventListener('selectstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
   pageEl.addEventListener('dragstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
-
-  pageEl.addEventListener('click', (e) => {
-    if(followOnly) return;
-    if(longPressTriggered) return;
-    const target = e.target.closest ? e.target.closest('.w') : null;
-    if(!target || !pageEl.contains(target)) return;
-    const idx = parseInt(target.dataset.idx, 10);
-    if(!Number.isFinite(idx)) return;
-    const w = words[idx];
-    if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
-    const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
-    if(!tip) return;
-    showToast('🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b><br>' + escapeHtml(tip), 5000);
-  });
-
   if(IS_TOUCH){
     pageEl.addEventListener('touchstart', e => { if(e.touches.length !== 1) return; const idx = wordIdxFromEvent(e); if(idx < 0) return; const span = e.target.closest('.w'); beginWordPress(span, idx, e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
     pageEl.addEventListener('touchmove', e => { if(e.touches.length !== 1) return; if(!wordPress.active) return; moveWordPress(e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
@@ -8234,8 +7601,6 @@ function renderVerses(ayahs, translations){
   pageEl.innerHTML='';
   const inner = document.createElement('div'); inner.className = 'mushaf-inner';
   words=[]; lastCurrentEl = null; longPressTriggered = false;
-
-  if(speechRecognition){ speechRecognition.__dead = true; }
 
   function pushWord(tok, surahId, ayahNum, parent){
     const span=document.createElement('span');
@@ -8306,7 +7671,6 @@ function renderVerses(ayahs, translations){
 function resetProgress(fullReset){
   ptr=0; errors=0; finished=false; recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-  prevWordAudio = null;
   if(fullReset){
     mistakes = []; mistakeCounter = 0; completedVerses = new Set();
     mistakesList.innerHTML = ''; mistakesPanel.hidden = true; mistakeCountBadge.textContent = '0';
@@ -8314,7 +7678,7 @@ function resetProgress(fullReset){
     resetPaceSamples();
   }
   lastCurrentEl = null; longPressTriggered = false; hudPending = false;
-  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; });
+  words.forEach(w=>{ w.el.className='w'; });
   pageEl.querySelectorAll('.ayah').forEach(a=>a.classList.remove('done','playing'));
   document.body.classList.remove('listen-mode');
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI();
@@ -8334,8 +7698,7 @@ function scrollElementIntoView(el, force){
   const maxTop = pageEl.scrollHeight - pageEl.clientHeight;
   const top = Math.max(0, Math.min(maxTop, targetTop));
   programmaticScrollUntil = performance.now() + 1200;
-  const behavior = (wantMic && currentPaceWPS > 1.2) ? 'auto' : 'smooth';
-  try{ pageEl.scrollTo({ top, behavior }); }
+  try{ pageEl.scrollTo({ top, behavior: 'smooth' }); }
   catch(e){ pageEl.scrollTop = top; }
 }
 function scrollCurrentIntoView(force){ scrollElementIntoView(words[ptr] && words[ptr].el, force); }
@@ -8351,7 +7714,6 @@ function jumpToWordAndListen(idx){
   longPressTriggered = false;
   errors = 0; mistakes = []; mistakeCounter = 0; completedVerses = new Set(); recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-  prevWordAudio = null;
   words.forEach(w => { w.el.classList.remove('correct','error','skipped','corrected','model','current','located','warned'); });
   pageEl.querySelectorAll('.ayah').forEach(a => a.classList.remove('done','playing'));
   mistakesList.innerHTML = ''; mistakesPanel.hidden = true; mistakeCountBadge.textContent = '0';
@@ -8362,18 +7724,7 @@ function jumpToWordAndListen(idx){
   else { startReciting(); addFeedback('🎯 Jumped — listening from here.', false, true); }
 }
 
-function scheduleHUD(){
-  if(hudPending) return;
-  hudPending = true;
-  requestAnimationFrame(() => {
-    hudPending = false;
-    updateHUD();
-    if (wordPress.active) return;
-    scrollCurrentIntoView(false);
-    schedulePositionAudioOverlay();
-  });
-}
-
+function scheduleHUD(){ if(hudPending) return; hudPending = true; requestAnimationFrame(() => { hudPending = false; updateHUD(); }); }
 function updateCurrent(){
   if(lastCurrentEl) lastCurrentEl.classList.remove('current');
   if(viewerOpen && viewerMode === 'audio'){ lastCurrentEl = null; return; }
@@ -8386,8 +7737,8 @@ function updateCurrent(){
   const el=words[ptr].el;
   el.classList.add('current');
   lastCurrentEl = el;
+  scheduleAutoScroll();
 }
-
 function jumpToCurrent(){
   const el = words[ptr] && words[ptr].el; if(!el) return;
   el.classList.add('pressing'); setTimeout(() => el.classList.remove('pressing'), 450);
@@ -8420,9 +7771,7 @@ function appendMistake(m){
   const li = document.createElement('li');
 
   const kindBadge = m.tajweedName
-    ? '<span class="tj-kind" title="' +
-        escapeHtml(m.tajweedExplanation || m.tajweedName) +
-      '" aria-label="' + escapeHtml(m.tajweedExplanation || m.tajweedName) + '">' +
+    ? '<span class="tj-kind" title="' + escapeHtml(m.tajweedName) + '">' +
         escapeHtml(m.tajweedName) +
       '</span>'
     : '';
@@ -8467,28 +7816,14 @@ function advancePast(n){
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
 }
-function commitCorrect(i, seg){
-  const w = words[i]; if(!w) return;
-  if (seg) w.audio = seg;
-  const warned = w.el.classList.contains('warned');
-  const baseCls = (hideText && followOnly) ? 'w revealed' : 'w correct';
-  w.el.className = baseCls + (warned ? ' warned' : '');
-  maybeExplainRules(w);
-}
-function commitManyCorrect(start, end, seg){
+function commitCorrect(i){ const w = words[i]; if(!w) return; w.el.className = (hideText && followOnly) ? 'w revealed' : 'w correct'; }
+function commitManyCorrect(start, end){
   const toReveal = hideText && followOnly;
   const stop = Math.min(end, words.length);
-  const baseCls = toReveal ? 'w revealed' : 'w correct';
-  for(let i = start; i < stop; i++){
-    if (seg) words[i].audio = seg;
-    const warned = words[i].el.classList.contains('warned');
-    words[i].el.className = baseCls + (warned ? ' warned' : '');
-  }
-  if(stop > start) maybeExplainRules(words[stop - 1]);
+  const cls = toReveal ? 'w revealed' : 'w correct';
+  for(let i = start; i < stop; i++){ words[i].el.className = cls; }
 }
-
 function markSkippedWord(i){
-  if(followOnly) return;
   const w = words[i]; if(!w) return;
   const el = w.el;
   if(el.classList.contains('error')) return;
@@ -8509,16 +7844,16 @@ function recordMistake(i, kind, heardRaw){
   if(beepOn && kind === 'misread') beepThrottled('error');
 }
 
-async function grade(tokens, startIdx){
+function grade(tokens, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
-  if(followOnly) return gradeFollowFast(tokens, start);
-  return await gradeFull(tokens, start);
+  if(matchStrictness() === 'strict') return gradeFull(tokens, start);
+  return gradeFollowOnly(tokens, start);
 }
 
-const FOLLOW_LOOKAHEAD = 1;
+const FOLLOW_LOOKAHEAD = 2;
 const FOLLOW_WRONG_LIMIT = 3;
-const FOLLOW_PIN_STOP_MS = 10000;
+const FOLLOW_PIN_STOP_MS = 7000;
 
 let followWrongTokens = 0;
 let followPinTimer    = null;
@@ -8539,184 +7874,75 @@ function noteFollowWrongToken(){
   followPinPtr = ptr;
   const w = words[ptr];
   const label = w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '';
-  addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 10 s…', false, true);
+  addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 7 s…', false, true);
   followPinTimer = setTimeout(() => {
     followPinTimer = null;
     if(!wantMic) return;
     if(ptr !== followPinPtr) return;
-    addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
+    addFeedback('⏹️ That word was not recited within 7 s — microphone stopped.', true);
     stopReciting(true);
     setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
   }, FOLLOW_PIN_STOP_MS);
 }
 
-function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
-  if (!w || !heard) return false;
-  if (heard === w.norm) return true;
-
-  const L = Math.max(heard.length, w.norm.length);
-  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
-
-  if (lev(heard, w.norm) <= tol) return true;
-  if (w.phon.length >= 2 && hPhon.length >= 2 &&
-      lev(hPhon, w.phon) <= tol) return true;
-  if (hPhonLoose && w.phonLoose &&
-      hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
-      lev(hPhonLoose, w.phonLoose) <= tol) return true;
-
-  return false;
-}
-
-function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
-  if (!w || !heard || !w.norm) return false;
-
-  const heardLen  = heard.length;
-  const targetLen = w.norm.length;
-  if (targetLen === 0) return false;
-  if (heardLen < 1 && targetLen > 1) return false;
-
-  const ratio = heardLen / targetLen;
-  if (ratio < 0.20 || ratio > 4.0) return false;
-
-  const L   = Math.max(heardLen, targetLen);
-  const tol = toleranceFor(L);
-
-  if (lev(heard, w.norm) <= tol) return true;
-  if (hPhon.length >= 2 && w.phon.length >= 2 &&
-      lev(hPhon, w.phon) <= tol) return true;
-  if (hPhonLoose && w.phonLoose &&
-      hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
-      lev(hPhonLoose, w.phonLoose) <= tol) return true;
-
-  return false;
-}
-
-function gradeFollowFast(tokens, startIdx) {
+function gradeFollowOnly(tokens, startIdx){
   const start = startIdx || 0;
   let used = 0;
-
-  for (let ti = start; ti < tokens.length; ti++) {
-    if (ptr >= words.length) { used++; continue; }
-
+  for(let ti = start; ti < tokens.length; ti++){
+    if(ptr >= words.length){ used++; continue; }
     const rawTok = tokens[ti];
     const heard  = normArCached(rawTok);
-    if (!heard) { used++; continue; }
+    if(!heard){ used++; continue; }
+    const hPhon = phonArCached(rawTok);
 
-    const hPhon      = phonArCached(rawTok);
-    const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
-    const w          = words[ptr];
+    if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
 
-    /* 1. ASR direct / strict-phonetic / loose-phonetic match on the
-       CURRENT word → advance 1. Loose tier is what catches Google STT
-       substituting ح→ه, خ→ه, غ→ق, ع→ء. The ال-prefix bridge handles
-       Google dropping or inserting the definite article. */
-    if (heard === w.norm ||
-        isMatchWord(heard, hPhon, hPhonLoose, w) ||
-        followAlPrefixMatch(heard, w)) {
-      commitCorrect(ptr, null);
-      advancePast(1);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
+    if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
+      commitCorrect(ptr); advancePast(1);
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
-    /* 2. Split-token match: pendingHeard + rawTok together form the
-       CURRENT word → advance 1. */
-    if (trySplitTokenMatch(heard, rawTok)) {
-      commitCorrect(ptr, null);
-      advancePast(1);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
+    if(trySplitTokenMatch(heard, rawTok)){
+      commitCorrect(ptr); advancePast(1);
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
-    /* 3. Merged-token match: ONE ASR token that covers 2–3 consecutive
-       words starting at ptr. Loose phonetics included so Google STT
-       merging + substituting ح→ه etc. still resolves. */
-    const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
-    if (mergedN > 0) {
-      commitManyCorrect(ptr, ptr + mergedN, null);
+    const mergedN = tryMergedTokenMatch(heard, hPhon);
+    if(mergedN > 0){
+      commitManyCorrect(ptr, ptr + mergedN);
       advancePast(mergedN);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
-    /* 4. MFA phonetic match on the CURRENT word (loose tier included). */
-    if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)) {
-      commitCorrect(ptr, null);
-      advancePast(1);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
+    let found = -1;
+    const maxK = Math.min(FOLLOW_LOOKAHEAD, words.length - ptr - 1);
+    for(let k = 1; k <= maxK; k++){
+      const target = words[ptr + k];
+      if(heard === target.norm){ found = k; break; }
+      if(k === 1 && isMatchWord(heard, hPhon, null, target)){ found = k; break; }
+      if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
+    }
+    if(found > 0){
+      for(let k = 0; k < found; k++) markSkippedWord(ptr + k);
+      commitCorrect(ptr + found);
+      advancePast(found + 1);
+      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
     }
 
-    /* 5. Plausible-enough — the main "close enough" fallback. */
-    if (isFollowPlausible(heard, hPhon, hPhonLoose, w)) {
-      commitCorrect(ptr, null);
-      advancePast(1);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
-    }
-
-    /* 6. Not this word — STAY on words[ptr] and wait. */
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
-    if (pendingHeard.length > 5) pendingHeard.length = 0;
+    if(pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
   }
-
   return used;
-}
-
-function isAcousticWordShapeMatch(w, seg) {
-  if (!seg || !w || seg.durationMs < 60) return false;
-  const samples = rmsAnalyser.samplesIn(seg.start, seg.end);
-  if (samples.length < 3) return false;
-
-  const expectedMs = Math.max(100, w.norm.length * 100);
-  const ratio = seg.durationMs / expectedMs;
-  const minRatio = 0.2;
-  const maxRatio = 4.0;
-  if (ratio < minRatio || ratio > maxRatio) return false;
-
-  const vr = rmsAnalyser.vowelRun(seg.start, seg.end);
-  const minVowelRatio = 0.15;
-  if (vr.durationMs < expectedMs * minVowelRatio) return false;
-
-  let maxRms = 0;
-  for (let i = 0; i < samples.length; i++) if (samples[i].rms > maxRms) maxRms = samples[i].rms;
-  if (maxRms < rmsAnalyser.minRms() * 1.0) return false;
-
-  return true;
-}
-
-async function runMFAInference(w, seg, heard) {
-  if (!seg || !w || !heard) return false;
-
-  const T = getBaseMsPerLetter();
-  const expectedMs = Math.max(60, w.norm.length * (T || 110));
-  const ratio = seg.durationMs / expectedMs;
-  const durationOk = ratio > 0.35 && ratio < 2.80;
-
-  const L = Math.max(heard.length, w.norm.length);
-  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
-  const normOk = heard === w.norm || lev(heard, w.norm) <= tol;
-
-  const hPhon = phonArCached(heard);
-  const phonOk = w.phon.length >= 2 && hPhon.length >= 2 &&
-                 lev(hPhon, w.phon) <= tol;
-
-  return durationOk && (normOk || phonOk);
 }
 
 const FULL_LOOKAHEAD = 5;
 
-async function gradeFull(tokens, startIdx){
+function gradeFull(tokens, startIdx){
   const start = startIdx || 0;
   let used = 0;
-  const LOOKAHEAD = 0;
+  const LOOKAHEAD = 2;
 
   const outerBatchCtx = batchTimingCtx;
   batchTimingCtx = {
@@ -8734,54 +7960,76 @@ async function gradeFull(tokens, startIdx){
       if(ptr >= words.length){ used++; continue; }
       const hPhon = phonArCached(rawTok);
 
-      const matchesCurrent = heard === words[ptr].norm ||
-                             isMatchWord(heard, hPhon, null, words[ptr]);
-
-      if(ptr > 0 && !matchesCurrent && isMatchWord(heard, hPhon, null, words[ptr - 1])){
-        pendingHeard.length = 0;
-        used++; continue;
-      }
+      if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
-      if(matchesCurrent){
-        const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-        const _w = words[ptr];
-        let emphViol = null;
-        if (!followOnly && STRICT_FEATURES.emphatics() && heard !== _w.norm){
-          const viol = emphaticViolation(heard, _w.norm);
-          if (viol.length) emphViol = viol;
-        }
-        commitCorrect(ptr, seg);
-        if (emphViol){
-          _w.el.classList.add('warned');
-          if (!silentWarned){
-            silentWarned = true;
-            const label = TAJWEED_ERROR_NAMES['emphatic-' + emphViol[0].expected] || ('emphatic ' + emphViol[0].expected);
-            addFeedback('⚠️ <b>' + _w.raw.replace(TASHKEEL,'') + '</b> — ' + label, false, true);
-          }
-        }
+      if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
+        commitCorrect(ptr);
         runStrict1Checks(ptr, heard, { timingReliable: true });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
-        noteFollowProgress();
         used++; continue;
       }
 
       if(trySplitTokenMatch(heard, rawTok)){
         const combined = normArCached(pendingHeard.join('') + rawTok);
-        const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-        commitCorrect(ptr, seg);
+        commitCorrect(ptr);
         runStrict1Checks(ptr, combined, { timingReliable: false });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
-        noteFollowProgress();
         used++; continue;
       }
 
-      const mergedN = tryMergedTokenMatch(heard, hPhon, null);
+      let found = -1;
+      const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
+      for(let k = 1; k <= maxK; k++){
+        const target = words[ptr + k];
+        if(heard === target.norm){ found = k; break; }
+        if(k === 1 && (isMatchWord(heard, hPhon, null, target) ||
+                       (followOnly && isPlausiblePronunciationAttempt(heard, hPhon, target)))){
+          found = k; break;
+        }
+        if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
+      }
+      if(found > 0){
+        let skipStart = ptr;
+        if(pendingHeard.length){
+          const buffered = normArCached(pendingHeard.join(''));
+          const target   = words[ptr].norm;
+          if(buffered.length >= target.length * 0.40 &&
+             target.startsWith(buffered)){
+            commitCorrect(ptr);
+            skipStart = ptr + 1;
+          }
+        }
+        for(let k = skipStart; k < ptr + found; k++) markSkippedWord(k);
+        commitCorrect(ptr + found);
+        runStrict1Checks(ptr + found, heard, { timingReliable: false });
+        advancePast(found + 1);
+        pendingHeard.length = 0; consecutiveReds = 0;
+        used++; continue;
+      }
+
+      const followAttemptWord = words[ptr];
+      if(followOnly && !pendingHeard.length && followAttemptWord &&
+         isPlausiblePronunciationAttempt(heard, hPhon, followAttemptWord)){
+        // A close pronunciation is an attempt, not a skipped word. Lookahead
+        // above gets priority so a recited following word still marks a skip.
+       commitCorrect(ptr);
+        lastDirectCommitIdx = -1;
+        lastDirectCommitAt = 0;
+        lastCommitBatchId = -1;
+        advancePast(1);
+        pendingHeard.length = 0;
+        consecutiveReds = 0;
+        noteFollowProgress();
+        used++;
+        continue;
+      }
+
+      const mergedN = tryMergedTokenMatch(heard, hPhon);
       if(mergedN > 0){
-        const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-        commitManyCorrect(ptr, ptr + mergedN, seg);
+        commitManyCorrect(ptr, ptr + mergedN);
         let lastMadd = -1, lastGhunnah = -1, lastSilent = -1;
         for(let k = mergedN - 1; k >= 0; k--){
           const ww = words[ptr + k];
@@ -8796,32 +8044,6 @@ async function gradeFull(tokens, startIdx){
         });
         advancePast(mergedN);
         pendingHeard.length = 0; consecutiveReds = 0;
-        noteFollowProgress();
-        used++; continue;
-      }
-
-      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-
-      if (await runMFAInference(words[ptr], seg, heard)) {
-        commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, heard, { timingReliable: false });
-        advancePast(1);
-        pendingHeard.length = 0;
-        noteFollowProgress();
-        consecutiveReds = 0;
-        used++; continue;
-      }
-
-      const _wRms = words[ptr];
-      const _needsVowelRun = !followOnly && _wRms.tjRules &&
-        (_wRms.tjRules.madd || _wRms.tjRules.hasGhunnahContext);
-      if (_needsVowelRun && seg && isAcousticWordShapeMatch(_wRms, seg)) {
-        commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, heard, { timingReliable: false });
-        advancePast(1);
-        pendingHeard.length = 0;
-        noteFollowProgress();
-        consecutiveReds = 0;
         used++; continue;
       }
 
@@ -8829,51 +8051,29 @@ async function gradeFull(tokens, startIdx){
         if(pendingHeard.length === 1 &&
            heard.startsWith(normArCached(pendingHeard[0]))){
           pendingHeard[0] = rawTok;
-        } else if(pendingHeard.length < 2){
+        } else if(pendingHeard.length < 4){
           pendingHeard.push(rawTok);
         }
         used++; continue;
       }
-      pendingHeard.length = 0;
-
-      {
-        const curW = words[ptr];
-        if(curW && isPlausiblePronunciationAttempt(heard, hPhon, curW)){
-          const voiced = seg && seg.durationMs > 40 &&
-                         rmsAnalyser.voiceDurationMs(seg.start, seg.end) > 20;
-          if(voiced){
-            commitCorrect(ptr, seg);
-            if(!followOnly){
-              runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true });
-            }
-            lastDirectCommitIdx = -1;
-            lastDirectCommitAt  = 0;
-            lastCommitBatchId   = -1;
-            prevWordAudio       = null;
-            advancePast(1);
-            pendingHeard.length = 0;
-            consecutiveReds = 0;
-            noteFollowProgress();
-            used++; continue;
-          }
-        }
-      }
 
       const w = words[ptr];
+      const hasPending = pendingHeard.length > 0;
+      const plausibleAttempt = w &&
+                               isPlausiblePronunciationAttempt(heard, hPhon, w);
+      const plausible = !hasPending && !!plausibleAttempt;
 
-      if (followOnly) {
-        noteFollowWrongToken();
-        used++;
-        continue;
+      if(!plausible && pendingHeard.length < 4){
+        pendingHeard.push(rawTok);
+        used++; continue;
       }
 
-      const plausibleAttempt = w && isPlausiblePronunciationAttempt(heard, hPhon, w);
-      if(plausibleAttempt && w &&
+      let markedThisTime = false;
+      if(!followOnly && plausible &&
          !w.el.classList.contains('error') &&
          !w.el.classList.contains('skipped')){
-        if(seg) w.audio = seg;
         w.el.classList.add('error');
-        w.el.classList.remove('current','correct','corrected','model','located','warned');
+        w.el.classList.remove('current','correct','corrected','model','located');
         errors++;
         const m = {
           idx: mistakeCounter++,
@@ -8885,14 +8085,21 @@ async function gradeFull(tokens, startIdx){
         mistakes.push(m); appendMistake(m);
         scheduleHUD();
         if(beepOn) beepThrottled('error');
+        markedThisTime = true;
       }
-      noteFollowWrongToken();
 
       lastDirectCommitIdx = -1;
       lastDirectCommitAt  = 0;
       lastCommitBatchId   = -1;
-      prevWordAudio       = null;
-      consecutiveReds     = 0;
+
+      if(markedThisTime){
+        consecutiveReds++;
+        if(consecutiveReds < 2) advancePast(1);
+      } else {
+        consecutiveReds = 0;
+        if(followOnly) markSkippedWord(ptr);
+        advancePast(1);
+      }
       pendingHeard.length = 0;
       used++;
     }
@@ -8901,6 +8108,8 @@ async function gradeFull(tokens, startIdx){
     if(ctx && ctx.startTime > 0 && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 &&
        ctx.contributions.length > 0){
       const now = performance.now();
+      // Same hasSignal() gate as runStrict1Checks — skip the batch RMS check
+      // entirely if the analyser has never seen a real signal.
       const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5 && rmsAnalyser.hasSignal();
       if(rmsAvailable){
         const voiceMs = rmsAnalyser.voiceDurationMs(ctx.startTime, now);
@@ -8947,24 +8156,26 @@ async function startReciting(){
   if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
   if(micPermission !== 'granted'){ const ok = await promptForMic(); if(!ok) return; }
   if(!followOnly && mode === 'surah' && !coachTajweedReady && !coachTajweedDegraded){
+    // Do not block ASR on Tajweed readiness — rule checks self-gate via
+    // runStrict1Checks()'s `if (!coachTajweedReady) return;` guard, so it is
+    // safe to start listening immediately.
     addFeedback('🎨 Tajweed rules are still loading — recitation will start now; rule checks will activate once ready.', false, true);
   }
+  // Always await the mic stream so RMS boot is complete before ASR fires.
+  // ensureMicStream() early-returns when the stream is already live, so this
+  // is cheap on resumed sessions.
   await ensureMicStream().catch(() => {});
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
   recReset(); pendingJumpTarget = -1;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
-  prevWordAudio = null;
   setMicButton(); setStatus('Starting…', 'loading');
   requestWakeLock(); resetSilenceTimer(true); scheduleSaveProgress();
   try{ bumpStreak(); }catch(_){}
 
-resetSpeechPipeline();
-
   try{
-    speechRecognition = createSpeechRecognition();
-  if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
-    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
+    if(!speechRecognition || speechRecognition.__dead) speechRecognition = createSpeechRecognition();
+    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false; micWarningShown = false;
@@ -8982,15 +8193,14 @@ resetSpeechPipeline();
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false; micPaused = false;
-resetSpeechPipeline();
   disarmSpeechKeepalive(); pendingJumpTarget = -1;
   cancelFollowPinTimer();
-  pendingHeard.length = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
-  prevWordAudio = null;
   setMicButton(); recRunning = false; speechStarting = false;
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
+  // A stopped listening session must release the capture tracks, not merely
+  // mute them, so the browser and operating system stop recording audio.
   releaseMicStream();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
@@ -9023,6 +8233,7 @@ function finish(){
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer(); stopMicWatchdog();
   cancelFollowPinTimer();
+  // Completion ends the listening session and releases the microphone device.
   releaseMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
@@ -9037,27 +8248,6 @@ function finish(){
   }
   if(!IS_ANDROID && navigator.vibrate) navigator.vibrate([60,40,60,40,120]);
   updateHUD(); updateFsMicBtn(); syncFsButtons();
-
-  try{
-    if (localStorage.getItem('qc.debugTajweed') === '1'){
-      const nf = rmsAnalyser.bandNoiseFloor();
-      console.debug('[Tajweed calibration]', {
-        T_mora: getBaseMsPerLetter(),
-        paceSamples: paceSamples.length,
-        noiseFloorBands: Array.from(nf),
-        minRms: rmsAnalyser.minRms(),
-        calibrated: rmsAnalyser.isCalibrated(),
-        errors,
-        totalWords: words.length,
-        maddChecks: STRICT_FEATURES.madd(),
-        ghunnahChecks: STRICT_FEATURES.ghunnah(),
-        laamChecks: STRICT_FEATURES.laam(),
-        emphatics: STRICT_FEATURES.emphatics(),
-        silentChecks: STRICT_FEATURES.silent(),
-        hamWasl: STRICT_FEATURES.hamWasl()
-      });
-    }
-  }catch(_){}
 }
 
 function stopPlayback(){
@@ -9258,6 +8448,9 @@ backFromAudio.addEventListener('click', () => showScreen('home'));
 btnBackHome.addEventListener('click', () => {
   if(readerFullscreen) exitReaderFullscreen();
   stopEverything(true);
+  // Full release when leaving the coach screen entirely — the mic indicator
+  // will now clear. stopReciting() only muted the stream so it could be
+  // re-used; this is the final hard cleanup.
   releaseMicStream();
   showScreen('home');
 });
@@ -9284,27 +8477,32 @@ function openCopyrightModal(){
     '<div class="modal info-modal">' +
     '<div class="grabber"></div>' +
     '<h2>© Copyright &amp; AI Policy</h2>' +
+
     '<div class="feature"><h3><span class="fnum">©</span> Copyright notice</h3><ul>' +
       '<li><b>© 2025 Quran Recitation Coach. All rights reserved.</b></li>' +
       '<li>The <b>Quranic text</b> is the word of Allah ﷻ and is not subject to copyright. The specific <b>translations</b>, <b>recitations</b> and <b>Tajweed annotations</b> are used under the terms of their sources (AlQuran.cloud, Quran.com, EveryAyah.com, Islamic Network) and remain the work of their respective scholars and reciters.</li>' +
       '<li>The <b>application code, design system, user interface, feature implementations, artwork and documentation</b> are the exclusive intellectual property of the author.</li>' +
     '</ul></div>' +
+
     '<div class="feature"><h3><span class="fnum">✓</span> Permitted use</h3><ul>' +
       '<li>Personal, non-commercial worship and Quran study.</li>' +
       '<li>Sharing a link to the app with family and friends.</li>' +
       '<li>Installing the app on your own devices.</li>' +
     '</ul></div>' +
+
     '<div class="feature"><h3><span class="fnum">✕</span> Prohibited without written permission</h3><ul>' +
       '<li>Copying, modifying or redistributing the source code.</li>' +
       '<li>Using any part of this application for <b>AI model training, dataset creation, or automated scraping</b>.</li>' +
       '<li>Rebranding, republishing or reselling this application.</li>' +
     '</ul></div>' +
+
     '<div class="feature"><h3><span class="fnum">🛡️</span> AI training policy</h3><ul>' +
       '<li><b>AI training and automated content extraction are expressly prohibited.</b></li>' +
       '<li>This site enforces its policy via <b>robots.txt directives</b>, <b>meta tags</b> and <b>User-Agent filtering</b>.</li>' +
       '<li>Explicitly <b>permitted</b>: Google Search (Googlebot), Bing Search (Bingbot) and Vercel Analytics.</li>' +
       '<li>Known AI / dataset crawlers are <b>blocked</b>: GPTBot, ChatGPT-User, OAI-SearchBot, CCBot, Google-Extended, Google-CloudVertexBot, GoogleOther, anthropic-ai, ClaudeBot, Claude-Web, PerplexityBot, cohere-ai, Bytespider, Applebot-Extended, FacebookBot, ImagesiftBot, Omgilibot, Diffbot, YouBot, TimpiBot, Amazonbot, meta-externalagent.</li>' +
     '</ul></div>' +
+
     '<div class="footer-note">For licensing enquiries, use the Feedback option in the ☰ menu.</div>' +
     '<div class="btn-group"><button class="primary" id="copyClose">Close</button></div>' +
     '</div>';
@@ -9378,6 +8576,8 @@ prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSura
 nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSurah(1); });
 surahButton.addEventListener('click',openSurahPicker);
 
+if(selMatch) selMatch.value = 'strict';
+
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     if(wantMic && !finished && !fsPaused) resumeMic();
@@ -9408,6 +8608,8 @@ window.addEventListener('beforeunload',()=>{
   }
 });
 
+// pagehide fires on mobile when the page is put into the bfcache — release
+// the mic here too so the platform indicator is cleared correctly.
 window.addEventListener('pagehide', () => {
   try{ releaseMicStream(); }catch(_){}
 });
@@ -9465,6 +8667,28 @@ function closeQrScreen(){ if(!qrFullscreen) return; qrFullscreen.hidden = true; 
 if(qrCloseBtn) qrCloseBtn.addEventListener('click', closeQrScreen);
 if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target === qrFullscreen) closeQrScreen(); }); }
 
+(function boot(){
+  initServiceWorker().catch(err => console.warn('[SW] boot init failed:', err));
+  updateHijriDate(); setInterval(updateHijriDate, 30 * 60 * 1000);
+  renderImportantDates(); setInterval(renderImportantDates, 60 * 60 * 1000);
+  installWordDelegates();
+  applyTheme(); applyMutexUI(); applyFollowOnlyUI();
+  setMicButton(); updateFullscreenIcon(); updateViewerFullscreenIcon(); updateFsMicBtn(); updateQvVolIcon(); applyViewerTranslateUI();
+  volumeSlider.value = String(currentVolume); qvVolSlider.value = String(currentVolume);
+  updateVolIcon(); updateReciterTrigger(); updateTranslationTrigger(); updateTextTranslationTrigger();
+  updateTranslationCheckboxState();
+  refreshPermissionState();
+  loadBookmarks(); renderBookmarksScreen(); renderJuzIndex(); refreshProgressMenu();
+  updateInstallMenuItem(); maybeShowInstallPrompt();
+  updateStreakUI(); renderStreakBadges();
+  const hifzSel = document.getElementById('hifzSurahSelect');
+  if(hifzSel){
+    const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);
+    if(lastSurah) hifzSel.value = String(lastSurah);
+  }
+  showScreen('home');
+})();
+
 function openCoachInfoModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -9478,42 +8702,39 @@ function openCoachInfoModal(){
       '<li>The top of the coach screen always shows two pill tabs — <b>Follow</b> and <b>Tajweed</b>. One is always active; tapping the other switches mode instantly.</li>' +
       '<li>Both modes use your browser\'s <b>built-in speech recognition</b> — no custom model download. An internet connection is required.</li>' +
       '<li>Hold any word for 3 seconds to start reciting from that point.</li>' +
-      '<li><b>Tap any coloured word</b> to see the Tajweed rule name and a short explanation.</li>' +
       '<li>On Android phones the coach stays <b>silent and vibration-free while listening</b> so the microphone never picks up its own tones.</li>' +
+      '<li><b>Pauses and ornaments</b> — waqf marks (ۖ ۗ ۘ ۙ ۚ ۛ), rub-el-hizb (۞), sajdah (۩) and end-of-ayah (۝) symbols — are drawn but <b>never counted as words to recite</b>. The coach only listens for real words, so it never stalls on a symbol.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
     '<h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3>' +
     '<ul>' +
-      '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
-      '<li>Follow mode uses balanced matching with MFA phonetic tolerance to keep the highlight in sync with your recitation.</li>' +
-      '<li><b>Nothing is marked red and no mistakes are counted</b> in Follow mode.</li>' +
+      '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite, so you keep your place even while learning.</li>' +
+      '<li>Follow mode always uses a fixed <b>strict word-matching</b> with a tight <b>2-word lookahead</b>, so a breath, a filler or a small recognition error never stops the microphone.</li>' +
+      '<li>Unmatched words are silently skipped without moving the highlight — the microphone never stops.</li>' +
+      '<li>If <b>three words in a row</b> are not recognised, the pointer is <b>pinned on the third word</b> and a <b>7-second</b> countdown starts. Recite the word (or any later word) to clear it; if the word is still not recited when the countdown expires, the <b>microphone is stopped</b> so you can re-centre and try again.</li>' +
+      '<li><b>Nothing is marked red and no mistakes are counted</b> — the coach simply keeps following your recitation.</li>' +
+      '<li>Follow mode never records mistakes or accuracy — its only job is to help you memorise.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
     '<h3><span class="fnum">3</span> 🎵 Tajweed mode (error feedback)</h3>' +
     '<ul>' +
-      '<li><b>Tajweed</b> is designed to highlight every mispronunciation.</li>' +
-      '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter.</li>' +
-      '<li>Tajweed uses a stricter word-matching tolerance (+0) and a tight MFA gate (3-letter words require an exact match) so mispronunciations surface reliably.</li>' +
-      '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> measured on the actual vowel run.<br>• <b>Ghunnah</b> verified by both transcript and audio spectrum.<br>• <b>Laam Shamsiyyah</b> checked by onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> flagged when a glottal re-attack is detected.<br>• <b>Emphatic letter substitution</b> (ص → س, ط → ت…) surfaced as a warning.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
-      '<li><b>Every coloured word explains itself.</b> Tap any coloured word to see the Tajweed rule name and a short description. The same explanation appears automatically in the feedback panel when a coloured word is recited correctly.</li>' +
-      '<li><b>Rule-ready chip:</b> a small chip near the mode pills shows whether the Tajweed rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules unavailable</b>.</li>' +
+      '<li><b>Tajweed</b> is designed to highlight every mispronunciation in a session.</li>' +
+      '<li>Tajweed always uses <b>strict word-matching</b> with a tight lookahead so the recitation flow is never interrupted.</li>' +
+      '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter — so you can finish the passage and review the whole list of mistakes at the end.</li>' +
+      '<li>An ayah-by-ayah <b>Mistakes</b> panel and an <b>Accuracy</b> percentage appear on the coach screen while Tajweed is active. Every Tajweed rule violation is labelled with <b>the name of the rule that was broken</b> — e.g. <i>Madd (normal) — too short</i>, <i>Ghunnah — nasal missing</i>, <i>Ikhfa — too short</i>, <i>Idghaam (with ghunnah) — nasal missing</i>, <i>Iqlab — nasal (م) missing</i>, <i>Silent letter — pronounced</i> — both in the mistakes panel and in the live feedback feed.</li>' +
+      '<li>In Tajweed mode, every word is also <b>coloured by its Tajweed rule</b> (Madd, Ghunnah, Qalqalah, Ikhfa, Idghaam, Iqlab, Hamzat al-Wasl, Laam Shamsiyyah, Silent) using the same authoritative Quran.com Uthmani annotations as the standalone Tajweed Colors screen. Status is shown by background / underline so the rule colour stays visible while you recite.</li>' +
+      '<li><b>Rule-aware checks:</b> while you recite, the coach verifies four key Tajweed rules marked on each word:<br>• <b>Yellow / Orange / Red madd letters</b> must be held long enough — the coach measures the timing between consecutive word commits. Batch requirements scale with your recitation pace. <i>Mid-ayah madds</i> use the ASR commit gap; <i>end-of-ayah madds</i> use the RMS voiced-duration measurement compared to a <b>pace-calibrated expectation</b>: the coach learns your recitation rate (ms per letter) from the non-madd words you recite in the current session and predicts the expected duration for each end-of-ayah madd word (letter count + madd counts × learned rate, ×0.90 tolerance). Until enough samples are collected it falls back to a fixed 250 ms voiced minimum.<br>• <b>Green ghunnah letters</b> (ن / م) must be present in what is heard — for <b>ikhfāʾ</b> (including ikhfāʾ shafawī, م before ب) and <b>iqlāb</b> (ن→م) the expected nasal is derived from the rule type, so a dropped nasal is caught.<br>• <b>Ghunnah length</b> — the four ghunnah-producing rules require <b>2 ḥarakāt</b> of nasalisation. The coach measures sustained voice energy between commits and flags the word red if the nasalisation is too short.<br>• <b>Silent letters</b> (the grey span) must <i>not</i> be pronounced. The check compares the heard token against the <b>full written word</b> and the <b>silent-stripped normalised form</b> (computed from the Quran.com annotation spans); it flags the word red only when the heard form is strictly closer to the full form — meaning the reciter unambiguously pronounced the silent letter. Geminate mergers (e.g. the first ل of الله) and multi-alif words (e.g. أَنَا) are handled correctly, so a correct recitation is never falsely flagged.</li>' +
+      '<li><b>Live rule-ready chip:</b> a small chip next to the mode pills shows at a glance whether the Tajweed rule checks are actually armed — <b>● Loading rules…</b> while the Quran.com annotations are being fetched, <b>● Rules ready</b> in green once they have been aligned to the surah you are reciting, and <b>● Rules unavailable</b> in amber if the fetch fails. Tap the chip for a full explanation. In Follow mode the chip is hidden, because Tajweed rule checks do not apply there.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">4</span> 🙈 Hide text &amp; Reveal text</h3>' +
-    '<ul>' +
-      '<li><b>Hide text</b> (available in Follow mode) hides the whole mushaf so you can recite from memory. Words become visible as you recite them.</li>' +
-      '<li>While hidden mode is active, a small <b>Reveal text</b> tab appears inside the fullscreen toolbar (alongside ⏸ ▶ ⏹). Tapping it temporarily shows the entire page; tapping again hides it once more. The tab fades away with the rest of the toolbar after 3 seconds.</li>' +
-    '</ul>' +
-  '</div>' +
-  '<div class="feature">' +
-    '<h3><span class="fnum">5</span> Progress — Follow &amp; Tajweed memory</h3>' +
+    '<h3><span class="fnum">4</span> Progress — Follow &amp; Tajweed memory</h3>' +
     '<ul>' +
       '<li>Whichever mode you are in, the coach automatically remembers the <b>last surah, ayah and word</b> you reached.</li>' +
-      '<li>Tap <b>Progress</b> on the Home screen, then choose <b>Follow</b> or <b>Tajweed</b>.</li>' +
-      '<li>Progress is stored only on your device.</li>' +
+      '<li>Tap <b>Progress</b> on the Home screen, then choose <b>Follow</b> or <b>Tajweed</b>. The Quran screen opens with that mode switched on and the pointer waiting on your last word.</li>' +
+      '<li>Progress is stored only on your device, and it survives every app update.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="footer-note">All learning progress stays on your device.</div>' +
@@ -9532,17 +8753,19 @@ function openInfoModal(){
   bg.innerHTML = '<div class="modal info-modal">' +
   '<div class="grabber"></div>' +
   '<h2>ℹ️ About this app</h2>' +
-  '<div class="coach-note"><b>Looking for the Quran Recitation Coach rules?</b><br>The Recitation Coach has its own Info tab on the <b>Quran Recitation Coach</b> page.</div>' +
-  '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>Today\'s <b>Hijri date</b> is computed from the same arithmetic algorithm used by the calendar.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">4</span> 📖 Two English translations</h3><ul><li>Yusuf Ali &amp; Saheeh International.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li><b>Default:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
-  '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> to bookmark it.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>⬇</b> to download a surah for offline.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Alarms + Qibla compass.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Three memorisation modes.</li></ul></div>' +
-  '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>10 achievements to unlock.</li></ul></div>' +
+  '<div class="coach-note"><b>Looking for the Quran Recitation Coach rules?</b><br>The Recitation Coach has its own Info tab on the <b>Quran Recitation Coach</b> page — it explains Follow &amp; Tajweed modes, matching rules and progress memory. Everything else in the app is explained below.</div>' +
+  '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>The Home screen shows today\'s <b>Hijri date</b> in English and Arabic, computed from the same arithmetic algorithm used by the calendar.</li><li>Tap the card to open a <b>month view</b> of the Hijri and Gregorian calendars together.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li>Open any surah from the index or pick a <b>Juz</b> — pages turn by swiping.</li><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li><li>Tap <b>EN</b> to show or hide the English translation.</li><li>The mushaf page follows the <b>light / dark theme</b>.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>: a framed page, a top row with the surah name · page number · juz name, then the <b>Bismillah on its own centred line</b>, followed by the ayahs flowing as one continuous justified words text.</li><li>Ayah numbers appear as small <b>medallions</b> inside the text.</li><li>Verses of <b>Sajdah</b> are marked with a <b>۩</b> and a pop-up notice appears when you open a page containing one.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">4</span> 📖 Two English translations — Yusuf Ali &amp; Saheeh International</h3><ul><li>The reader, the audio screen and the recitation coach can show either <b>Abdullah Yusuf Ali</b> or <b>Saheeh International</b> English translation of the Holy Qur\'an.</li><li>On the <b>Play audio</b> screen, tap the <b>Text Translation</b> dropdown to choose which one is displayed in the reader, the coach, and the audio player.</li><li><b>Automatic text matching:</b> when you tick the <b>Play translation audio</b> checkbox (the Saheeh International English recitation), the app automatically switches the displayed English text to <b>Saheeh International</b> underneath each Arabic ayah — so text and audio always match.</li><li><b>Footnotes are omitted.</b> Only the translation text itself is shown.</li><li>Translation text is fetched live from the Quran APIs and cached by your browser for offline reading after first view.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li>On the <b>Play audio</b> screen, tap the <b>Reciter</b> dropdown to open a scrollable list of all ' + RECITER_ORDER.length + ' Qaris.</li><li>Your choice is remembered and used everywhere ayah audio is played.</li><li><b>Default reciter:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><div style="font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:6px">Available Qaris (' + RECITER_ORDER.length + ')</div><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
+  '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> in the reader to bookmark it.</li><li>Tap a bookmark to jump back to that page.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>▶️ Play audio</b> and pick any surah with the play icon.</li><li><b>Download for offline listening:</b> tap the <b>⬇</b> button between the ayah count and the Arabic surah name.</li><li>While downloading the button shows a <b>percentage</b>; when finished it turns into a green <b>✓</b>.</li><li>Downloaded surahs play <b>without any internet connection</b>, and they <b>survive every app update</b>.</li><li>Tick the <b>Play translation audio</b> checkbox to hear an English recitation of each verse after the Arabic recitation. The English text shown on-screen will then automatically match the Saheeh International audio.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Tap <b>Prayer Times</b> on the Home screen.</li><li>Tap the bell next to any prayer to turn its alarm on or off.</li><li>Inside <b>⚙️ → Alarms</b>, choose the alarm sound: <b>Athaan</b>, <b>Beep</b> or <b>Mute</b>.</li><li>Inside <b>⚙️ → Adjust</b>, shift any prayer by ±1 minute to match your local masjid.</li><li>Inside <b>⚙️ → Qibla</b>, the compass rose shows the direction of the Ka\'bah for your saved location.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Tap <b>Hifz Test</b> on the Home screen for a memorization test with 3 modes: Silent Recall, Reveal-on-Mistake, Blank Last Line.</li><li>Tap <b>Tajweed Colors</b> on the Home screen for an authoritative, surah-by-surah colored mushaf sourced from <b>Quran.com\'s Uthmani Tajweed</b> annotations (Hafs ʿan ʿAsim).</li><li>Choose any of the <b>114 surahs</b> from the dropdown, toggle 12 tajweed rules on/off, and tap <b>⛶</b> to read in full screen with a large font.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>Recite, bookmark, or download something each day to grow your <b>daily streak</b>.</li><li>Tap the streak bar to see all 10 achievements you can unlock.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">11</span> 🌐 Which browser should I use?</h3><ul><li><b>Android — Google Chrome</b> or <b>Microsoft Edge</b>: everything works, including the live recitation coach.</li><li><b>iPhone / iPad — Safari (iOS 14.5 or newer)</b>: everything works.</li><li><b>Desktop — Chrome, Edge or Safari</b>: everything works.</li><li><b>Firefox</b> and most <b>in-app browsers</b> do <b>not</b> implement the Web Speech API, so the live coach is unavailable there.</li></ul></div>' +
+  '<div class="feature"><h3><span class="fnum">12</span> 🇨🇳 Chinese phones, Huawei &amp; Honor</h3><ul><li>Most Chinese-market phones ship <b>without Google Play Services</b> and without Google Chrome.</li><li>Their built-in browsers do <b>not</b> implement the Web Speech API — the <b>Recitation Coach cannot work</b> in them.</li><li>Everything else works fine: the <b>Surah index, Juz index, Quran text, book-form pages, English translation, Prayer Times, Qibla, bookmarks, ayah-by-ayah audio, offline downloads, Hifz Test, Tajweed Colors</b>.</li><li><b>To get the coach:</b> install <b>Google Chrome</b> and open this page in Chrome.</li></ul></div>' +
   '<div class="footer-note">All learning progress, prayer adjustments and downloads stay on your device.</div>' +
   '<div class="btn-group"><button class="primary" id="infoClose">Got it</button><button class="danger" id="infoReset">Reset app</button></div>' +
 '</div>';
@@ -9576,7 +8799,7 @@ const FEEDBACK_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function openFeedbackModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
-  bg.innerHTML = '<div class="modal feedback-modal"><div class="grabber"></div><h2>💬 Send feedback</h2><p>Tell us what you think, report a bug, or suggest an improvement.</p><div class="feedback-field"><label for="fbEmail">Your email</label><input type="email" id="fbEmail" inputmode="email" autocomplete="email" placeholder="you@example.com" required></div><div class="feedback-field"><label for="fbMessage">Your message</label><textarea id="fbMessage" rows="6" placeholder="Type your feedback here…" required></textarea></div><div class="feedback-status" id="fbStatus" hidden></div><div class="btn-group"><button class="primary" id="fbSubmit" type="button">Send feedback</button><button class="ghost" id="fbCancel" type="button">Cancel</button></div></div>';
+  bg.innerHTML = '<div class="modal feedback-modal"><div class="grabber"></div><h2>💬 Send feedback</h2><p>Tell us what you think, report a bug, or suggest an improvement. Your email is required so we can follow up if needed.</p><div class="feedback-field"><label for="fbEmail">Your email</label><input type="email" id="fbEmail" inputmode="email" autocomplete="email" placeholder="you@example.com" required></div><div class="feedback-field"><label for="fbMessage">Your message</label><textarea id="fbMessage" rows="6" placeholder="Type your feedback here…" required></textarea></div><div class="feedback-status" id="fbStatus" hidden></div><div class="btn-group"><button class="primary" id="fbSubmit" type="button">Send feedback</button><button class="ghost" id="fbCancel" type="button">Cancel</button></div></div>';
   document.body.appendChild(bg);
   const emailEl   = bg.querySelector('#fbEmail');
   const msgEl     = bg.querySelector('#fbMessage');
@@ -10220,26 +9443,4 @@ function initPrayerTimes(){
   if(prayerState.sound !== 'mute' && Object.values(prayerState.alarms).some(Boolean)) requestNotificationPermission();
 }
 initPrayerTimes();
-
-(function boot(){
-  initServiceWorker().catch(err => console.warn('[SW] boot init failed:', err));
-  updateHijriDate(); setInterval(updateHijriDate, 30 * 60 * 1000);
-  renderImportantDates(); setInterval(renderImportantDates, 60 * 60 * 1000);
-  installWordDelegates();
-  applyTheme(); applyMutexUI(); applyFollowOnlyUI();
-  setMicButton(); updateFullscreenIcon(); updateViewerFullscreenIcon(); updateFsMicBtn(); updateQvVolIcon(); applyViewerTranslateUI();
-  volumeSlider.value = String(currentVolume); qvVolSlider.value = String(currentVolume);
-  updateVolIcon(); updateReciterTrigger(); updateTranslationTrigger(); updateTextTranslationTrigger();
-  updateTranslationCheckboxState();
-  refreshPermissionState();
-  loadBookmarks(); renderBookmarksScreen(); renderJuzIndex(); refreshProgressMenu();
-  updateInstallMenuItem(); maybeShowInstallPrompt();
-  updateStreakUI(); renderStreakBadges();
-  const hifzSel = document.getElementById('hifzSurahSelect');
-  if(hifzSel){
-    const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);
-    if(lastSurah) hifzSel.value = String(lastSurah);
-  }
-  showScreen('home');
-})();
 </script></body></html>
