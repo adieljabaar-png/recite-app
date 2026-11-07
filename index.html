@@ -3007,8 +3007,8 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   const L = la > lb ? la : lb;
   if(L < 2) return false;
 
-  const extraTol = followOnly ? 1 : 0;
-  const tol = toleranceFor(L) + extraTol;
+const extraTol = followOnly ? 1 : 0;   // ← change to
+const extraTol = 0;
 
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
@@ -8527,7 +8527,7 @@ function isFollowPlausible(heard, hPhon, w) {
   if (ratio < 0.20 || ratio > 4.0) return false;
 
   const L   = Math.max(heardLen, targetLen);
-  const tol = toleranceFor(L) + 2;
+  const tol = toleranceFor(L);
 
   if (lev(heard, w.norm) <= tol) return true;
   if (hPhon.length >= 2 && w.phon.length >= 2 &&
