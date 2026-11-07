@@ -10,8 +10,6 @@
 <meta name="apple-mobile-web-app-title" content="Recite" />
 <meta name="application-name" content="Recite" />
 <meta name="description" content="Practice Quran recitation with live word-by-word feedback." />
-
-<!-- ── Copyright & AI policy ───────────────────────────────── -->
 <meta name="copyright" content="© 2025 Quran Recitation Coach. All rights reserved." />
 <meta name="rights" content="All rights reserved. AI training prohibited." />
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1, noai, noimageai" />
@@ -986,6 +984,7 @@ background-repeat:no-repeat;background-position:right 5px center;
 .toggle.match-select select option{background:#1b2436;color:#fff}
 .toggles{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
 .toggles::-webkit-scrollbar{display:none}
+
 .barwrap{height:5px;background:#0b101b;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .bar{height:100%;width:0%;background:linear-gradient(90deg,#4f8cff,#2fd07a);transition:width .3s}
 .hud{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
@@ -1017,7 +1016,7 @@ font-size:.76rem;direction:ltr;animation:slide-in .22s ease;min-height:32px;
 .mistakes-list .correct{font-family:'Amiri','Amiri Quran',serif;font-size:1.15rem;color:#fff;direction:rtl;flex-shrink:0;}
 .mistakes-list .heard{color:var(--muted);font-family:'Amiri','Amiri Quran',serif;font-size:.95rem;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .mistakes-list .meta{margin-left:auto;color:var(--muted);font-size:.65rem;white-space:nowrap;flex-shrink:0;font-family:-apple-system,sans-serif;}
-.mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;}
+.mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;cursor:help;}
 body.light-mode .mistakes-list .tj-kind{background:rgba(120,80,220,.16);border-color:rgba(120,80,220,.55);color:#5b2d9e;}
 @keyframes slide-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
@@ -1083,17 +1082,61 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.error{background:rgba(255,90,106,.22);color:#ff9aa4;text-decoration:underline wavy var(--bad);text-underline-offset:8px;animation:shake .32s ease;}
 .w.skipped{background:rgba(255,176,32,.16);color:#ffcf6b;text-decoration:line-through;text-decoration-color:var(--warn);}
 .w.model{background:rgba(255,176,32,.3);color:#fff}
-.w.warned{color:var(--warn) !important;text-decoration:underline dotted var(--warn);text-underline-offset:6px;background:rgba(255,176,32,.08);}
+.w.warned{text-decoration:underline dotted var(--warn);text-underline-offset:6px;background:rgba(255,176,32,.08);}
 .w-deco{display:inline-block;padding:0 3px;opacity:.9;pointer-events:none;cursor:default;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @keyframes locatePulse{0%{background:rgba(79,140,255,.55);box-shadow:0 0 0 0 rgba(79,140,255,.6);color:#fff}100%{background:transparent;box-shadow:0 0 0 18px rgba(79,140,255,0);color:var(--text)}}
 .w.located{animation:locatePulse .9s ease}
-body.hide-text-mode:not(.viewer-open) .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
-body.hide-text-mode:not(.viewer-open) .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
-body.hide-text-mode:not(.viewer-open) .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
-body.hide-text-mode:not(.viewer-open) .w.current{color: transparent !important;background: transparent !important;box-shadow: none !important;}
-body.hide-text-mode:not(.viewer-open) .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
+
+/* Hide-text mode now works everywhere (including fullscreen viewer). */
+body.hide-text-mode .w:not(.revealed){color: transparent !important;background: transparent !important;box-shadow: none !important;text-decoration-color: transparent !important;text-shadow: none !important;transition: color .25s ease, background .25s ease, box-shadow .25s ease;}
+body.hide-text-mode .w.revealed{color: var(--text) !important;background: transparent !important;box-shadow: none !important;text-decoration: none !important;transition: color .3s ease;}
+body.hide-text-mode .w.skipped.revealed{color:#ffcf6b !important;background:rgba(255,176,32,.18) !important;box-shadow:none !important;text-decoration:line-through !important;text-decoration-color:var(--warn);border-radius:7px;}
+body.hide-text-mode .w.current{color: transparent !important;background: transparent !important;box-shadow: none !important;}
+body.hide-text-mode .w.pressing{background: rgba(79,140,255,.3) !important;box-shadow: 0 0 0 3px rgba(79,140,255,.5) !important;}
 body.hide-text-mode:not(.viewer-open) .mushaf::after{content: "🙈 Text hidden — recite from memory. Words appear as you go.";display:block;direction:ltr;font-family:-apple-system,sans-serif;font-size:.72rem;color:var(--muted);text-align:center;padding:16px 8px 4px;letter-spacing:.02em;opacity:.75;}
+
+/* Reveal-all-text override (works everywhere too) */
+body.hide-text-mode.reveal-all-text .w:not(.revealed){
+  color: var(--text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration-color: transparent !important;
+  text-shadow: none !important;
+}
+body.hide-text-mode.reveal-all-text .w.current{
+  color: #fff !important;
+  background: linear-gradient(180deg,#5c96ff,#3a72e6) !important;
+  box-shadow: 0 0 0 3px rgba(79,140,255,.2), 0 4px 12px rgba(79,140,255,.3) !important;
+}
+body.hide-text-mode.reveal-all-text .w.skipped{
+  color:#ffcf6b !important;
+  background:rgba(255,176,32,.18) !important;
+  text-decoration:line-through !important;
+  text-decoration-color:var(--warn) !important;
+}
+body.hide-text-mode.reveal-all-text:not(.viewer-open) .mushaf::after{
+  display:none !important;
+}
+
+/* Viewer-specific hide-text overrides (must out-rank viewer-read-mode's inherit rule) */
+body.viewer-read-mode.hide-text-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .w:not(.revealed){
+  color:transparent !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  text-decoration:none !important;
+  -webkit-text-stroke:0 !important;
+}
+body.viewer-read-mode.hide-text-mode.reveal-all-text .qv-slot .mushaf.mushaf-book .mushaf-book-content .w:not(.revealed){
+  color:inherit !important;
+  -webkit-text-stroke:0 !important;
+}
+body.viewer-read-mode.hide-text-mode.reveal-all-text .qv-slot .mushaf.mushaf-book .mushaf-book-content .w.current:not(.revealed){
+  color:#fff !important;
+  background:linear-gradient(180deg,#5c96ff,#3a72e6) !important;
+  box-shadow:0 0 0 3px rgba(79,140,255,.2), 0 4px 12px rgba(79,140,255,.3) !important;
+}
+
 .ayah-num{display:inline-block;font-family:-apple-system,sans-serif;font-size:.42em;vertical-align:middle;color:#cbd6ea;background:#1c2740;border:1px solid #2b3a55;border-radius:999px;padding:2px 9px;margin:0 8px;direction:ltr;}
 .loading{direction:ltr;text-align:center;color:var(--muted);font-family:-apple-system,sans-serif;font-size:.9rem;font-weight:400;padding:42px 20px;line-height:1.6;}
 .loading .err{color:var(--bad);font-weight:600;display:block;margin-bottom:8px}
@@ -1185,6 +1228,43 @@ max-width:calc(100vw - 16px);
 .fs-controls .fs-sep{width:1px;height:24px;background:rgba(255,255,255,.12);margin:0 1px;flex-shrink:0;}
 .fs-controls #fsMic.active-mic{color:var(--good);background:rgba(47,208,122,.15);border-color:rgba(47,208,122,.5);animation: fsMicPulse 1.6s infinite;}
 @keyframes fsMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(47,208,122,.35)}50%{box-shadow:0 0 0 8px rgba(47,208,122,0)}}
+
+/* Reveal-text tab — sits inline with ⏸ ▶ ⏹ and hides after 3 s with the toolbar */
+.fs-controls .fs-text-tab{
+  width:auto;min-width:0;padding:0 12px;height:36px;
+  border-radius:999px;flex-shrink:0;white-space:nowrap;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--gold,#d4af37);
+  background:rgba(212,175,55,.10);
+  border:1px solid rgba(212,175,55,.45);
+  transition:background .2s, border-color .2s, color .2s, transform .12s, box-shadow .2s;
+}
+.fs-controls .fs-text-tab:active{ transform:scale(.95) }
+.fs-controls .fs-text-tab.active{
+  background:rgba(212,175,55,.22);
+  border-color:rgba(212,175,55,.75);
+  color:#fff;
+  box-shadow:0 4px 14px rgba(212,175,55,.32);
+}
+body.light-mode .fs-controls .fs-text-tab{
+  color:#a67c00;background:rgba(166,124,0,.08);border-color:rgba(166,124,0,.40);
+}
+body.light-mode .fs-controls .fs-text-tab.active{
+  background:rgba(166,124,0,.20);border-color:rgba(166,124,0,.70);color:#1a2233;
+}
+@media (max-width:420px){
+  .fs-controls{gap:3px;padding:6px 8px}
+  .fs-controls button{width:40px;height:40px;font-size:.9rem}
+  .fs-controls .fs-text-tab{padding:0 9px;font-size:.58rem;height:32px;letter-spacing:.04em}
+  .fs-controls .fs-sep{height:20px;margin:0}
+}
+@media (max-width:360px){
+  .fs-controls{gap:2px;padding:5px 6px}
+  .fs-controls button{width:36px;height:36px;font-size:.85rem}
+  .fs-controls .fs-text-tab{padding:0 7px;font-size:.55rem;height:30px;letter-spacing:.03em}
+}
+
 .fs-badge{position:fixed;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%);z-index:200;background:rgba(17,24,39,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.03em;opacity:0;pointer-events:none;transition:opacity .3s;max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fs-badge.visible{opacity:1}
 .fs-badge .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle;}
@@ -1823,6 +1903,10 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
   border-radius: 4px;
 }
 
+.w[title] { cursor: help; }
+.w[title]:active { filter: brightness(1.25); }
+body.light-mode .w[title]:active { filter: brightness(0.85); }
+
 #tajweedNoiseChip {
   color: var(--warn);
   border-color: rgba(255,176,32,.6);
@@ -1929,41 +2013,13 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
 </head>
 <body>
 
-<!-- ── AI crawler blocker ───────────────────────────────────── -->
 <script>
 (function () {
   'use strict';
-
-  var SAFE_BOTS = [
-    'googlebot', 'google-inspectiontool', 'storebot-google',
-    'bingbot', 'msnbot',
-    'vercel', 'vercel-screenshot', 'vercel-analytics', 'vercelbot',
-    'duckduckbot', 'yandex', 'baiduspider', 'slurp',
-    'applebot', 'facebookexternalhit'
-  ];
-
-  var AI_BOTS = [
-    'gptbot', 'chatgpt-user', 'oai-searchbot',
-    'ccbot',
-    'google-cloudvertexbot', 'googleother',
-    'anthropic-ai', 'claudebot', 'claude-web',
-    'perplexitybot',
-    'cohere-ai', 'cohere-ai-training',
-    'bytespider',
-    'imagesiftbot', 'img2dataset',
-    'omgilibot', 'omgili', 'diffbot', 'youbot',
-    'timpibot',
-    'amazonbot',
-    'meta-externalagent', 'meta-externalfetcher',
-    'facebookbot'
-  ];
-
+  var SAFE_BOTS = ['googlebot', 'google-inspectiontool', 'storebot-google', 'bingbot', 'msnbot', 'vercel', 'vercel-screenshot', 'vercel-analytics', 'vercelbot', 'duckduckbot', 'yandex', 'baiduspider', 'slurp', 'applebot', 'facebookexternalhit'];
+  var AI_BOTS = ['gptbot', 'chatgpt-user', 'oai-searchbot', 'ccbot', 'google-cloudvertexbot', 'googleother', 'anthropic-ai', 'claudebot', 'claude-web', 'perplexitybot', 'cohere-ai', 'cohere-ai-training', 'bytespider', 'imagesiftbot', 'img2dataset', 'omgilibot', 'omgili', 'diffbot', 'youbot', 'timpibot', 'amazonbot', 'meta-externalagent', 'meta-externalfetcher', 'facebookbot'];
   var ua = (navigator.userAgent || '').toLowerCase();
-
-  for (var i = 0; i < SAFE_BOTS.length; i++) {
-    if (ua.indexOf(SAFE_BOTS[i]) !== -1) return;
-  }
-
+  for (var i = 0; i < SAFE_BOTS.length; i++) if (ua.indexOf(SAFE_BOTS[i]) !== -1) return;
   for (var j = 0; j < AI_BOTS.length; j++) {
     if (ua.indexOf(AI_BOTS[j]) !== -1) {
       window.__AI_BLOCKED__ = true;
@@ -2250,9 +2306,10 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
     <label class="toggle match-select" id="matchChip" hidden>
-      🤝 Match
-      <select id="selMatch" aria-label="Pronunciation matching strictness" disabled>
+      🎯 Follow
+      <select id="selMatch" aria-label="Follow matching strictness">
         <option value="strict" selected>Strict</option>
+        <option value="lenient">Lenient</option>
       </select>
     </label>
     <span class="toggle" id="tajweedStatusChip" hidden
@@ -2424,6 +2481,7 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   <button id="fsPause" aria-label="Pause">⏸</button>
   <button id="fsContinue" aria-label="Continue">▶</button>
   <button id="fsStop" aria-label="Stop">⏹</button>
+  <button id="fsReveal" class="fs-text-tab" type="button" style="display:none" aria-label="Reveal text">Reveal text</button>
   <span class="fs-sep"></span>
   <button id="fsMinimize" aria-label="Minimise fullscreen">⤡</button>
 </div>
@@ -2484,6 +2542,7 @@ const selMatch       = document.getElementById('selMatch');
 const matchChip      = document.getElementById('matchChip');
 const chkHideText    = document.getElementById('chkHideText');
 const hideTextChip   = document.getElementById('hideTextChip');
+const fsRevealBtn    = document.getElementById('fsReveal');
 const modeFollowBtn  = document.getElementById('modeFollowBtn');
 const modeTajweedBtn = document.getElementById('modeTajweedBtn');
 const supportBox     = document.getElementById('support');
@@ -2691,7 +2750,6 @@ const SPEECH_LANG = 'ar-SA';
 
 const TASHKEEL = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\uFEFF\u0640]/g;
 
-/* ── Feature flags ───────────────────────────────────────── */
 const STRICT_FEATURES = {
   madd:      () => localStorage.getItem('qc.strictMadd')           !== '0',
   ghunnah:   () => localStorage.getItem('qc.strictGhunnah')        !== '0',
@@ -2702,7 +2760,8 @@ const STRICT_FEATURES = {
 };
 
 function normAr(s){
-  return String(s).replace(TASHKEEL,'')
+  return String(s).normalize('NFKC')
+    .replace(TASHKEEL,'')
     .replace(/\u0671/g,'\u0627')
     .replace(/[\u0622\u0623\u0625\u0672\u0673]/g,'\u0627')
     .replace(/\u0629/g,'\u0647')
@@ -2732,18 +2791,16 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   '\u062D':'\u0647','\u062E':'\u0647','\u063A':'\u0642','\u0639':'\u0621'
 });
 
-/* Emphatic → light substitution map — used by emphaticViolation()
-   to catch ASR autocorrect swallowing heavy letters (Fix 2). */
 const EMPHATIC_FAMILY = {
-  '\u0635': '\u0633', // ص → س
-  '\u0636': '\u062F', // ض → د
-  '\u0637': '\u062A', // ط → ت
-  '\u0638': '\u0630', // ظ → ذ
-  '\u0642': '\u0643', // ق → ك
-  '\u062D': '\u0647', // ح → ه
-  '\u062E': '\u0647', // خ → ه
-  '\u0639': '\u0621', // ع → ء
-  '\u063A': '\u0642'  // غ → ق
+  '\u0635': '\u0633',
+  '\u0636': '\u062F',
+  '\u0637': '\u062A',
+  '\u0638': '\u0630',
+  '\u0642': '\u0643',
+  '\u062D': '\u0647',
+  '\u062E': '\u0647',
+  '\u0639': '\u0621',
+  '\u063A': '\u0642'
 };
 
 function phonNormAr(s){
@@ -2835,10 +2892,17 @@ function gregorianToHijri(date){
   return jdnToHijri(jdn);
 }
 
-let matchLevel = 'strict';
+let matchLevel = (function () {
+  try {
+    const v = localStorage.getItem('qc.matchLevel');
+    if (v === 'strict' || v === 'lenient') return v;
+  } catch (e) {}
+  return 'strict';
+})();
 
 let followOnly = localStorage.getItem('qc.followOnly') !== '0';
 let hideText   = localStorage.getItem('qc.hideText') === '1';
+let revealAllText = false;
 let beepOn     = !followOnly;
 let theme      = localStorage.getItem('qc.theme') || 'dark';
 
@@ -2957,18 +3021,23 @@ function lev(a, b){
   return r;
 }
 
-function matchStrictness(){ return 'strict'; }
+function matchStrictness(){ return matchLevel; }
 
 const TOL_TABLE = {
-  strict:   [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2]
+  strict:  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
+  lenient: [0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
 };
 function toleranceFor(L){
-  const t = TOL_TABLE.strict;
+  const key = followOnly ? matchLevel : 'strict';
+  const t = TOL_TABLE[key] || TOL_TABLE.strict;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 
-const CONF_FLOOR_TABLE = { strict: 0.35 };
-function confidenceFloor(){ return CONF_FLOOR_TABLE.strict; }
+const CONF_FLOOR_TABLE = { strict: 0.35, lenient: 0.20 };
+function confidenceFloor(){
+  const key = followOnly ? matchLevel : 'strict';
+  return CONF_FLOOR_TABLE[key] || 0.35;
+}
 
 const NOISE_LIMIT_TABLE = { strict: 2 };
 function noiseLimit(){ return NOISE_LIMIT_TABLE.strict; }
@@ -2980,7 +3049,10 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   if(hNorm === wNorm) return true;
   const L = la > lb ? la : lb;
   if(L < 2) return false;
-  const tol = toleranceFor(L);
+  
+  const extraTol = followOnly ? (matchLevel === 'lenient' ? 2 : 1) : 0;
+  const tol = toleranceFor(L) + extraTol;
+  
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 2) return false;
   if(lev(hNorm, wNorm) <= tol) return true;
@@ -2989,7 +3061,8 @@ function isMatchWord(hNorm, hPhon, _hPhonLoose, w){
   }
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
-    if(S / L >= 0.85){
+    const prefixThreshold = followOnly ? 0.85 : 0.70;
+    if(S / L >= prefixThreshold){
       if(hNorm.startsWith(wNorm) || wNorm.startsWith(hNorm)) return true;
       if(hNorm.endsWith(wNorm)   || wNorm.endsWith(hNorm))   return true;
     }
@@ -3005,15 +3078,17 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(heardLen < 2 && targetLen > 1) return false;
 
   const ratio = heardLen / targetLen;
-  if(ratio < 0.35 || ratio > 2.5) return false;
+  const minRatio = followOnly ? 0.35 : 0.25;
+  const maxRatio = followOnly ? 2.5 : 3.5;
+  if(ratio < minRatio || ratio > maxRatio) return false;
 
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
 
-  if(lev(heard, w.norm) <= tol + 2) return true;
+  if(lev(heard, w.norm) <= tol + (followOnly ? 2 : 3)) return true;
 
   if(hPhon.length >= 2 && w.phon.length >= 2 &&
-     lev(hPhon, w.phon) <= tol + 1) return true;
+     lev(hPhon, w.phon) <= tol + (followOnly ? 1 : 2)) return true;
 
   return false;
 }
@@ -3504,7 +3579,6 @@ async function handleAudioDownloadTap(surahNumber, type){
   else downloadTranslationSurahAudio(surahNumber);
 }
 
-/* ── QR generator (unchanged) ─────────────────────────────── */
 const QRGen = (function(){
   'use strict';
   const EXP = new Uint8Array(512);
@@ -3735,7 +3809,6 @@ const QRGen = (function(){
   return { encode: encode, toSvg: toSvg };
 })();
 
-/* ── App-wide recitation state ────────────────────────────── */
 let words=[], ptr=0, errors=0, finished=false;
 let mode = 'page';
 let pageNum = 1;
@@ -3766,7 +3839,7 @@ let hudPending = false;
 
 let advanceTimes = [];
 let currentPaceWPS = 0;
-let adaptiveSilenceMs = 6000;
+let adaptiveSilenceMs = 10000;
 let pendingJumpTarget = -1;
 
 const REC_BUF_MAX = 24;
@@ -3789,7 +3862,6 @@ const SPEECH_KEEPALIVE_MS = 40000;
 let micStream = null;
 let lastMicError = null;
 
-/* ── Upgraded RMS + FFT analyser (Fix 1 infrastructure) ──── */
 const rmsAnalyser = (function(){
   const samples = [];
   const MAX_AGE_MS = 8000;
@@ -4093,7 +4165,7 @@ function recPush(newToks){
   const overflow = recTokens.length - REC_BUF_MAX - recCursor;
   if(overflow > 0){ recTokens.splice(0, overflow); recCursor = Math.max(0, recCursor - overflow); }
 }
-function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); }
+function recReset(){ recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; interimProgress.clear(); followWrongTokens = 0; lenientSkipVerse = null; cancelFollowPinTimer(); }
 
 function showScreen(name){
   currentScreenName = name;
@@ -4532,7 +4604,6 @@ function finishHifzTest(){
   bg.querySelector('#hifzResultClose').addEventListener('click', close);
 }
 
-/* ── Tajweed Colors screen (standalone) ──────────────────── */
 const TJ_API_BASE = 'https://api.quran.com/api/v4';
 
 const TJ_ALL_RULES = [
@@ -4789,6 +4860,13 @@ async function applyTajweedColorsToCoach(){
       w.tjRules = parseTajweedWordRules(tWord.html);
       w.normNoSilent = tWord.normNoSilent || w.norm;
       if (w.tjRules) w.tjRules.normNoSilent = w.normNoSilent;
+      if (w.tjRules && w.tjRules.allRules && w.tjRules.allRules.length){
+        const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
+        if (tip){
+          w.el.title = tip;
+          w.el.setAttribute('aria-label', w.raw.replace(TASHKEEL, '') + ' — ' + tip);
+        }
+      }
       appliedCount++;
     });
 
@@ -4822,7 +4900,7 @@ function removeTajweedColorsFromCoach(){
     tjPill.setAttribute('aria-label', 'Tajweed mode');
   }
   if (!coachTajweedApplied) return;
-  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; });
+  words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; w.el.removeAttribute('title'); w.el.removeAttribute('aria-label'); });
   coachTajweedApplied = false;
 }
 
@@ -4899,9 +4977,6 @@ function getBaseMsPerLetter(){
 
 function resetPaceSamples(){ paceSamples.length = 0; }
 
-/* Mora-relative required duration for a mid-ayah madd letter. Used only
-   as a fallback when rmsAvailable is false; the primary path in
-   runStrict1Checks() computes this directly from vowelRun(). */
 function maddRequiredMs(kind){
   const T_mora = getBaseMsPerLetter();
   if (T_mora !== null){
@@ -4939,7 +5014,28 @@ let silentWarned        = false;
 
 let batchTimingCtx = null;
 
-/* ── Extended parseTajweedWordRules (Fix 4A, 4B) ─────────── */
+const TAJWEED_RULE_INFO = {
+  ham_wasl:             { name: 'Hamzat al-Wasl',            desc: 'connecting hamza — silent when joining speech' },
+  laam_shamsiyah:       { name: 'Laam Shamsiyyah',           desc: 'solar lām — assimilated into the following sun letter' },
+  madda_normal:         { name: 'Madd (normal)',             desc: 'elongated 2 morae' },
+  madda_permissible:    { name: 'Madd (permissible)',        desc: 'elongated 2, 4 or 6 morae' },
+  madda_necessary:      { name: 'Madd (necessary)',          desc: 'elongated 6 morae — obligatory' },
+  qalqalah:             { name: 'Qalqalah',                  desc: 'echo / bounce on ق ط ب ج د' },
+  ghunnah:              { name: 'Ghunnah',                   desc: 'nasalisation held ~2 counts on ن or م' },
+  ikhfa:                { name: 'Ikhfa',                     desc: 'partial nasalisation before certain letters' },
+  idghaam_ghunnah:      { name: 'Idghaam (with ghunnah)',    desc: 'merging with nasalisation' },
+  idghaam_no_ghunnah:   { name: 'Idghaam (no ghunnah)',      desc: 'merging without nasalisation' },
+  iqlab:                { name: 'Iqlab',                     desc: 'ن becomes م before ب' },
+  silent:               { name: 'Silent',                    desc: 'silent letter — not pronounced' }
+};
+function buildRuleTooltip(rules, sep){
+  if(!rules || !rules.length) return '';
+  return rules.map(r => {
+    const info = TAJWEED_RULE_INFO[r];
+    return info ? (info.name + ' — ' + info.desc) : r;
+  }).join(sep || '\n');
+}
+
 function parseTajweedWordRules(decoratedHtml){
   const rules = {
     madd: null,
@@ -4952,7 +5048,8 @@ function parseTajweedWordRules(decoratedHtml){
     normNoSilent: null,
     laamShamsiyyahPositions: [],
     hamWasl: false,
-    silentPositionsInNorm: []
+    silentPositionsInNorm: [],
+    allRules: []
   };
   if (!decoratedHtml) return rules;
 
@@ -5003,7 +5100,33 @@ function parseTajweedWordRules(decoratedHtml){
 
   if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) rules.hamWasl = true;
 
+  const seen = new Set();
+  const classRe = /class="([^"]*)"/g;
+  let cm;
+  while ((cm = classRe.exec(decoratedHtml)) !== null){
+    cm[1].split(/\s+/).forEach(c => {
+      if (c.startsWith('tj-') && TAJWEED_RULE_INFO[c.slice(3)]) seen.add(c.slice(3));
+    });
+  }
+  rules.allRules = Array.from(seen);
+
   return rules;
+}
+
+let _lastRuleExplainAt = 0;
+const RULE_EXPLAIN_THROTTLE_MS = 2000;
+function maybeExplainRules(w){
+  if(followOnly) return;
+  if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
+  const now = performance.now();
+  if(now - _lastRuleExplainAt < RULE_EXPLAIN_THROTTLE_MS) return;
+  _lastRuleExplainAt = now;
+  const explanation = buildRuleTooltip(w.tjRules.allRules, ' · ');
+  if(!explanation) return;
+  addFeedback(
+    '🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b> — ' + escapeHtml(explanation),
+    false, true
+  );
 }
 
 function strict1MaddOk(prevW, deltaMs){
@@ -5012,7 +5135,6 @@ function strict1MaddOk(prevW, deltaMs){
   return deltaMs >= need;
 }
 
-/* ── Hybrid Ghunnah check (Fix 3) ────────────────────────── */
 function strict1GhunnahOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
   if (!STRICT_FEATURES.ghunnah()) return true;
@@ -5052,7 +5174,6 @@ function strict1GhunnahOk(w, heard){
   return true;
 }
 
-/* ── New acoustic helpers (Fix 2, 3, 4) ──────────────────── */
 function emphaticViolation(heardNorm, targetNorm){
   const viol = [];
   for (let i = 0; i < targetNorm.length; i++){
@@ -5160,7 +5281,6 @@ function strict1SilentOk(w, heard){
   return dFull >= best;
 }
 
-/* ── Extended error names (Fix 2, 3, 4) ───────────────────── */
 const TAJWEED_ERROR_NAMES = {
   'madd-normal':            'Madd (normal) — too short',
   'madd-permissible':       'Madd (permissible) — too short',
@@ -5210,11 +5330,19 @@ const TAJWEED_ERROR_NAMES = {
 
 function markStrict1Error(w, kind, detail){
   if (!w) return;
-  if (w.el.classList.contains('error')) return;
-  w.el.className = 'w error';
+  if (w._tajweedErrs && w._tajweedErrs.has(kind)) return;
+  if (!w._tajweedErrs) w._tajweedErrs = new Set();
+  w._tajweedErrs.add(kind);
+
+  if (!w.el.classList.contains('error')) w.el.className = 'w error';
   errors++;
 
   const tajweedName = TAJWEED_ERROR_NAMES[kind] || ('Tajweed — ' + kind);
+  const rule = kind.split('-')[0];
+  const ruleInfo = TAJWEED_RULE_INFO[rule];
+  const tajweedExplanation = ruleInfo
+    ? (ruleInfo.name + ' — ' + ruleInfo.desc)
+    : tajweedName;
 
   const m = {
     idx: mistakeCounter++,
@@ -5223,7 +5351,8 @@ function markStrict1Error(w, kind, detail){
     verse: w.verse,
     kind: 'tajweed-' + kind,
     tajweedType: kind,
-    tajweedName: tajweedName
+    tajweedName: tajweedName,
+    tajweedExplanation: tajweedExplanation
   };
   mistakes.push(m); appendMistake(m); scheduleHUD();
   if (beepOn) beepThrottled('error');
@@ -5243,14 +5372,18 @@ function markStrict1Error(w, kind, detail){
 function markStrict1Warning(w, kind, detail){
   if (!w) return;
   if (w.el.classList.contains('warned') || w.el.classList.contains('error')) return;
-  w.el.className = 'w warned';
+  
+  w.el.classList.add('warned');
+  if (!w.el.classList.contains('correct') && !w.el.classList.contains('corrected')) {
+      w.el.classList.add('correct');
+  }
+
   if (!silentWarned){
     silentWarned = true;
     addFeedback('⚠️ <b>' + w.raw.replace(TASHKEEL,'') + '</b> — ' + detail, false, true);
   }
 }
 
-/* ── Full runStrict1Checks rewrite (Fix 1, 3, 4A, 4B, 4C) ── */
 let prevWordAudio = null;
 
 function runStrict1Checks(idx, heard, opts){
@@ -5609,6 +5742,18 @@ async function openTajweedScreen(){
   });
 })();
 
+/* Match-strictness dropdown (Follow mode) */
+(function wireFollowMatch(){
+  if(selMatch){
+    selMatch.addEventListener('change', () => {
+      matchLevel = (selMatch.value === 'lenient') ? 'lenient' : 'strict';
+      try { localStorage.setItem('qc.matchLevel', matchLevel); } catch (e) {}
+      lenientSkipVerse = null;
+      showToast('🎯 Follow match: <b>' + (matchLevel === 'lenient' ? 'Lenient' : 'Strict') + '</b>');
+    });
+  }
+})();
+
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -5685,6 +5830,7 @@ async function resumeRecitationSession(modeKey){
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
     lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
     prevWordAudio = null;
+    lenientSkipVerse = null;
     applyMutexUI(); applyFollowOnlyUI();
     showScreen('coach'); coachLoaded = false; coachLoading = true;
     try{ await loadSurah(data.surah, true); coachLoaded = true; }
@@ -5903,7 +6049,9 @@ function scoreAlternativeToks(toks, startPtr){
   let score = 0;
   let ti = 0;
   let wi = startPtr;
-  const maxAhead = Math.min(6, words.length - startPtr);
+
+const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
+
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
     const heard = normArCached(rawTok);
@@ -5931,93 +6079,229 @@ function scoreAlternativeToks(toks, startPtr){
   return score;
 }
 
+   function buildPhraseObjects(rec) {
+  if (!rec) return false;
+  const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
+  if (!PhraseCtor) return false;
+  if (!('phrases' in rec)) return false;
+  if (!words.length) return false;
+
+  const end = Math.min(words.length, ptr + 50);
+  const seen = new Set();
+  const phrases = [];
+
+  for (let i = ptr; i < end; i++) {
+    const clean = String(words[i].raw || '')
+      .normalize('NFKC')
+      .replace(TASHKEEL, '')
+      .replace(/[^\u0621-\u064A\s]/g, '')
+      .trim();
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    try {
+      phrases.push(new PhraseCtor(clean, 6.0));
+    } catch (_) {}
+  }
+
+  if (!phrases.length) return false;
+
+  try {
+    rec.phrases = phrases;
+    rec.__lastPhrasePtr = ptr;
+    return true;
+  } catch (e) {
+    console.warn('[Speech] Failed to set phrases:', e);
+    return false;
+  }
+}
+
+/* ── Speech result pipeline (throttle + serialization) ──────── */
+let pendingSpeechEvent = null;
+let speechResultTimer = null;
+let speechInFlight = false;
+const speechQueue = [];
+const SPEECH_THROTTLE_MS = 200;
+
+function resetSpeechPipeline() {
+  speechQueue.length = 0;
+  pendingSpeechEvent = null;
+  if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
+}
+
+function scheduleSpeechResult(event) {
+  if (!event || !wantMic || fsPaused || micPaused) return;
+
+  // Snapshot the event so queued items remain valid after the handler returns.
+  let hasFinal = false;
+  const snapshot = [];
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const result = event.results[i];
+    if (!result) continue;
+    const alts = [];
+    for (let a = 0; a < result.length; a++) {
+      const alt = result[a];
+      alts.push({
+        transcript: alt.transcript || '',
+        confidence: (typeof alt.confidence === 'number' ? alt.confidence : 0)
+      });
+    }
+    snapshot.push({ index: i, isFinal: !!result.isFinal, alternatives: alts });
+    if (result.isFinal) hasFinal = true;
+  }
+  if (!snapshot.length) return;
+
+  const snap = { resultIndex: event.resultIndex, results: snapshot };
+
+  if (hasFinal) {
+    // Flush any pending interim first, then process the final immediately.
+    if (pendingSpeechEvent) {
+      speechQueue.push(pendingSpeechEvent);
+      pendingSpeechEvent = null;
+    }
+    if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
+    speechQueue.push(snap);
+    processSpeechQueue();
+    return;
+  }
+
+  // Interim — throttle to once per 200 ms, keeping only the latest.
+  pendingSpeechEvent = snap;
+  if (speechResultTimer) return;
+  speechResultTimer = setTimeout(() => {
+    speechResultTimer = null;
+    const ev = pendingSpeechEvent;
+    pendingSpeechEvent = null;
+    if (!ev || !wantMic || fsPaused || micPaused) return;
+    speechQueue.push(ev);
+    processSpeechQueue();
+  }, SPEECH_THROTTLE_MS);
+}
+
+async function processSpeechQueue() {
+  if (speechInFlight) return;
+  if (!speechQueue.length) return;
+  speechInFlight = true;
+  try {
+    while (speechQueue.length) {
+      const snap = speechQueue.shift();
+      if (!wantMic || fsPaused || micPaused) continue;
+      try { await runSpeechResultProcessing(snap); }
+      catch (e) { console.warn('[Speech] process error:', e); }
+    }
+  } finally {
+    speechInFlight = false;
+    if (speechQueue.length) processSpeechQueue();
+  }
+}
+
+async function runSpeechResultProcessing(snap) {
+  if (!snap || fsPaused || micPaused || !wantMic) return;
+  lastResultAt = performance.now();
+  sessionHadResult = true;
+  confirmMicAudio();
+  resetSilenceTimer(true);
+
+  currentBatchId++;
+
+  for (let ri = 0; ri < snap.results.length; ri++) {
+    const result = snap.results[ri];
+    const i = result.index;
+    const isFinal = result.isFinal;
+    const alternatives = result.alternatives;
+    if (!alternatives || !alternatives.length) continue;
+
+    const floor = confidenceFloor();
+    const useScoring = alternatives.length > 1;
+    let bestAlt = null;
+    let bestTranscript = '';
+    let bestWeighted = -1;
+
+    for (let ai = 0; ai < alternatives.length; ai++) {
+      const cand = alternatives[ai];
+      const tr = (cand.transcript || '').trim();
+      if (!tr) continue;
+      const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
+      if (isFinal && conf > 0 && conf < floor) continue;
+      const candToks = tr.split(/\s+/).filter(Boolean);
+      if (!candToks.length) continue;
+      const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
+      // Change F: phonetic alignment weighted more heavily than raw ASR confidence.
+      const weighted = (rawScore * 3) + (conf * 1.5);
+      if (weighted > bestWeighted) {
+        bestWeighted = weighted;
+        bestAlt = cand;
+        bestTranscript = tr;
+      }
+    }
+
+    if (!bestAlt || !bestTranscript) continue;
+    const toks = bestTranscript.split(/\s+/).filter(Boolean);
+    if (!toks.length) continue;
+
+    if (isFinal) {
+      const already = interimProgress.get(i) || 0;
+      interimProgress.delete(i);
+      if (i <= lastSpeechResultIndex) continue;
+      lastSpeechResultIndex = i;
+      const newToks = toks.slice(already);
+      if (!newToks.length) continue;
+      recPush(newToks);
+      const used = await grade(recTokens, recCursor);
+      recCursor = Math.min(recCursor + used, recTokens.length);
+      if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+      scheduleHUD();
+    } else {
+      const already = interimProgress.get(i) || 0;
+      const safeEnd = Math.max(already, toks.length - 1);
+      const newToks = toks.slice(already, safeEnd);
+      if (newToks.length) {
+        interimProgress.set(i, safeEnd);
+        recPush(newToks);
+        const used = await grade(recTokens, recCursor);
+        recCursor = Math.min(recCursor + used, recTokens.length);
+        if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+        scheduleHUD();
+      }
+      const tail = toks.slice(-4).join(' ');
+      if (statusHint && tail) statusHint.textContent = '… ' + tail;
+    }
+  }
+
+  // Refresh contextual-biasing phrases as the reciter advances.
+  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
+    buildPhraseObjects(speechRecognition);
+  }
+}
+
 function createSpeechRecognition(){
   if(!SPEECH_SUPPORTED) return null;
-  if(speechRecognition) return speechRecognition;
-  const rec = new SpeechRecognitionCtor();
-  rec.lang = SPEECH_LANG;
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.maxAlternatives = 3;
 
-  rec.onstart = () => {
+  if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
+  if(speechRecognition){
+    try{ speechRecognition.abort(); }catch(_){}
+    speechRecognition = null;
+  }
+
+  const rec = new SpeechRecognitionCtor();
+  rec.lang             = SPEECH_LANG;
+  rec.continuous       = true;
+  rec.interimResults   = true;
+
+
+  const phrasesAttached = buildPhraseObjects(rec);
+  rec.__hasPhrases = phrasesAttached;
+
+ 
+      
+   
+ rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
+    buildPhraseObjects(rec);
   };
 
-  rec.onresult = (event) => {
-    if(fsPaused || micPaused || !wantMic) return;
-    lastResultAt = performance.now();
-    sessionHadResult = true;
-    confirmMicAudio();
-    resetSilenceTimer(true);
-
-    currentBatchId++;
-
-    for(let i = event.resultIndex; i < event.results.length; i++){
-      const result = event.results[i];
-      if(!result || result.length === 0) continue;
-
-      const floor = confidenceFloor();
-      const useScoring = result.length > 1;
-      let bestAlt = null;
-      let bestTranscript = '';
-      let bestWeighted = -1;
-
-      for(let a = 0; a < result.length; a++){
-        const cand = result[a];
-        if(!cand) continue;
-        const tr = (cand.transcript || '').trim();
-        if(!tr) continue;
-        const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
-        if(result.isFinal && conf > 0 && conf < floor) continue;
-        const candToks = tr.split(/\s+/).filter(Boolean);
-        if(!candToks.length) continue;
-        const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
-        const weighted = rawScore * 2 + conf;
-        if(weighted > bestWeighted){
-          bestWeighted = weighted;
-          bestAlt = cand;
-          bestTranscript = tr;
-        }
-      }
-
-      if(!bestAlt || !bestTranscript) continue;
-      const transcript = bestTranscript;
-
-      const toks = transcript.split(/\s+/).filter(Boolean);
-      if(!toks.length) continue;
-
-      if(result.isFinal){
-        const already = interimProgress.get(i) || 0;
-        interimProgress.delete(i);
-        if(i <= lastSpeechResultIndex) continue;
-        lastSpeechResultIndex = i;
-        const newToks = toks.slice(already);
-        if(!newToks.length) continue;
-        recPush(newToks);
-        const used = grade(recTokens, recCursor);
-        recCursor = Math.min(recCursor + used, recTokens.length);
-        if(recCursor >= recTokens.length){ recTokens.length = 0; recCursor = 0; }
-        scheduleHUD();
-      } else {
-        const already = interimProgress.get(i) || 0;
-        const safeEnd = Math.max(already, toks.length - 1);
-        const newToks = toks.slice(already, safeEnd);
-        if(newToks.length){
-          interimProgress.set(i, safeEnd);
-          recPush(newToks);
-          const used = grade(recTokens, recCursor);
-          recCursor = Math.min(recCursor + used, recTokens.length);
-          if(recCursor >= recTokens.length){ recTokens.length = 0; recCursor = 0; }
-          scheduleHUD();
-        }
-        const tail = toks.slice(-4).join(' ');
-        if(statusHint && tail) statusHint.textContent = '… ' + tail;
-      }
-    }
-  };
+  rec.onresult = (event) => scheduleSpeechResult(event);
 
   rec.onerror = (event) => {
     const err = event && event.error ? event.error : 'unknown';
@@ -7620,14 +7904,14 @@ function noteAdvance(n){
 }
 function updateAdaptiveParams(){
   const p = currentPaceWPS;
-  if(p <= 0){ adaptiveSilenceMs = 6000; return; }
-  if     (p < 0.6){ adaptiveSilenceMs = 9000; }
-  else if(p < 1.2){ adaptiveSilenceMs = 8000; }
-  else if(p < 2.0){ adaptiveSilenceMs = 7000; }
-  else if(p < 3.2){ adaptiveSilenceMs = 6000; }
-  else            { adaptiveSilenceMs = 6000; }
+  if(p <= 0){ adaptiveSilenceMs = 10000; return; }
+  if     (p < 0.6){ adaptiveSilenceMs = 12000; }
+  else if(p < 1.2){ adaptiveSilenceMs = 11000; }
+  else if(p < 2.0){ adaptiveSilenceMs = 10000; }
+  else if(p < 3.2){ adaptiveSilenceMs = 10000; }
+  else            { adaptiveSilenceMs = 10000; }
 }
-function resetPace(){ advanceTimes = []; currentPaceWPS = 0; adaptiveSilenceMs = 6000; pendingJumpTarget = -1; }
+function resetPace(){ advanceTimes = []; currentPaceWPS = 0; adaptiveSilenceMs = 10000; pendingJumpTarget = -1; }
 
 function enterReaderFullscreen(){
   if(readerFullscreen) return;
@@ -7646,7 +7930,7 @@ function exitReaderFullscreen(){
   if(nativeFullscreenElement()){ try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){} }
   updateFullscreenIcon(); scrollCurrentIntoView(true);
 }
-function showFsControls(){ if(viewerOpen) return; fsControls.classList.add('visible'); showFsBadge(); clearTimeout(fsControlsTimer); fsControlsTimer = setTimeout(hideFsControls, 2800); }
+function showFsControls(){ if(viewerOpen) return; fsControls.classList.add('visible'); showFsBadge(); clearTimeout(fsControlsTimer); fsControlsTimer = setTimeout(hideFsControls, 3000); }
 function hideFsControls(){ fsControls.classList.remove('visible'); clearTimeout(fsControlsTimer); }
 let fsBadgeTimer = null;
 function showFsBadge(){ if(viewerOpen) return; fsBadge.classList.add('visible'); clearTimeout(fsBadgeTimer); fsBadgeTimer = setTimeout(hideFsBadge, 2800); }
@@ -7705,10 +7989,32 @@ fsContinueBtn.addEventListener('click', () => {
 fsStopBtn.addEventListener('click', () => { fsPaused = false; stopEverything(); setStatus('Ready','idle'); fsPauseBtn.disabled = false; fsContinueBtn.disabled = true; updateFsMicBtn(); showFsControls(); });
 fsMinimizeBtn.addEventListener('click', () => exitReaderFullscreen());
 fsContinueBtn.disabled = true;
+
+/* Reveal-text tab inside the fullscreen toolbar */
+function syncRevealButtons(){
+  if(!fsRevealBtn) return;
+  const show = !!(hideText && followOnly);
+  fsRevealBtn.style.display = show ? '' : 'none';
+  fsRevealBtn.textContent = revealAllText ? 'Hide text' : 'Reveal text';
+  fsRevealBtn.classList.toggle('active', revealAllText);
+  fsRevealBtn.setAttribute('aria-label', revealAllText ? 'Hide revealed text' : 'Reveal text');
+  fsRevealBtn.title = revealAllText ? 'Hide text again' : 'Reveal the next ayah';
+}
+if(fsRevealBtn){
+  fsRevealBtn.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    revealAllText = !revealAllText;
+    document.body.classList.toggle('reveal-all-text', revealAllText);
+    syncRevealButtons();
+    if(navigator.vibrate) navigator.vibrate(12);
+    showFsControls();
+  });
+}
 function syncFsButtons(){
   if(fsPaused || (!wantMic && !playing)){ fsPauseBtn.disabled = true; fsContinueBtn.disabled = !fsPaused; }
   else { fsPauseBtn.disabled = false; fsContinueBtn.disabled = true; }
   updateFsMicBtn();
+  syncRevealButtons();
 }
 
 let updatingMutex = false;
@@ -7717,7 +8023,9 @@ function applyMutexUI(){
   beepOn = !followOnly;
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
-  if(matchChip) matchChip.hidden = true;
+
+  if(matchChip) matchChip.hidden = !followOnly;
+  if(selMatch)  selMatch.value  = matchLevel;
   if(hideTextChip) hideTextChip.hidden = !followOnly;
 
   const tjNoiseChip = document.getElementById('tajweedNoiseChip');
@@ -7725,9 +8033,9 @@ function applyMutexUI(){
 
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
-  if(selMatch) selMatch.value = 'strict';
   applyHideTextUI();
   updateTajweedStatusChip();
+  syncRevealButtons();
 }
 function setRecitationMode(modeName){
   const newFollow = (modeName === 'follow');
@@ -7738,7 +8046,7 @@ function setRecitationMode(modeName){
   pendingHeard.length = 0; consecutiveReds = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
-  followWrongTokens = 0; cancelFollowPinTimer();
+  followWrongTokens = 0; lenientSkipVerse = null; cancelFollowPinTimer();
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -7756,17 +8064,20 @@ function applyHideTextUI(){
   if(hideText && followOnly){
     document.body.classList.add('hide-text-mode');
     words.forEach(w => {
-      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected')){
+      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){
         w.el.classList.add('revealed');
-        w.el.classList.remove('correct','corrected');
+        w.el.classList.remove('correct','corrected','warned');
       } else if(w.el.classList.contains('skipped')){
         w.el.classList.add('revealed');
       }
     });
   } else {
     document.body.classList.remove('hide-text-mode');
+    revealAllText = false;
+    document.body.classList.remove('reveal-all-text');
     words.forEach(w => w.el.classList.remove('revealed'));
   }
+  syncRevealButtons();
 }
 function applyFollowOnlyUI(){
   if(followOnly){
@@ -7913,6 +8224,21 @@ function installWordDelegates(){
   pageEl.addEventListener('contextmenu', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
   pageEl.addEventListener('selectstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
   pageEl.addEventListener('dragstart', e => { if(e.target.closest && e.target.closest('.w')) e.preventDefault(); });
+
+  pageEl.addEventListener('click', (e) => {
+    if(followOnly) return;
+    if(longPressTriggered) return;
+    const target = e.target.closest ? e.target.closest('.w') : null;
+    if(!target || !pageEl.contains(target)) return;
+    const idx = parseInt(target.dataset.idx, 10);
+    if(!Number.isFinite(idx)) return;
+    const w = words[idx];
+    if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
+    const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
+    if(!tip) return;
+    showToast('🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b><br>' + escapeHtml(tip), 5000);
+  });
+
   if(IS_TOUCH){
     pageEl.addEventListener('touchstart', e => { if(e.touches.length !== 1) return; const idx = wordIdxFromEvent(e); if(idx < 0) return; const span = e.target.closest('.w'); beginWordPress(span, idx, e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
     pageEl.addEventListener('touchmove', e => { if(e.touches.length !== 1) return; if(!wordPress.active) return; moveWordPress(e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
@@ -7931,6 +8257,8 @@ function renderVerses(ayahs, translations){
   pageEl.innerHTML='';
   const inner = document.createElement('div'); inner.className = 'mushaf-inner';
   words=[]; lastCurrentEl = null; longPressTriggered = false;
+
+  if(speechRecognition){ speechRecognition.__dead = true; }
 
   function pushWord(tok, surahId, ayahNum, parent){
     const span=document.createElement('span');
@@ -8009,7 +8337,7 @@ function resetProgress(fullReset){
     resetPaceSamples();
   }
   lastCurrentEl = null; longPressTriggered = false; hudPending = false;
-  words.forEach(w=>{ w.el.className='w'; w.audio = null; });
+  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; });
   pageEl.querySelectorAll('.ayah').forEach(a=>a.classList.remove('done','playing'));
   document.body.classList.remove('listen-mode');
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI();
@@ -8054,9 +8382,20 @@ function jumpToWordAndListen(idx){
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI(); scrollCurrentIntoView(true); scheduleSaveProgress();
   if(wantMic){ pendingJumpTarget = -1; setStatus('Listening', 'listening', contextLabel()); addFeedback('🎯 Jumped — listening from here.', false, true); }
   else { startReciting(); addFeedback('🎯 Jumped — listening from here.', false, true); }
+} 
+
+function scheduleHUD(){
+  if(hudPending) return;
+  hudPending = true;
+  requestAnimationFrame(() => {
+    hudPending = false;
+    updateHUD();
+    if (wordPress.active) return;
+    scrollCurrentIntoView(false);
+    schedulePositionAudioOverlay();
+  });
 }
 
-function scheduleHUD(){ if(hudPending) return; hudPending = true; requestAnimationFrame(() => { hudPending = false; updateHUD(); }); }
 function updateCurrent(){
   if(lastCurrentEl) lastCurrentEl.classList.remove('current');
   if(viewerOpen && viewerMode === 'audio'){ lastCurrentEl = null; return; }
@@ -8069,8 +8408,9 @@ function updateCurrent(){
   const el=words[ptr].el;
   el.classList.add('current');
   lastCurrentEl = el;
-  scheduleAutoScroll();
+  // Scrolling is folded into scheduleHUD's single rAF to avoid double repaint.
 }
+
 function jumpToCurrent(){
   const el = words[ptr] && words[ptr].el; if(!el) return;
   el.classList.add('pressing'); setTimeout(() => el.classList.remove('pressing'), 450);
@@ -8103,7 +8443,9 @@ function appendMistake(m){
   const li = document.createElement('li');
 
   const kindBadge = m.tajweedName
-    ? '<span class="tj-kind" title="' + escapeHtml(m.tajweedName) + '">' +
+    ? '<span class="tj-kind" title="' +
+        escapeHtml(m.tajweedExplanation || m.tajweedName) +
+      '" aria-label="' + escapeHtml(m.tajweedExplanation || m.tajweedName) + '">' +
         escapeHtml(m.tajweedName) +
       '</span>'
     : '';
@@ -8154,6 +8496,7 @@ function commitCorrect(i, seg){
   const warned = w.el.classList.contains('warned');
   const baseCls = (hideText && followOnly) ? 'w revealed' : 'w correct';
   w.el.className = baseCls + (warned ? ' warned' : '');
+  maybeExplainRules(w);
 }
 function commitManyCorrect(start, end, seg){
   const toReveal = hideText && followOnly;
@@ -8164,8 +8507,11 @@ function commitManyCorrect(start, end, seg){
     const warned = words[i].el.classList.contains('warned');
     words[i].el.className = baseCls + (warned ? ' warned' : '');
   }
+  if(stop > start) maybeExplainRules(words[stop - 1]);
 }
+
 function markSkippedWord(i){
+  if(followOnly) return;
   const w = words[i]; if(!w) return;
   const el = w.el;
   if(el.classList.contains('error')) return;
@@ -8186,18 +8532,19 @@ function recordMistake(i, kind, heardRaw){
   if(beepOn && kind === 'misread') beepThrottled('error');
 }
 
-function grade(tokens, startIdx){
+async function grade(tokens, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
-  if(matchStrictness() === 'strict') return gradeFull(tokens, start);
-  return gradeFollowOnly(tokens, start);
+  if(followOnly) return gradeFollowFast(tokens, start);
+  return await gradeFull(tokens, start);
 }
 
-const FOLLOW_LOOKAHEAD = 2;
+const FOLLOW_LOOKAHEAD = 1;
 const FOLLOW_WRONG_LIMIT = 3;
-const FOLLOW_PIN_STOP_MS = 7000;
+const FOLLOW_PIN_STOP_MS = 10000;
 
 let followWrongTokens = 0;
+let lenientSkipVerse  = null;
 let followPinTimer    = null;
 let followPinPtr      = -1;
 
@@ -8216,79 +8563,185 @@ function noteFollowWrongToken(){
   followPinPtr = ptr;
   const w = words[ptr];
   const label = w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '';
-  addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 7 s…', false, true);
+  addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 10 s…', false, true);
   followPinTimer = setTimeout(() => {
     followPinTimer = null;
     if(!wantMic) return;
     if(ptr !== followPinPtr) return;
-    addFeedback('⏹️ That word was not recited within 7 s — microphone stopped.', true);
+    addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
     stopReciting(true);
     setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
   }, FOLLOW_PIN_STOP_MS);
 }
 
-function gradeFollowOnly(tokens, startIdx){
+function isFollowMFAMatch(w, heard, hPhon) {
+  if (!w || !heard) return false;
+  if (heard === w.norm) return true;
+
+  const L = Math.max(heard.length, w.norm.length);
+  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
+
+  if (lev(heard, w.norm) <= tol) return true;
+  if (w.phon.length >= 2 && hPhon.length >= 2 &&
+      lev(hPhon, w.phon) <= tol) return true;
+
+  return false;
+}
+
+function isFollowPlausible(heard, hPhon, w) {
+  if (!w || !heard || !w.norm) return false;
+
+  const heardLen  = heard.length;
+  const targetLen = w.norm.length;
+  if (targetLen === 0) return false;
+  if (heardLen < 1 && targetLen > 1) return false;
+
+  const ratio = heardLen / targetLen;
+  if (ratio < 0.20 || ratio > 4.0) return false;
+
+  const L   = Math.max(heardLen, targetLen);
+  const tol = toleranceFor(L) + 2;
+
+  if (lev(heard, w.norm) <= tol) return true;
+  if (hPhon.length >= 2 && w.phon.length >= 2 &&
+      lev(hPhon, w.phon) <= tol) return true;
+
+  return false;
+}
+
+function gradeFollowFast(tokens, startIdx) {
   const start = startIdx || 0;
   let used = 0;
-  for(let ti = start; ti < tokens.length; ti++){
-    if(ptr >= words.length){ used++; continue; }
+  const isLenient = (matchLevel === 'lenient');
+
+  for (let ti = start; ti < tokens.length; ti++) {
+    if (ptr >= words.length) { used++; continue; }
+
     const rawTok = tokens[ti];
     const heard  = normArCached(rawTok);
-    if(!heard){ used++; continue; }
+    if (!heard) { used++; continue; }
+
     const hPhon = phonArCached(rawTok);
+    const w     = words[ptr];
 
-    if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
-
-    if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
-      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-      commitCorrect(ptr, seg); advancePast(1);
-      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
+    /* 1. ASR direct match on the CURRENT word → advance 1. */
+    if (heard === w.norm || isMatchWord(heard, hPhon, null, w)) {
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
     }
 
-    if(trySplitTokenMatch(heard, rawTok)){
-      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-      commitCorrect(ptr, seg); advancePast(1);
-      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
+    /* 2. Split-token match: pendingHeard + rawTok together form the
+       CURRENT word → advance 1. */
+    if (trySplitTokenMatch(heard, rawTok)) {
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
     }
 
+    /* 3. Merged-token match: ONE ASR token that covers 2–3 consecutive
+       words starting at ptr. */
     const mergedN = tryMergedTokenMatch(heard, hPhon);
-    if(mergedN > 0){
-      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-      commitManyCorrect(ptr, ptr + mergedN, seg);
+    if (mergedN > 0) {
+      commitManyCorrect(ptr, ptr + mergedN, null);
       advancePast(mergedN);
-      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
     }
 
-    let found = -1;
-    const maxK = Math.min(FOLLOW_LOOKAHEAD, words.length - ptr - 1);
-    for(let k = 1; k <= maxK; k++){
-      const target = words[ptr + k];
-      if(heard === target.norm){ found = k; break; }
-      if(k === 1 && isMatchWord(heard, hPhon, null, target)){ found = k; break; }
-      if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
-    }
-    if(found > 0){
-      for(let k = 0; k < found; k++) markSkippedWord(ptr + k);
-      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-      commitCorrect(ptr + found, seg);
-      advancePast(found + 1);
-      pendingHeard.length = 0; noteFollowProgress(); used++; continue;
+    /* 4. MFA phonetic match on the CURRENT word — SKIPPED in Lenient mode. */
+    if (!isLenient && isFollowMFAMatch(w, heard, hPhon)) {
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
     }
 
+    /* 5. Plausible-enough — the main "close enough" fallback. */
+    if (isFollowPlausible(heard, hPhon, w)) {
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
+    }
+
+    /* 6. LENIENT: one graceful skip per ayah, always marked GREEN. */
+    if (isLenient) {
+      const verseKey = w.verse;
+      if (lenientSkipVerse !== verseKey) {
+        lenientSkipVerse = verseKey;
+        commitCorrect(ptr, null);
+        advancePast(1);
+        noteFollowProgress();
+        pendingHeard.length = 0;
+        used++; continue;
+      }
+    }
+
+    /* 7. Not this word — STAY on words[ptr] and wait. */
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
-    if(pendingHeard.length > 5) pendingHeard.length = 0;
+    if (pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
   }
+
   return used;
+}
+
+function isAcousticWordShapeMatch(w, seg) {
+  if (!seg || !w || seg.durationMs < 60) return false;
+  const samples = rmsAnalyser.samplesIn(seg.start, seg.end);
+  if (samples.length < 3) return false;
+
+  const expectedMs = Math.max(100, w.norm.length * 100);
+  const ratio = seg.durationMs / expectedMs;
+  const minRatio = 0.2;
+  const maxRatio = 4.0;
+  if (ratio < minRatio || ratio > maxRatio) return false; 
+
+  const vr = rmsAnalyser.vowelRun(seg.start, seg.end);
+  const minVowelRatio = 0.15;
+  if (vr.durationMs < expectedMs * minVowelRatio) return false;
+
+  let maxRms = 0;
+  for (let i = 0; i < samples.length; i++) if (samples[i].rms > maxRms) maxRms = samples[i].rms;
+  if (maxRms < rmsAnalyser.minRms() * 1.0) return false;
+
+  return true;
+}
+
+async function runMFAInference(w, seg, heard) {
+  if (!seg || !w || !heard) return false;
+
+  const T = getBaseMsPerLetter();
+  const expectedMs = Math.max(60, w.norm.length * (T || 110));
+  const ratio = seg.durationMs / expectedMs;
+  const durationOk = ratio > 0.35 && ratio < 2.80;
+
+  const L = Math.max(heard.length, w.norm.length);
+  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
+  const normOk = heard === w.norm || lev(heard, w.norm) <= tol;
+
+  const hPhon = phonArCached(heard);
+  const phonOk = w.phon.length >= 2 && hPhon.length >= 2 &&
+                 lev(hPhon, w.phon) <= tol;
+
+  return durationOk && (normOk || phonOk);
 }
 
 const FULL_LOOKAHEAD = 5;
 
-function gradeFull(tokens, startIdx){
+async function gradeFull(tokens, startIdx){
   const start = startIdx || 0;
   let used = 0;
-  const LOOKAHEAD = 2;
+  const LOOKAHEAD = 0;
 
   const outerBatchCtx = batchTimingCtx;
   batchTimingCtx = {
@@ -8306,10 +8759,16 @@ function gradeFull(tokens, startIdx){
       if(ptr >= words.length){ used++; continue; }
       const hPhon = phonArCached(rawTok);
 
-      if(ptr > 0 && isMatchWord(heard, hPhon, null, words[ptr - 1])){ used++; continue; }
+      const matchesCurrent = heard === words[ptr].norm ||
+                             isMatchWord(heard, hPhon, null, words[ptr]);
+
+      if(ptr > 0 && !matchesCurrent && isMatchWord(heard, hPhon, null, words[ptr - 1])){
+        pendingHeard.length = 0;
+        used++; continue;
+      }
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
-      if(heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr])){
+      if(matchesCurrent){
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
         const _w = words[ptr];
         let emphViol = null;
@@ -8329,6 +8788,7 @@ function gradeFull(tokens, startIdx){
         runStrict1Checks(ptr, heard, { timingReliable: true });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
+        noteFollowProgress();
         used++; continue;
       }
 
@@ -8339,55 +8799,8 @@ function gradeFull(tokens, startIdx){
         runStrict1Checks(ptr, combined, { timingReliable: false });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
-        used++; continue;
-      }
-
-      let found = -1;
-      const maxK = Math.min(LOOKAHEAD, words.length - ptr - 1);
-      for(let k = 1; k <= maxK; k++){
-        const target = words[ptr + k];
-        if(heard === target.norm){ found = k; break; }
-        if(k === 1 && (isMatchWord(heard, hPhon, null, target) ||
-                       (followOnly && isPlausiblePronunciationAttempt(heard, hPhon, target)))){
-          found = k; break;
-        }
-        if(k >= 2 && hPhon.length >= 4 && hPhon === target.phon){ found = k; break; }
-      }
-      if(found > 0){
-        const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-        let skipStart = ptr;
-        if(pendingHeard.length){
-          const buffered = normArCached(pendingHeard.join(''));
-          const target   = words[ptr].norm;
-          if(buffered.length >= target.length * 0.40 &&
-             target.startsWith(buffered)){
-            commitCorrect(ptr, seg);
-            skipStart = ptr + 1;
-          }
-        }
-        for(let k = skipStart; k < ptr + found; k++) markSkippedWord(k);
-        commitCorrect(ptr + found, seg);
-        runStrict1Checks(ptr + found, heard, { timingReliable: false });
-        advancePast(found + 1);
-        pendingHeard.length = 0; consecutiveReds = 0;
-        used++; continue;
-      }
-
-      const followAttemptWord = words[ptr];
-      if(followOnly && !pendingHeard.length && followAttemptWord &&
-         isPlausiblePronunciationAttempt(heard, hPhon, followAttemptWord)){
-       const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
-       commitCorrect(ptr, seg);
-        lastDirectCommitIdx = -1;
-        lastDirectCommitAt = 0;
-        lastCommitBatchId = -1;
-        prevWordAudio = null;
-        advancePast(1);
-        pendingHeard.length = 0;
-        consecutiveReds = 0;
         noteFollowProgress();
-        used++;
-        continue;
+        used++; continue;
       }
 
       const mergedN = tryMergedTokenMatch(heard, hPhon);
@@ -8408,6 +8821,32 @@ function gradeFull(tokens, startIdx){
         });
         advancePast(mergedN);
         pendingHeard.length = 0; consecutiveReds = 0;
+        noteFollowProgress();
+        used++; continue;
+      }
+
+      const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
+
+      if (await runMFAInference(words[ptr], seg, heard)) {
+        commitCorrect(ptr, seg);
+        runStrict1Checks(ptr, heard, { timingReliable: false });
+        advancePast(1);
+        pendingHeard.length = 0;
+        noteFollowProgress();
+        consecutiveReds = 0;
+        used++; continue;
+      }
+
+      const _wRms = words[ptr];
+      const _needsVowelRun = !followOnly && _wRms.tjRules &&
+        (_wRms.tjRules.madd || _wRms.tjRules.hasGhunnahContext);
+      if (_needsVowelRun && seg && isAcousticWordShapeMatch(_wRms, seg)) {
+        commitCorrect(ptr, seg);
+        runStrict1Checks(ptr, heard, { timingReliable: false });
+        advancePast(1);
+        pendingHeard.length = 0;
+        noteFollowProgress();
+        consecutiveReds = 0;
         used++; continue;
       }
 
@@ -8415,27 +8854,49 @@ function gradeFull(tokens, startIdx){
         if(pendingHeard.length === 1 &&
            heard.startsWith(normArCached(pendingHeard[0]))){
           pendingHeard[0] = rawTok;
-        } else if(pendingHeard.length < 4){
+        } else if(pendingHeard.length < 2){
           pendingHeard.push(rawTok);
         }
         used++; continue;
       }
+      pendingHeard.length = 0;
 
-      const w = words[ptr];
-      const hasPending = pendingHeard.length > 0;
-      const plausibleAttempt = w &&
-                               isPlausiblePronunciationAttempt(heard, hPhon, w);
-      const plausible = !hasPending && !!plausibleAttempt;
-
-      if(!plausible && pendingHeard.length < 4){
-        pendingHeard.push(rawTok);
-        used++; continue;
+      {
+        const curW = words[ptr];
+        if(curW && isPlausiblePronunciationAttempt(heard, hPhon, curW)){
+          const voiced = seg && seg.durationMs > 40 &&
+                         rmsAnalyser.voiceDurationMs(seg.start, seg.end) > 20;
+          if(voiced){
+            commitCorrect(ptr, seg);
+            if(!followOnly){
+              runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true });
+            }
+            lastDirectCommitIdx = -1;
+            lastDirectCommitAt  = 0;
+            lastCommitBatchId   = -1;
+            prevWordAudio       = null;
+            advancePast(1);
+            pendingHeard.length = 0;
+            consecutiveReds = 0;
+            noteFollowProgress();
+            used++; continue;
+          }
+        }
       }
 
-      let markedThisTime = false;
-      if(!followOnly && plausible &&
+      const w = words[ptr];
+
+      if (followOnly) {
+        noteFollowWrongToken();
+        used++;
+        continue;
+      }
+
+      const plausibleAttempt = w && isPlausiblePronunciationAttempt(heard, hPhon, w);
+      if(plausibleAttempt && w &&
          !w.el.classList.contains('error') &&
          !w.el.classList.contains('skipped')){
+        if(seg) w.audio = seg;
         w.el.classList.add('error');
         w.el.classList.remove('current','correct','corrected','model','located','warned');
         errors++;
@@ -8449,22 +8910,14 @@ function gradeFull(tokens, startIdx){
         mistakes.push(m); appendMistake(m);
         scheduleHUD();
         if(beepOn) beepThrottled('error');
-        markedThisTime = true;
       }
+      noteFollowWrongToken();
 
       lastDirectCommitIdx = -1;
       lastDirectCommitAt  = 0;
       lastCommitBatchId   = -1;
       prevWordAudio       = null;
-
-      if(markedThisTime){
-        consecutiveReds++;
-        if(consecutiveReds < 2) advancePast(1);
-      } else {
-        consecutiveReds = 0;
-        if(followOnly) markSkippedWord(ptr);
-        advancePast(1);
-      }
+      consecutiveReds     = 0;
       pendingHeard.length = 0;
       used++;
     }
@@ -8531,9 +8984,12 @@ async function startReciting(){
   requestWakeLock(); resetSilenceTimer(true); scheduleSaveProgress();
   try{ bumpStreak(); }catch(_){}
 
+resetSpeechPipeline();
+
   try{
-    if(!speechRecognition || speechRecognition.__dead) speechRecognition = createSpeechRecognition();
-    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
+    speechRecognition = createSpeechRecognition();
+  if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
+    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false; micWarningShown = false;
@@ -8551,8 +9007,11 @@ async function startReciting(){
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false; micPaused = false;
+resetSpeechPipeline();
   disarmSpeechKeepalive(); pendingJumpTarget = -1;
+  lenientSkipVerse = null;
   cancelFollowPinTimer();
+  pendingHeard.length = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
   prevWordAudio = null;
   setMicButton(); recRunning = false; speechStarting = false;
@@ -8945,8 +9404,6 @@ prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSura
 nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSurah(1); });
 surahButton.addEventListener('click',openSurahPicker);
 
-if(selMatch) selMatch.value = 'strict';
-
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     if(wantMic && !finished && !fsPaused) resumeMic();
@@ -9047,6 +9504,7 @@ function openCoachInfoModal(){
       '<li>The top of the coach screen always shows two pill tabs — <b>Follow</b> and <b>Tajweed</b>. One is always active; tapping the other switches mode instantly.</li>' +
       '<li>Both modes use your browser\'s <b>built-in speech recognition</b> — no custom model download. An internet connection is required.</li>' +
       '<li>Hold any word for 3 seconds to start reciting from that point.</li>' +
+      '<li><b>Tap any coloured word</b> to see the Tajweed rule name and a short explanation.</li>' +
       '<li>On Android phones the coach stays <b>silent and vibration-free while listening</b> so the microphone never picks up its own tones.</li>' +
     '</ul>' +
   '</div>' +
@@ -9054,8 +9512,8 @@ function openCoachInfoModal(){
     '<h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3>' +
     '<ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
-      '<li>Follow mode always uses a fixed <b>strict word-matching</b> with a tight <b>2-word lookahead</b>.</li>' +
-      '<li><b>Nothing is marked red and no mistakes are counted</b>.</li>' +
+      '<li>A small dropdown next to the Follow pill lets you pick the matching strictness:<br>• <b>Strict</b> — balanced matching with MFA phonetic tolerance.<br>• <b>Lenient</b> — relaxed matching that skips the MFA check entirely, so the highlight moves faster. A close-enough word is accepted and marked green; if a word cannot be recognised at all, the system will skip <b>one word per ayah</b> to keep you moving. Nothing is ever marked yellow — skipped words stay green.</li>' +
+      '<li><b>Nothing is marked red and no mistakes are counted</b> in Follow mode.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
@@ -9063,12 +9521,21 @@ function openCoachInfoModal(){
     '<ul>' +
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation.</li>' +
       '<li>On a mispronounced word the coach <b>beeps</b> and <b>marks the word red</b>, then <b>keeps following</b> the reciter.</li>' +
-      '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> measured on the actual vowel run — not on ASR commit timing — and compared against your rolling <b>mora baseline</b> (pace).<br>• <b>Ghunnah</b> verified by both the transcript <i>and</i> the audio spectrum (nasal formant at 250–400 Hz).<br>• <b>Laam Shamsiyyah</b> checked by the onset spectral centroid (solar lām voiced → low onset centroid).<br>• <b>Hamzat al-Wasl</b> flagged when a glottal re-attack (silence gap) is detected before the word.<br>• <b>Emphatic letter substitution</b> (ص → س, ط → ت, ق → ك, ح → ه…) surfaced as a warning even if the ASR autocorrected.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped normalised form.</li>' +
+      '<li>Tajweed uses a stricter word-matching tolerance (+0) and a tight MFA gate (3-letter words require an exact match) so mispronunciations surface reliably.</li>' +
+      '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> measured on the actual vowel run.<br>• <b>Ghunnah</b> verified by both transcript and audio spectrum.<br>• <b>Laam Shamsiyyah</b> checked by onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> flagged when a glottal re-attack is detected.<br>• <b>Emphatic letter substitution</b> (ص → س, ط → ت…) surfaced as a warning.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
+      '<li><b>Every coloured word explains itself.</b> Tap any coloured word to see the Tajweed rule name and a short description. The same explanation appears automatically in the feedback panel when a coloured word is recited correctly.</li>' +
       '<li><b>Rule-ready chip:</b> a small chip near the mode pills shows whether the Tajweed rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules unavailable</b>.</li>' +
     '</ul>' +
   '</div>' +
   '<div class="feature">' +
-    '<h3><span class="fnum">4</span> Progress — Follow &amp; Tajweed memory</h3>' +
+    '<h3><span class="fnum">4</span> 🙈 Hide text &amp; Reveal text</h3>' +
+    '<ul>' +
+      '<li><b>Hide text</b> (available in Follow mode) hides the whole mushaf so you can recite from memory. Words become visible as you recite them.</li>' +
+      '<li>While hidden mode is active, a small <b>Reveal text</b> tab appears inside the fullscreen toolbar (alongside ⏸ ▶ ⏹). Tapping it temporarily shows the entire page; tapping again hides it once more. The tab fades away with the rest of the toolbar after 3 seconds.</li>' +
+    '</ul>' +
+  '</div>' +
+  '<div class="feature">' +
+    '<h3><span class="fnum">5</span> Progress — Follow &amp; Tajweed memory</h3>' +
     '<ul>' +
       '<li>Whichever mode you are in, the coach automatically remembers the <b>last surah, ayah and word</b> you reached.</li>' +
       '<li>Tap <b>Progress</b> on the Home screen, then choose <b>Follow</b> or <b>Tajweed</b>.</li>' +
