@@ -2981,7 +2981,14 @@ function lev(a, b){
   const hit = _levCache.get(key);
   if(hit !== undefined) return hit;
   const r = levBounded(a, b, LEV_CACHE_MAX);
-  if(_levCache.size >= _LEV_MAX) _levCache.clear();
+  if(_levCache.size >= _LEV_MAX){
+    let drop = _LEV_MAX >> 1;
+    let i = 0;
+    for(const k of _levCache.keys()){
+      if(i++ >= drop) break;
+      _levCache.delete(k);
+    }
+  }
   _levCache.set(key, r);
   return r;
 }
@@ -6033,7 +6040,7 @@ function scoreAlternativeToks(toks, startPtr){
   let ti = 0;
   let wi = startPtr;
 
-const maxAhead = followOnly ? 12 : Math.min(6, words.length - startPtr);
+  const maxAhead = followOnly ? 4 : Math.min(6, words.length - startPtr);
 
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
@@ -6103,7 +6110,7 @@ let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
 const speechQueue = [];
-const SPEECH_THROTTLE_MS = 200;
+const SPEECH_THROTTLE_MS = 100;
 
 function resetSpeechPipeline() {
   speechQueue.length = 0;
@@ -6246,7 +6253,7 @@ async function runSpeechResultProcessing(snap) {
     }
   }
 
-  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
+  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
     buildPhraseObjects(speechRecognition);
   }
 }
@@ -6272,7 +6279,7 @@ function createSpeechRecognition(){
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    buildPhraseObjects(rec);
+    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
   };
 
   rec.onresult = (event) => scheduleSpeechResult(event);
@@ -8327,7 +8334,8 @@ function scrollElementIntoView(el, force){
   const maxTop = pageEl.scrollHeight - pageEl.clientHeight;
   const top = Math.max(0, Math.min(maxTop, targetTop));
   programmaticScrollUntil = performance.now() + 1200;
-  try{ pageEl.scrollTo({ top, behavior: 'smooth' }); }
+  const behavior = (wantMic && currentPaceWPS > 1.2) ? 'auto' : 'smooth';
+  try{ pageEl.scrollTo({ top, behavior }); }
   catch(e){ pageEl.scrollTop = top; }
 }
 function scrollCurrentIntoView(force){ scrollElementIntoView(words[ptr] && words[ptr].el, force); }
