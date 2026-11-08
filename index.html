@@ -54,6 +54,9 @@
     --safe-bottom:env(safe-area-inset-bottom,0px);
     --safe-left:env(safe-area-inset-left,0px);
     --safe-right:env(safe-area-inset-right,0px);
+    --gold: #c9a227; 
+    --gold-light: #e3bd45; 
+    --gold-glow: rgba(201, 162, 39, 0.6); 
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   [hidden]{display:none !important}
@@ -397,29 +400,89 @@ body.light-mode .progress-menu{background:linear-gradient(180deg,#ffffff,#eef2f8
 .coach-bar{
 display:flex;align-items:center;gap:14px;width:100%;
 padding:16px 18px;height:auto;
-background:linear-gradient(135deg, #2a5ccc 0%, #4f8cff 60%, #6fa3ff 100%);
-border:none;border-radius:20px;color:#fff;
-box-shadow:0 12px 32px rgba(79,140,255,.36), inset 0 1px 0 rgba(255,255,255,.18);
+background:linear-gradient(180deg, var(--gold-light), var(--gold));
+border:1px solid #ffeaa7;
+border-radius:20px;color:#111827;
+box-shadow:0 12px 32px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4);
 transition:transform .15s, box-shadow .25s, filter .2s;
 text-align:left;cursor:pointer;position:relative;overflow:hidden;
 font-family:inherit;font-weight:600;-webkit-appearance:none;
 }
 .coach-bar::after{
 content:'';position:absolute;inset:0;pointer-events:none;
-background:radial-gradient(220px 100px at 100% 0%, rgba(255,255,255,.18), transparent 60%);
+background:radial-gradient(220px 100px at 100% 0%, rgba(255,255,255,.4), transparent 60%);
 }
 .coach-bar:active{transform:scale(.985);filter:brightness(1.06)}
 .coach-icon{
-font-size:1.45rem;background:rgba(255,255,255,.20);
-border:1px solid rgba(255,255,255,.30);
+font-size:1.45rem;background:rgba(0,0,0,.08);
+border:1px solid rgba(0,0,0,.12);
 width:52px;height:52px;border-radius:15px;
 display:inline-flex;align-items:center;justify-content:center;
 flex-shrink:0;position:relative;
 }
 .coach-text{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;position:relative}
-.coach-text strong{font-size:1.05rem;font-weight:800;letter-spacing:.005em}
-.coach-text small{font-size:.74rem;opacity:.9;font-weight:600}
-.coach-chev{font-size:1.6rem;opacity:.8;font-weight:300;position:relative}
+.coach-text strong{font-size:1.05rem;font-weight:800;letter-spacing:.005em;color:#111827;}
+.coach-text small{font-size:.74rem;opacity:.9;font-weight:600;color:#333;}
+.coach-chev{font-size:1.6rem;opacity:.8;font-weight:300;position:relative;color:#111827;}
+
+.recite-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 10px 0;
+  width: 100%;
+}
+.gold-control-main {
+  flex: 1;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: #111827;
+  border: 1px solid #ffeaa7;
+  box-shadow: 0 0 20px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4);
+  font-weight: 800;
+  font-size: .95rem;
+  height: 54px;
+  border-radius: 999px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .12s, filter .12s;
+}
+.gold-control-main:active {
+  transform: scale(0.97);
+  filter: brightness(1.05);
+}
+.gold-control-main.on {
+  animation: pulseGold 1.5s infinite;
+}
+.gold-control-small {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: #111827;
+  border: 1px solid #ffeaa7;
+  box-shadow: 0 0 15px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform .12s, filter .12s;
+}
+.gold-control-small:active {
+  transform: scale(0.92);
+  filter: brightness(1.05);
+}
+@keyframes pulseGold {
+  0% { box-shadow: 0 0 10px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  50% { box-shadow: 0 0 25px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4); }
+  100% { box-shadow: 0 0 10px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4); }
+}
+
 .sub-header{display:flex;align-items:center;gap:10px;padding:2px 0 8px;}
 .sub-header h1{flex:1;margin:0;font-size:1.2rem;font-weight:800;letter-spacing:.005em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sub-header .sub-note{font-size:.7rem;color:var(--muted);font-weight:600;letter-spacing:.02em;white-space:nowrap;}
@@ -1213,17 +1276,17 @@ max-width:calc(100vw - 16px);
   border-radius:999px;flex-shrink:0;white-space:nowrap;
   display:inline-flex;align-items:center;justify-content:center;
   font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--gold,#d4af37);
-  background:rgba(212,175,55,.10);
-  border:1px solid rgba(212,175,55,.45);
+  color:var(--gold,#c9a227);
+  background:rgba(201,162,39,.10);
+  border:1px solid rgba(201,162,39,.45);
   transition:background .2s, border-color .2s, color .2s, transform .12s, box-shadow .2s;
 }
 .fs-controls .fs-text-tab:active{ transform:scale(.95) }
 .fs-controls .fs-text-tab.active{
-  background:rgba(212,175,55,.22);
-  border-color:rgba(212,175,55,.75);
+  background:rgba(201,162,39,.22);
+  border-color:rgba(201,162,39,.75);
   color:#fff;
-  box-shadow:0 4px 14px rgba(212,175,55,.32);
+  box-shadow:0 4px 14px rgba(201,162,39,.32);
 }
 body.light-mode .fs-controls .fs-text-tab{
   color:#a67c00;background:rgba(166,124,0,.08);border-color:rgba(166,124,0,.40);
@@ -1242,6 +1305,20 @@ body.light-mode .fs-controls .fs-text-tab.active{
   .fs-controls button{width:36px;height:36px;font-size:.85rem}
   .fs-controls .fs-text-tab{padding:0 7px;font-size:.55rem;height:30px;letter-spacing:.03em}
 }
+
+.qv-fs-float{
+position:absolute;top:calc(var(--safe-top) + 70px);right:calc(var(--safe-right) + 12px);
+z-index:6;opacity:1;transition:opacity .3s ease;pointer-events:none;
+}
+.qv-fs-float .qv-btn{
+pointer-events:auto;width:44px;height:44px;border-radius:50%;
+background:rgba(17,24,39,.85);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.35);
+}
+body.light-mode .qv-fs-float .qv-btn{background:rgba(255,255,255,.92);}
+.qv-fs-float.hidden{opacity:0;}
+.qv-fs-float.hidden .qv-btn{pointer-events:none;}
+body.viewer-audio-mode .qv-fs-float{display:none;}
 
 .fs-badge{position:fixed;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%);z-index:200;background:rgba(17,24,39,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.03em;opacity:0;pointer-events:none;transition:opacity .3s;max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fs-badge.visible{opacity:1}
@@ -1358,10 +1435,10 @@ body.light-mode .feedback-status.info{background:rgba(42,111,224,.08);color:#2a6
 body.light-mode .feedback-status.ok{color:#1c6e4a;}
 body.light-mode .feedback-status.err{color:#8a2033;}
 
-#tilePrayerTimes{grid-column: 1 / -1;display: grid;grid-template-columns: auto 1fr;grid-template-rows: auto auto;align-items: center;column-gap: 14px;row-gap: 2px;min-height: 92px;padding: 16px;}
+#tilePrayerTimes{display: grid;grid-template-columns: auto 1fr;grid-template-rows: auto auto;align-items: center;column-gap: 10px;row-gap: 2px;min-height: 104px;padding: 13px 14px;}
 #tilePrayerTimes .tile-icon{ grid-row: 1 / 3; align-self: center; }
 #tilePrayerTimes .tile-title{ grid-column: 2; align-self: end; }
-#tilePrayerTimes .tile-sub{ grid-column: 2; align-self: start; margin-top: 0; }
+#tilePrayerTimes .tile-sub{ grid-column: 2; align-self: start; margin-top: 0; white-space: normal; line-height: 1.3; }
 
 .prayer-top{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.28);}
 .prayer-settings-btn{width:46px;height:46px;border-radius:50%;padding:0;flex-shrink:0;background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.38);color:#9dc0ff;font-size:1.15rem;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;transition:transform .12s, background .2s, border-color .2s, color .2s;}
@@ -1718,8 +1795,8 @@ body.light-mode .tj-silent             { color:#5d6d7e !important }
 }
 
 :root{
-  --gold: #d4af37;
-  --gold-soft: rgba(212,175,55,.65);
+  --gold: #c9a227;
+  --gold-soft: rgba(201,162,39,.65);
 }
 body.light-mode{
   --gold: #a67c00;
@@ -1740,8 +1817,8 @@ body.light-mode{
 .tile-title{ font-size: .92rem !important; }
 .tile-sub{ font-size: .64rem !important; }
 #tilePrayerTimes{
-  min-height: 82px !important;
-  padding: 12px 14px !important;
+  min-height: 104px !important;
+  padding: 13px 14px !important;
 }
 
 .tj-fs-close{
@@ -1778,9 +1855,6 @@ body.light-mode .tj-fs-close{
 .progress-trigger,
 .coach-bar{
   border-color: var(--gold) !important;
-}
-.coach-bar{
-  border: 1px solid var(--gold) !important;
 }
 
 .surah-row,
@@ -2083,32 +2157,10 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
       <span class="tile-title">Prayer Times</span>
       <span class="tile-sub">Five daily prayers · Qibla direction · Alarms</span>
     </button>
-  </div>
-
-  <div class="streak-bar" id="streakBar" role="button" tabindex="0" aria-label="View your streak and achievements">
-    <span class="streak-fire">🔥</span>
-    <div class="streak-info">
-      <span class="streak-count" id="streakCount">0</span>
-      <span class="streak-label">day streak</span>
-    </div>
-    <div class="streak-badges" id="streakBadges"></div>
-    <span class="streak-best">Best: <b id="streakBest">0</b></span>
-  </div>
-
-  <div class="home-feature-tabs">
-    <button class="feature-tab" id="tileHifz" type="button">
-      <span class="ft-icon">🧠</span>
-      <div class="ft-text">
-        <strong>Hifz Test</strong>
-        <small>Memorize &amp; test</small>
-      </div>
-    </button>
-    <button class="feature-tab" id="tileTajweed" type="button">
-      <span class="ft-icon">🎨</span>
-      <div class="ft-text">
-        <strong>Tajweed Colors</strong>
-        <small>Authoritative · any surah</small>
-      </div>
+    <button class="tile" id="tileDashboard" type="button">
+      <span class="tile-icon">📊</span>
+      <span class="tile-title">Dashboard</span>
+      <span class="tile-sub">Stats, Progress &amp; Tools</span>
     </button>
   </div>
 
@@ -2120,6 +2172,33 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     </span>
     <span class="coach-chev">›</span>
   </button>
+
+  <section class="islamic-dates" id="islamicDates" aria-label="Important Islamic dates">
+    <div class="islamic-dates-header">
+      <span class="ico">🕌</span>
+      <span>Important Islamic Dates</span>
+    </div>
+    <ul class="islamic-dates-list" id="islamicDatesList"></ul>
+  </section>
+
+</div>
+
+<div class="app screen" id="screenDashboard" hidden>
+  <div class="sub-header">
+    <button id="backFromDashboard" class="back-pill" type="button">Back</button>
+    <h1>Dashboard</h1>
+    <span class="sub-note">Overview</span>
+  </div>
+  
+  <div class="streak-bar" id="streakBar" role="button" tabindex="0" aria-label="View your streak and achievements">
+    <span class="streak-fire">🔥</span>
+    <div class="streak-info">
+      <span class="streak-count" id="streakCount">0</span>
+      <span class="streak-label">day streak</span>
+    </div>
+    <div class="streak-badges" id="streakBadges"></div>
+    <span class="streak-best">Best: <b id="streakBest">0</b></span>
+  </div>
 
   <div class="progress-section" id="progressSection">
     <button class="progress-trigger" id="progressTrigger" type="button" aria-expanded="false" aria-haspopup="menu">
@@ -2142,15 +2221,24 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     </div>
   </div>
 
-  <section class="islamic-dates" id="islamicDates" aria-label="Important Islamic dates">
-    <div class="islamic-dates-header">
-      <span class="ico">🕌</span>
-      <span>Important Islamic Dates</span>
-    </div>
-    <ul class="islamic-dates-list" id="islamicDatesList"></ul>
-  </section>
-
+  <div class="home-feature-tabs">
+    <button class="feature-tab" id="tileHifz" type="button">
+      <span class="ft-icon">🧠</span>
+      <div class="ft-text">
+        <strong>Hifz Test</strong>
+        <small>Memorize &amp; test</small>
+      </div>
+    </button>
+    <button class="feature-tab" id="tileTajweed" type="button">
+      <span class="ft-icon">🎨</span>
+      <div class="ft-text">
+        <strong>Tajweed Colors</strong>
+        <small>Authoritative · any surah</small>
+      </div>
+    </button>
+  </div>
 </div>
+
 <div class="app screen" id="screenSurahIndex" hidden>
   <div class="sub-header">
     <button id="backFromIndex" class="back-pill" type="button" aria-label="Back to home">Back</button>
@@ -2262,21 +2350,22 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   </div>
   <section class="panel hide-immersive">
     <div class="row" id="surahNavRow" hidden>
-      <button id="btnPrevSurah" class="ghost icon" aria-label="Previous surah">◀</button>
+      <button id="btnPrevSurah" class="ghost icon" aria-label="Next surah">◀</button>
       <div class="surah-info">
         <span class="surah-en" id="surahEn">—</span>
         <span class="surah-ar" id="surahAr">—</span>
         <span class="surah-count" id="surahCount"></span>
       </div>
-      <button id="btnNextSurah" class="ghost icon" aria-label="Next surah">▶</button>
+      <button id="btnNextSurah" class="ghost icon" aria-label="Previous surah">▶</button>
       <button id="btnSurah" class="ghost" style="padding:0 12px">📖 Surah</button>
     </div>
   </section>
-  <div class="btn-row three">
-    <button id="btnStop" class="ghost">⏹ Stop</button>
-    <button id="btnReset" class="ghost">↺ Restart</button>
-    <button id="btnJump" class="ghost">⤒ Current</button>
-  </div>
+  <section class="hud">
+    <div class="stat"><span id="statProgress">0%</span><small>Progress</small></div>
+    <div class="stat"><span id="statErrors">—</span><small>Mistakes</small></div>
+    <div class="stat"><span id="statAcc">—</span><small>Accuracy</small></div>
+  </section>
+  <div class="barwrap"><div class="bar" id="bar"></div></div>
   <div class="toggles hide-immersive">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
@@ -2289,12 +2378,11 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
       <input type="checkbox" id="chkHideText"> 🙈 Hide text
     </label>
   </div>
-  <div class="barwrap"><div class="bar" id="bar"></div></div>
-  <section class="hud">
-    <div class="stat"><span id="statProgress">0%</span><small>Progress</small></div>
-    <div class="stat"><span id="statErrors">—</span><small>Mistakes</small></div>
-    <div class="stat"><span id="statAcc">—</span><small>Accuracy</small></div>
-  </section>
+  <div class="recite-controls">
+    <button id="btnStop" class="gold-control-small" aria-label="Pause">⏸</button>
+    <button id="btnMic" class="gold-control-main">Start Reciting 🎤</button>
+    <button id="btnReset" class="gold-control-small" aria-label="Restart">↺</button>
+  </div>
   <section class="mistakes-panel hide-immersive" id="mistakesPanel" hidden>
     <div class="mistakes-header">
       <span>📋 Mistakes</span>
@@ -2303,12 +2391,10 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     </div>
     <ol class="mistakes-list" id="mistakesList"></ol>
   </section>
-  <div class="btn-row"><button id="btnMic" class="primary">🎤 Start reciting</button></div>
   <section class="mushaf" id="pageEl" aria-label="Quran text">
     <div class="mushaf-inner"><div class="loading">Loading…</div></div>
   </section>
   <div class="legend hide-immersive">
-    <span><i style="background:#4f8cff"></i>current</span>
     <span><i style="background:#2fd07a"></i>correct</span>
     <span><i style="background:#ff5a6a"></i>misread</span>
     <span>· Scrolls automatically as you recite</span>
@@ -2436,9 +2522,11 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
       </div>
       <button class="qv-btn qv-translate" id="qvTranslate" aria-label="Show English translation" title="English translation">EN</button>
       <button class="qv-btn qv-page-nav" id="qvNextPage" aria-label="Next page">›</button>
-      <button class="qv-btn qv-fs" id="qvFullscreen" aria-label="Toggle fullscreen">⛶</button>
       <button class="qv-btn" id="qvSurahBtn" aria-label="Surah picker">📖</button>
     </div>
+  </div>
+  <div class="qv-fs-float hidden" id="qvFsFloat">
+    <button class="qv-btn qv-fs" id="qvFullscreen" aria-label="Toggle fullscreen">⛶</button>
   </div>
 </div>
 
@@ -2496,7 +2584,6 @@ const statusHint     = document.getElementById('statusHint');
 const micButton      = document.getElementById('btnMic');
 const stopButton     = document.getElementById('btnStop');
 const resetButton    = document.getElementById('btnReset');
-const jumpButton     = document.getElementById('btnJump');
 const surahButton    = document.getElementById('btnSurah');
 const prevSurahBtn   = document.getElementById('btnPrevSurah');
 const nextSurahBtn   = document.getElementById('btnNextSurah');
@@ -2539,6 +2626,7 @@ const screenCoach        = document.getElementById('screenCoach');
 const screenPrayer       = document.getElementById('screenPrayer');
 const screenHifz         = document.getElementById('screenHifz');
 const screenTajweed      = document.getElementById('screenTajweed');
+const screenDashboard    = document.getElementById('screenDashboard');
 
 const homeThemeBtn   = document.getElementById('homeThemeBtn');
 const homeMenuWrap   = document.getElementById('homeMenuWrap');
@@ -2561,11 +2649,13 @@ const tileSurahIndex = document.getElementById('tileSurahIndex');
 const tileJuzIndex   = document.getElementById('tileJuzIndex');
 const tilePlayAudio  = document.getElementById('tilePlayAudio');
 const tileBookmarks  = document.getElementById('tileBookmarks');
+const tileDashboard  = document.getElementById('tileDashboard');
 const openCoachBtn   = document.getElementById('openCoachBtn');
 const backFromIndex  = document.getElementById('backFromIndex');
 const backFromJuz    = document.getElementById('backFromJuz');
 const backFromBookmarks = document.getElementById('backFromBookmarks');
 const backFromAudio  = document.getElementById('backFromAudio');
+const backFromDashboard = document.getElementById('backFromDashboard');
 const btnBackHome    = document.getElementById('btnBackHome');
 const hijriEn        = document.getElementById('hijriEn');
 const hijriAr        = document.getElementById('hijriAr');
@@ -2690,6 +2780,60 @@ const SAJDAH_VERSES = new Set([
   '7:206','13:15','16:50','17:109','19:58','22:18','22:77','25:60',
   '27:26','32:15','38:24','41:38','53:62','84:21','96:19'
 ]);
+
+/* ── Muqatta'at (disconnected openers) ────────────────────── */
+const MUQATTAAT_BY_SURAH = {
+  2:  [['الم', ['ا','ل','م']]],
+  3:  [['الم', ['ا','ل','م']]],
+  7:  [['المص', ['ا','ل','م','ص']]],
+  10: [['الر', ['ا','ل','ر']]],
+  11: [['الر', ['ا','ل','ر']]],
+  12: [['الر', ['ا','ل','ر']]],
+  13: [['المر', ['ا','ل','م','ر']]],
+  14: [['الر', ['ا','ل','ر']]],
+  15: [['الر', ['ا','ل','ر']]],
+  19: [['كهيعص', ['ك','ه','ي','ع','ص']]],
+  20: [['طه', ['ط','ه']]],
+  26: [['طسم', ['ط','س','م']]],
+  27: [['طس', ['ط','س']]],
+  28: [['طسم', ['ط','س','م']]],
+  29: [['الم', ['ا','ل','م']]],
+  30: [['الم', ['ا','ل','م']]],
+  31: [['الم', ['ا','ل','م']]],
+  32: [['الم', ['ا','ل','م']]],
+  36: [['يس', ['ي','س']]],
+  38: [['ص', ['ص']]],
+  40: [['حم', ['ح','م']]],
+  41: [['حم', ['ح','م']]],
+  42: [['حم', ['ح','م']], ['عسق', ['ع','س','ق']]],
+  43: [['حم', ['ح','م']]],
+  44: [['حم', ['ح','م']]],
+  45: [['حم', ['ح','م']]],
+  46: [['حم', ['ح','م']]],
+  50: [['ق', ['ق']]],
+  68: [['ن', ['ن']]]
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   MUQATTAAT LETTER NAMES (lenient — expanded with ASR variants so
+   the pointer reliably sticks to these disconnected-letter words)
+   ═══════════════════════════════════════════════════════════════════ */
+const LETTER_NAMES = {
+  'ا': ['الف', 'ألف', 'اليف', 'أليف', 'الفا', 'ألفا', 'الفي'],
+  'ل': ['لام', 'لم', 'لامو', 'لامي'],
+  'م': ['ميم', 'مم', 'ميمو', 'ميمي'],
+  'ص': ['صاد', 'صا', 'صادي', 'صادو'],
+  'ر': ['راء', 'را', 'راي', 'راءو'],
+  'ك': ['كاف', 'كا', 'كافي', 'كافو'],
+  'ه': ['هاء', 'ها', 'حاء', 'حا', 'هاي', 'هاءو'],
+  'ح': ['حاء', 'حا', 'هاء', 'ها', 'حاي', 'حاءو'],
+  'ي': ['ياء', 'يا', 'يائي', 'ياءو'],
+  'ع': ['عين', 'عيني', 'عينو'],
+  'ط': ['طاء', 'طا', 'طائي', 'طاءو'],
+  'س': ['سين', 'سيني', 'سينو'],
+  'ق': ['قاف', 'قا', 'كاف', 'كا', 'قافي', 'قافو'],
+  'ن': ['نون', 'نوني', 'نونو']
+};
 
 /* ── User-agent / platform detection ──────────────────────── */
 const UA = navigator.userAgent || '';
@@ -3098,6 +3242,130 @@ function trySplitTokenMatch(heard, rawTok){
   if(combinedNorm === target) return true;
   return (Math.abs(combinedNorm.length - target.length) <= 2 &&
           lev(combinedNorm, target) <= 1);
+}
+
+/* ── Muqatta'at detection & letter-wise matching ──────────── */
+function detectMuqattaat(surahId, ayahNum, nrm){
+  const entries = MUQATTAAT_BY_SURAH[surahId];
+  if(!entries) return null;
+  let idx = -1;
+  if(surahId === 42){ idx = ayahNum - 1; }
+  else { if(ayahNum !== 1) return null; idx = 0; }
+  if(idx < 0 || idx >= entries.length) return null;
+  const entry = entries[idx];
+  if(normArCached(entry[0]) !== nrm) return null;
+  return entry[1].slice();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NEW HELPER — isSingleLetterName(heard, letters)
+   Returns true when the heard token equals (after normalization) any
+   single letter name belonging to the given letters array. Used to
+   block premature whole-word completion on Muqattaat words such as
+   الم where the first letter-name (الف) shares a phon with الم.
+   ═══════════════════════════════════════════════════════════════════ */
+function isSingleLetterName(heard, letters){
+  if(!heard || !letters || !letters.length) return false;
+  for(let i = 0; i < letters.length; i++){
+    const names = LETTER_NAMES[letters[i]] || [];
+    for(let j = 0; j < names.length; j++){
+      if(heard === normArCached(names[j])) return true;
+    }
+  }
+  return false;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MUQATTAAT PROGRESS — Rewritten (Fix A + Fix B)
+   ─ Fix A: guard the whole-word phon path so a single letter-name
+     (الف, لام, ميم …) never completes the whole Muqattaat word.
+   ─ Fix B: per-letter matching is now much more lenient.
+     * names ≥ 3 chars accept |Δlen| ≤ 3 and lev ≤ 2
+     * names ≤ 2 chars keep the tight |Δlen| ≤ 2 / lev ≤ 1 gate
+     * phon fallback (hPhon and hPhonLoose) mirrors the same tolerances
+     * concatenation fallback runs span from remaining … down to 1
+   ═══════════════════════════════════════════════════════════════════ */
+function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
+  if(!w || !w.isMuqattaat) return 'no-match';
+  if(!heard) return 'no-match';
+  const letters = w.muqattaatLetters || [];
+  const cursor  = w.muqattaatCursor || 0;
+  if(cursor >= letters.length) return 'complete';
+
+  /* 1. Exact whole-word */
+  if(heard === w.norm) return 'complete';
+
+  /* 2. Lenient whole-word phon match — but never when the heard token is
+        itself a single letter name of any letter in this word, otherwise
+        e.g. 'الف' would prematurely complete 'الم'. */
+  if(heard.length >= 2 && w.phon && hPhon &&
+     w.phon.length >= 2 && hPhon.length >= 2 &&
+     !isSingleLetterName(heard, letters)){
+    const ratio = Math.min(hPhon.length, w.phon.length) / Math.max(hPhon.length, w.phon.length);
+    if(ratio >= 0.75 && lev(hPhon, w.phon) <= 1) return 'complete';
+  }
+
+  /* 3. Per-letter match at cursor — lenient */
+  const target = letters[cursor];
+  const names  = LETTER_NAMES[target] || [];
+  for(let i = 0; i < names.length; i++){
+    const name = names[i];
+    const nn   = normArCached(name);
+    if(!nn || nn.length < 2) continue;
+    const lenDiff = Math.abs(heard.length - nn.length);
+    const tol     = (nn.length >= 3) ? 2 : 1;
+    const lenTol  = (nn.length >= 3) ? 3 : 2;
+    if(heard === nn){
+      w.muqattaatCursor = cursor + 1;
+      return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+    }
+    if(lenDiff <= lenTol && lev(heard, nn) <= tol){
+      w.muqattaatCursor = cursor + 1;
+      return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+    }
+    const namePhon = phonArCached(name);
+    if(hPhon && namePhon && hPhon.length >= 2 && namePhon.length >= 2 &&
+       Math.abs(hPhon.length - namePhon.length) <= lenTol && lev(hPhon, namePhon) <= tol){
+      w.muqattaatCursor = cursor + 1;
+      return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+    }
+    if(hPhonLoose && namePhon && hPhonLoose.length >= 2 && namePhon.length >= 2 &&
+       Math.abs(hPhonLoose.length - namePhon.length) <= lenTol && lev(hPhonLoose, namePhon) <= tol){
+      w.muqattaatCursor = cursor + 1;
+      return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+    }
+  }
+
+  /* 4. Concatenation fallback — span from remaining down to 1 */
+  for(let span = letters.length - cursor; span >= 1; span--){
+    let concat = '';
+    let concatPhon = '';
+    let valid = true;
+    for(let i = 0; i < span; i++){
+      const names_i = LETTER_NAMES[letters[cursor + i]] || [];
+      if(!names_i.length){ valid = false; break; }
+      concat     += normArCached(names_i[0]);
+      concatPhon += phonArCached(names_i[0]);
+    }
+    if(!valid || !concat) continue;
+    if(heard.length >= 2){
+      if(heard === concat){
+        w.muqattaatCursor = cursor + span;
+        return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+      }
+      if(Math.abs(heard.length - concat.length) <= 2 && lev(heard, concat) <= 1){
+        w.muqattaatCursor = cursor + span;
+        return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+      }
+    }
+    if(hPhon && hPhon.length >= 4 && concatPhon.length >= 4 &&
+       Math.abs(hPhon.length - concatPhon.length) <= 2 && lev(hPhon, concatPhon) <= 2){
+      w.muqattaatCursor = cursor + span;
+      return (w.muqattaatCursor >= letters.length) ? 'complete' : 'partial';
+    }
+  }
+
+  return 'no-match';
 }
 
 function isStrongPartialPrefix(heard){
@@ -3705,7 +3973,7 @@ function recReset(){
 /* ── Screen router ────────────────────────────────────────── */
 function showScreen(name){
   currentScreenName = name;
-  const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed };
+  const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed, dashboard: screenDashboard };
   Object.entries(map).forEach(([k, el]) => { if(!el) return; el.hidden = (k !== name); });
   if(name !== 'coach' && readerFullscreen) exitReaderFullscreen();
   if(name === 'home') refreshProgressMenu();
@@ -3836,8 +4104,11 @@ function renderHifzMushaf(){
       const span = document.createElement('span');
       span.className = 'hifz-word';
       span.textContent = tok;
-      if(!normArCached(tok)){ span.classList.add('hifz-visible'); line.appendChild(span); return; }
-      const info = { el: span, raw: tok, aIdx, wIdx, revealed: false };
+      const nrm = normArCached(tok);
+      if(!nrm){ span.classList.add('hifz-visible'); line.appendChild(span); return; }
+      const info = { el: span, raw: tok, aIdx, wIdx, revealed: false, norm: nrm, phon: phonArCached(tok) };
+      const muq = detectMuqattaat(hifzState.surah, a.numberInSurah, nrm);
+      if(muq){ info.isMuqattaat = true; info.muqattaatLetters = muq; info.muqattaatCursor = 0; }
       hifzState.words.push(info);
       if(mode === 'silent'){ span.classList.add('hifz-hidden'); }
       else if(mode === 'blank'){ if(wIdx >= toks.length - 3) span.classList.add('hifz-hidden'); else span.classList.add('hifz-visible'); }
@@ -3899,6 +4170,11 @@ function startHifzSpeech(){
           if(!heard) return;
           const nextWord = hifzState.words.find(w => !w.revealed);
           if(!nextWord) return;
+          if(nextWord.isMuqattaat){
+            const r = tryMuqattaatProgress(heard, phonArCached(tok), null, nextWord);
+            if(r === 'complete') revealHifzWord(nextWord, false);
+            return;
+          }
           const tNorm = normArCached(nextWord.raw);
           const tPhon = phonArCached(nextWord.raw);
           if(heard === tNorm || isMatchWord(heard, phonArCached(tok), null, { norm:tNorm, phon:tPhon })){
@@ -4509,7 +4785,8 @@ let _lastRuleExplainAt = 0;
 const RULE_EXPLAIN_THROTTLE_MS = 2000;
 function maybeExplainRules(w){
   if(followOnly) return;
-  if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
+  if(!w || w.isMuqattaat) return;
+  if(!w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
   const now = performance.now();
   if(now - _lastRuleExplainAt < RULE_EXPLAIN_THROTTLE_MS) return;
   _lastRuleExplainAt = now;
@@ -4815,6 +5092,7 @@ function runStrict1Checks(idx, heard, opts){
   if (!coachTajweedReady) return;
   const w = words[idx];
   if (!w) return;
+  if (w.isMuqattaat) return;
 
   /* ── FIX 6a — emphatic check on every commit path ── */
   if (STRICT_FEATURES.emphatics() && heard && w.norm && heard !== w.norm){
@@ -5366,6 +5644,23 @@ function gradeFollowFast(tokens, startIdx){
     const hPhon      = phonArCached(rawTok);
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w          = words[ptr];
+
+    /* ── Muqatta'at: letter-wise progress, no flagging ── */
+    if (w && w.isMuqattaat) {
+      const mr = tryMuqattaatProgress(heard, hPhon, hPhonLoose, w);
+      if (mr === 'complete') {
+        commitCorrect(ptr, null);
+        advancePast(1);
+        noteFollowProgress();
+        pendingHeard.length = 0;
+        used++; continue;
+      }
+      /* Fix C — bounded stuck escape: non-complete counts as a wrong
+         token so the existing 3-token / 10 s pin-and-stop timer applies. */
+      noteFollowWrongToken();
+      used++; continue;   /* partial or no-match → stay on word, no error */
+    }
+
     const nextW        = words[ptr + 1];
     const isLastInAyah = !nextW || nextW.verse !== w.verse;
 
@@ -5412,6 +5707,7 @@ function gradeFollowFast(tokens, startIdx){
       if (ptr + k >= words.length) break;
       const futureW = words[ptr + k];
       if (futureW.verse !== w.verse) break;
+      if (futureW.isMuqattaat) break;
       const sim = followSimilarity(heard, hPhon, hPhonLoose, futureW);
       if (sim >= FOLLOW_TAU_JUMP){
         commitManyCorrect(ptr, ptr + k + 1, null);
@@ -5466,6 +5762,34 @@ async function gradeFull(tokens, startIdx){
       if(!heard){ used++; continue; }
       if(ptr >= words.length){ used++; continue; }
       const hPhon = phonArCached(rawTok);
+      const hPhonLoose = phonLooseArCached(rawTok);
+
+      /* ── Muqatta'at: letter-wise progress, no flagging ── */
+      {
+        const mqW = words[ptr];
+        if (mqW && mqW.isMuqattaat) {
+          const mr = tryMuqattaatProgress(heard, hPhon, hPhonLoose, mqW);
+          if (mr === 'complete') {
+            const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
+            commitCorrect(ptr, seg);
+            lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
+            advancePast(1);
+            pendingHeard.length = 0; consecutiveReds = 0;
+            noteFollowProgress();
+            mqW._muqStuckCount = 0;
+            used++; continue;
+          }
+          /* Fix C — soft warning after 6 consecutive non-completes on the
+             same Muqattaat word (Tajweed has no pin timer; this is a hint). */
+          mqW._muqStuckCount = (mqW._muqStuckCount || 0) + 1;
+          if (mqW._muqStuckCount === 6) {
+            const names = (mqW.muqattaatLetters || []).map(l => (LETTER_NAMES[l] || [l])[0]).join(' · ');
+            addFeedback('⚠️ Muqattaat not recognised — try the letter names one by one: ' + escapeHtml(names), false, true);
+          }
+          used++; continue;
+        }
+      }
+
       const matchesCurrent = heard === words[ptr].norm || isMatchWord(heard, hPhon, null, words[ptr]);
       if(ptr > 0 && !matchesCurrent && isMatchWord(heard, hPhon, null, words[ptr - 1])){ pendingHeard.length = 0; used++; continue; }
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
@@ -6033,7 +6357,8 @@ function applyModeUI(){
   surahNavRow.hidden = false;
   if(surahMeta){ surahEnEl.textContent = surahMeta.englishName; surahArEl.textContent = surahMeta.name; surahCountEl.textContent = surahMeta.numberOfAyahs + ' ayahs'; }
   else { surahEnEl.textContent = 'Surah ' + surahNum; surahArEl.textContent = ''; surahCountEl.textContent = ''; }
-  prevSurahBtn.disabled = (surahNum <= 1); nextSurahBtn.disabled = (surahNum >= 114);
+  prevSurahBtn.disabled = (surahNum >= 114);
+  nextSurahBtn.disabled = (surahNum <= 1);
 }
 
 /* ── Load surah / render words ──────────────────────────── */
@@ -6104,7 +6429,10 @@ function renderVerses(ayahs, translations){
     span.dataset.idx = String(myIndex);
     parent.appendChild(span);
     const nrm = normArCached(tok);
-    words.push({ raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null });
+    const w = { raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
+    const muq = detectMuqattaat(surahId, ayahNum, nrm);
+    if(muq){ w.isMuqattaat = true; w.muqattaatLetters = muq; w.muqattaatCursor = 0; }
+    words.push(w);
   }
   function pushDecoration(tok, parent){
     const span = document.createElement('span');
@@ -6327,7 +6655,7 @@ function resetProgress(fullReset){
     resetPaceSamples();
   }
   lastCurrentEl = null; longPressTriggered = false; hudPending = false;
-  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; });
+  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; w.muqattaatCursor = 0; w._muqStuckCount = 0; });
   pageEl.querySelectorAll('.ayah').forEach(a=>a.classList.remove('done','playing'));
   document.body.classList.remove('listen-mode');
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI();
@@ -6340,7 +6668,7 @@ function jumpToWordAndListen(idx){
   errors = 0; mistakes = []; mistakeCounter = 0; completedVerses = new Set(); recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
-  words.forEach(w => { w.el.classList.remove('correct','error','skipped','corrected','model','current','located','warned'); });
+  words.forEach(w => { w.el.classList.remove('correct','error','skipped','corrected','model','current','located','warned'); w.muqattaatCursor = 0; w._muqStuckCount = 0; });
   pageEl.querySelectorAll('.ayah').forEach(a => a.classList.remove('done','playing'));
   mistakesList.innerHTML = ''; mistakesPanel.hidden = true; mistakeCountBadge.textContent = '0';
   resetPace();
@@ -6416,7 +6744,7 @@ function installWordDelegates(){
 
 /* ── Mic button / recite / stop / finish ───────────────── */
 function setMicButton(){
-  micButton.textContent = wantMic ? '⏹ Stop reciting' : '🎤 Start reciting';
+  micButton.innerHTML = wantMic ? '⏹ Stop' : 'Start Reciting 🎤';
   micButton.classList.toggle('on',wantMic);
   syncFsButtons();
 }
@@ -7705,6 +8033,7 @@ async function openJuzInReader(juzNumber){
 let viewerOpen = false;
 let viewerMode = 'read';
 let viewerChromeTimer = null;
+let qvFsFloatTimer = null;
 const QV_CHROME_HIDE_MS = 3000;
 let viewerReturnScreen = 'home';
 let viewerHideFullscreen = false;
@@ -7755,12 +8084,21 @@ function updateViewerTranslationsDOM(){
   });
 }
 function isBrowserFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function showQvFsFloat(){
+  if(!viewerOpen || viewerMode !== 'read' || viewerHideFullscreen) return;
+  const el = document.getElementById('qvFsFloat');
+  if(!el) return;
+  el.classList.remove('hidden');
+  clearTimeout(qvFsFloatTimer);
+  qvFsFloatTimer = setTimeout(() => { el.classList.add('hidden'); }, 3000);
+}
 function showViewerChrome(){
   if(!viewerOpen) return;
   if(readerGesture && (readerGesture.moved || readerGesture.dragging || readerGesture.swiped || readerGesture.consumed)) return;
   quranViewer.classList.remove('chrome-hidden');
   clearTimeout(viewerChromeTimer);
   viewerChromeTimer = setTimeout(() => { if(!viewerOpen) return; quranViewer.classList.add('chrome-hidden'); }, QV_CHROME_HIDE_MS);
+  showQvFsFloat();
 }
 function hideViewerChromeNow(){
   if(!viewerOpen) return;
@@ -7789,7 +8127,12 @@ function updateViewerFullscreenIcon(){
   qvFullscreen.classList.toggle('on', on);
   qvFullscreen.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Enter fullscreen');
 }
-function applyViewerFullscreenVisibility(){ if(!qvFullscreen) return; qvFullscreen.style.display = viewerHideFullscreen ? 'none' : ''; }
+function applyViewerFullscreenVisibility(){
+  const fsf = document.getElementById('qvFsFloat');
+  if(fsf) fsf.style.display = viewerHideFullscreen ? 'none' : '';
+  if(!qvFullscreen) return;
+  qvFullscreen.style.display = viewerHideFullscreen ? 'none' : '';
+}
 function toggleViewerFullscreen(){
   if(isBrowserFullscreen()){
     try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){}
@@ -7833,6 +8176,7 @@ function openViewer(mode, opts){
   qvTitle.textContent = mode === 'audio' ? 'Playing' : 'Reading';
   applyViewerFullscreenVisibility(); updateViewerPlayIcon(); updateViewerFullscreenIcon(); updateQvVolIcon();
   applyViewerTranslateUI(); applyPageColor(); updateBookmarkButton(); showViewerChrome();
+  showQvFsFloat();
   setTimeout(() => { pageEl.scrollTop = 0; }, 30);
 }
 function closeViewer(){
@@ -7851,6 +8195,8 @@ function closeViewer(){
   readerState.token++; readerState.highlightVerse = null; viewerHideFullscreen = false;
   applyViewerFullscreenVisibility();
   clearTimeout(viewerChromeTimer); viewerChromeTimer = null;
+  clearTimeout(qvFsFloatTimer); qvFsFloatTimer = null;
+  const _fsf = document.getElementById('qvFsFloat'); if(_fsf) _fsf.classList.add('hidden');
   updateBookmarkButton();
   if(isBrowserFullscreen()){ try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){} }
   if(viewerReturnScreen && viewerReturnScreen !== 'coach') showScreen(viewerReturnScreen);
@@ -8826,11 +9172,13 @@ tilePlayAudio.addEventListener('click', () => {
   renderAudioSurahList();
 });
 tileBookmarks.addEventListener('click', () => { showScreen('bookmarks'); renderBookmarksScreen(); });
+if(tileDashboard) tileDashboard.addEventListener('click', () => { showScreen('dashboard'); });
 openCoachBtn.addEventListener('click', () => openCoachScreen());
 backFromIndex.addEventListener('click', () => showScreen('home'));
 backFromJuz.addEventListener('click', () => showScreen('home'));
 backFromBookmarks.addEventListener('click', () => showScreen('home'));
 backFromAudio.addEventListener('click', () => showScreen('home'));
+if(backFromDashboard) backFromDashboard.addEventListener('click', () => showScreen('home'));
 btnBackHome.addEventListener('click', () => { if(readerFullscreen) exitReaderFullscreen(); stopEverything(true); releaseMicStream(); showScreen('home'); });
 
 /* ── Home menu wiring + modals ─────────────────────────── */
@@ -8934,7 +9282,7 @@ function openCopyrightModal(){
   const startBtn = document.getElementById('hifzStartBtn');
   const stopBtn  = document.getElementById('hifzStopBtn');
   const finishBtn = document.getElementById('hifzFinishBtn');
-  if(back) back.addEventListener('click', () => { stopHifzTest(true); showScreen('home'); });
+  if(back) back.addEventListener('click', () => { stopHifzTest(true); showScreen('dashboard'); });
   if(sel)  sel.addEventListener('change', refreshHifzAyahMax);
   if(fromEl) fromEl.addEventListener('change', refreshHifzAyahMax);
   if(toEl)   toEl.addEventListener('change', refreshHifzAyahMax);
@@ -8949,7 +9297,7 @@ function openCopyrightModal(){
   const sel   = document.getElementById('tajweedSurahSelect');
   const fsBtn = document.getElementById('tajweedFullscreenBtn');
   const chips = document.querySelectorAll('.tj-chip');
-  if(back) back.addEventListener('click', () => { if(document.body.classList.contains('tj-fs-open')) toggleTajweedFullscreen(); showScreen('home'); });
+  if(back) back.addEventListener('click', () => { if(document.body.classList.contains('tj-fs-open')) toggleTajweedFullscreen(); showScreen('dashboard'); });
   if(fsBtn) fsBtn.addEventListener('click', toggleTajweedFullscreen);
   if(sel) sel.addEventListener('change', () => { const n = parseInt(sel.value, 10); if(Number.isFinite(n) && n >= 1 && n <= 114) loadTajweedSurah(n); });
   chips.forEach(chip => { chip.addEventListener('click', () => toggleTajweedRule(chip.dataset.rule, chip)); });
@@ -8995,7 +9343,16 @@ micButton.addEventListener('click', async () => {
   await startReciting();
   if(!wantMic) exitReaderFullscreen();
 });
-stopButton.addEventListener('click',()=>{ stopEverything(); releaseMicStream(); setStatus('Ready','idle'); fsPaused=false; syncFsButtons(); });
+stopButton.addEventListener('click',()=>{
+  if(wantMic){
+    stopReciting();
+    setStatus('Paused','idle','Tap Start reciting to resume');
+    addFeedback('⏸️ Paused — tap <b>Start reciting</b> to resume.', false, true);
+  } else {
+    setStatus('Ready','idle');
+  }
+  fsPaused = false; syncFsButtons();
+});
 resetButton.addEventListener('click',()=>{
   _normCache.clear(); _phonCache.clear(); _phonLooseCache.clear();
   mistakes = []; mistakeCounter = 0; completedVerses = new Set(); errors = 0;
@@ -9004,9 +9361,8 @@ resetButton.addEventListener('click',()=>{
   fsPaused=false; syncFsButtons();
   feedbackEl.innerHTML='<div class="line">Restarted.</div>';
 });
-jumpButton.addEventListener('click',jumpToCurrent);
-prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSurah(-1); });
-nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSurah(1); });
+prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSurah(1); });
+nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSurah(-1); });
 surahButton.addEventListener('click',openSurahPicker);
 
 /* ── Surah picker (modal) ─────────────────────────────── */
