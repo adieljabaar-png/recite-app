@@ -1956,20 +1956,6 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
 .w[title]:active { filter: brightness(1.25); }
 body.light-mode .w[title]:active { filter: brightness(0.85); }
 
-#tajweedNoiseChip {
-  color: var(--warn);
-  border-color: rgba(255,176,32,.6);
-  background: rgba(255,176,32,.1);
-  cursor: default;
-  user-select: none;
-  pointer-events: none;
-}
-body.light-mode #tajweedNoiseChip {
-  color: #7a5500;
-  border-color: rgba(198,138,0,.6);
-  background: rgba(198,138,0,.1);
-}
-
 #tajweedStatusChip{
   cursor: pointer;
   user-select: none;
@@ -2524,9 +2510,7 @@ body.light-mode .toggles .progress-trigger {
 
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
-    <span class="toggle" id="tajweedNoiseChip" hidden>
-      ⚠️ Background noise may affect Tajweed accuracy
-    </span>
+    
     <label class="toggle hide-text" id="hideTextChip" hidden>
       <input type="checkbox" id="chkHideText"> Hide text
     </label>
@@ -6344,8 +6328,6 @@ function applyMutexUI(){
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
   if(hideTextChip) hideTextChip.hidden = !followOnly;
-  const tjNoiseChip = document.getElementById('tajweedNoiseChip');
-  if(tjNoiseChip) tjNoiseChip.hidden = followOnly;
   if(chkHideText) chkHideText.checked = hideText;
   if(hideTextChip) hideTextChip.classList.toggle('active', hideText && followOnly);
   applyHideTextUI();
