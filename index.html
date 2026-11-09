@@ -1028,8 +1028,7 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{background:rgba(12
 .toggle.hide-text.active{border-color:rgba(255,176,32,.7);background:rgba(255,176,32,.12);color:#fff;}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.6);color:#7a5500;}
 .toggle.disabled{opacity:.4;pointer-events:none}
-.toggles{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
-.toggles::-webkit-scrollbar{display:none}
+.toggles{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:3px}
 
 .barwrap{height:5px;background:#0b101b;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .bar{height:100%;width:0%;background:linear-gradient(90deg,#4f8cff,#2fd07a);transition:width .3s}
@@ -2149,6 +2148,68 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
 .streak-fire                          { font-size: 1.6rem; }
 .streak-count                         { font-size: 1.22rem; }
 .streak-label                         { font-size: .7rem; }
+
+/* ── Progress tab inside Coach toggles ── */
+.toggles .progress-section {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.toggles .progress-trigger {
+  padding: 9px 11px;
+  min-height: 42px;
+  border-radius: 11px;
+  background: #111827;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  transition: transform .12s, background .2s, border-color .2s, color .2s;
+  border-color: var(--gold) !important;
+}
+.toggles .progress-trigger:hover {
+  background: rgba(79,140,255,.08);
+}
+.toggles .progress-trigger .pt-icon {
+  font-size: 1rem;
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+.toggles .progress-trigger .pt-text {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.toggles .progress-trigger .pt-text strong {
+  font-size: .75rem;
+  font-weight: 700;
+  color: inherit;
+}
+.toggles .progress-trigger .pt-chev {
+  font-size: .8rem;
+  margin-left: 2px;
+  transition: transform .2s;
+}
+.toggles .progress-section.open .pt-chev {
+  transform: rotate(180deg);
+}
+.toggles .progress-menu {
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  z-index: 100;
+}
+body.light-mode .toggles .progress-trigger {
+  background: #eef2f8;
+}
 </style>
 </head>
 <body>
@@ -2288,27 +2349,6 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
     </div>
     <div class="streak-badges" id="streakBadges"></div>
     <span class="streak-best">Best: <b id="streakBest">0</b></span>
-  </div>
-
-  <div class="progress-section" id="progressSection">
-    <button class="progress-trigger" id="progressTrigger" type="button" aria-expanded="false" aria-haspopup="menu">
-      <span class="pt-icon">📊</span>
-      <span class="pt-text">
-        <strong>Progress</strong>
-        <small>Resume a saved session</small>
-      </span>
-      <span class="pt-chev">▾</span>
-    </button>
-    <div class="progress-menu" id="progressMenu" role="menu" hidden>
-      <button class="progress-item" id="progressFollow" type="button" role="menuitem">
-        <span class="pi-icon">👂</span>
-        <span class="pi-text"><strong>Follow</strong><small id="progressFollowSub">No saved session</small></span>
-      </button>
-      <button class="progress-item" id="progressTajweed" type="button" role="menuitem">
-        <span class="pi-icon">🎵</span>
-        <span class="pi-text"><strong>Tajweed</strong><small id="progressTajweedSub">No saved session</small></span>
-      </button>
-    </div>
   </div>
 
   <div class="home-feature-tabs">
@@ -2459,6 +2499,29 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   <div class="toggles hide-immersive">
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">Tajweed</button>
+    
+    <!-- MOVED PROGRESS TAB -->
+    <div class="progress-section" id="progressSection">
+      <button class="progress-trigger" id="progressTrigger" type="button" aria-expanded="false" aria-haspopup="menu">
+        <span class="pt-icon">📊</span>
+        <span class="pt-text">
+          <strong>Progress</strong>
+          <small style="display:none;">Resume</small>
+        </span>
+        <span class="pt-chev">▾</span>
+      </button>
+      <div class="progress-menu" id="progressMenu" role="menu" hidden>
+        <button class="progress-item" id="progressFollow" type="button" role="menuitem">
+          <span class="pi-icon">👂</span>
+          <span class="pi-text"><strong>Follow</strong><small id="progressFollowSub">No saved session</small></span>
+        </button>
+        <button class="progress-item" id="progressTajweed" type="button" role="menuitem">
+          <span class="pi-icon">🎵</span>
+          <span class="pi-text"><strong>Tajweed</strong><small id="progressTajweedSub">No saved session</small></span>
+        </button>
+      </div>
+    </div>
+
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
     <span class="toggle" id="tajweedNoiseChip" hidden>
@@ -4028,6 +4091,7 @@ function showScreen(name){
 
 async function openCoachScreen(){
   showScreen('coach');
+  refreshProgressMenu();
   if(coachLoading) return;
   if(coachLoaded && !mushafDirtyForViewer) return;
   coachLoading = true; mushafDirtyForViewer = false;

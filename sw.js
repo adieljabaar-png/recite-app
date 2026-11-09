@@ -1,15 +1,14 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.0.11 — Version-only release. Forces SW reinstall + clean
-   cache rebuild so clients pick up the v2.0.11 index.html fixes
-   (Hifz back button, Bismillah as ayah 0, prayer-alarm stop-on-
-   tap, larger tab typography, coach tab icon removal).
+   v2.0.12 — Version-only release. Forces SW reinstall + clean
+   cache rebuild so clients pick up the v2.0.12 index.html fixes
+   (Progress tab moved to the Coach screen next to the Tajweed tab).
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.0.11';
+const VERSION = '2.0.12';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
