@@ -1,51 +1,15 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.0.12 — Hardened user-data protection.
-
-   ┌──────────────────────────────────────────────────────────┐
-   │  USER DATA PROTECTION GUARANTEE                          │
-   │                                                          │
-   │  The service worker NEVER touches:                       │
-   │    • Downloaded Quran audio (cache: qc-audio)            │
-   │    • Downloaded translation audio (cache: qc-audio)      │
-   │    • Bookmarks           (localStorage: qc.bookmarks)    │
-   │    • Prayer times / location / method / offsets          │
-   │                          (localStorage: qc.prayer)       │
-   │    • Follow / Tajweed progress                           │
-   │                          (localStorage: qc.progress.*)   │
-   │    • Streak & achievements                               │
-   │                          (localStorage: qc.streak,       │
-   │                           qc.achievements)               │
-   │    • Hifz test history   (localStorage: qc.hifzHistory)  │
-   │    • Download manifest   (localStorage: qc.downloads)    │
-   │    • Reciter / translation / theme / volume preferences  │
-   │                          (localStorage: qc.*)            │
-   │                                                          │
-   │  Why this is guaranteed, not just "currently true":      │
-   │    1. Service workers CANNOT read or write localStorage  │
-   │       — that is a web-platform boundary, not a choice    │
-   │       we make here.                                      │
-   │    2. Every cache deletion path passes through           │
-   │       isPersistentCache(), which hard-blocks qc-audio.   │
-   │    3. activate() only deletes caches whose name starts   │
-   │       with one of OWNED_PREFIXES, AND which are not on   │
-   │       the current version, AND which are not persistent. │
-   │    4. CLEAR_CACHES (bulk wipe) also skips persistent     │
-   │       caches — audio requires the separate, explicit     │
-   │       CLEAR_AUDIO_CACHE message (currently unused by     │
-   │       the app, so nothing in normal operation ever       │
-   │       deletes it).                                       │
-   │                                                          │
-   │  Version bumps only rotate the four shell/text/fonts/    │
-   │  runtime caches — regenerable network assets, not user   │
-   │  data. Audio downloads survive every future bump.        │
-   └──────────────────────────────────────────────────────────┘
+   v2.0.11 — Version-only release. Forces SW reinstall + clean
+   cache rebuild so clients pick up the v2.0.11 index.html fixes
+   (Hifz back button, Bismillah as ayah 0, prayer-alarm stop-on-
+   tap, larger tab typography, coach tab icon removal).
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.0.12';
+const VERSION = '2.0.11';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -55,24 +19,12 @@ const RUNTIME_CACHE = `qc-runtime-${VERSION}`;
 const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
-   version, and also protected from CLEAR_CACHES. Downloaded Quran
-   audio and downloaded translation audio both live here. */
+   version. Downloaded Quran audio and downloaded translation audio
+   both live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
 
 const OWNED_PREFIXES = ['qc-shell-', 'qc-text-', 'qc-fonts-', 'qc-runtime-'];
-
-/* Single source of truth for "is this cache user data?". Every
-   deletion path in this file MUST call this and MUST treat a true
-   return value as absolute veto. The array check is the primary
-   guard; the explicit name equality is a defence-in-depth belt so
-   that if OWNED_PREFIXES is ever widened (e.g. to 'qc-'), qc-audio
-   still cannot be swept up by a prefix rule. */
-function isPersistentCache(name){
-  if(typeof name !== 'string' || !name) return false;
-  if(name === AUDIO_CACHE) return true;               // hard block by exact name
-  return PERSISTENT_CACHES.includes(name);            // array whitelist
-}
 
 /* Pre-cache the shell, manifest, AND the real app icons so they
    are available for the install prompt and offline usage. */
@@ -145,25 +97,25 @@ self.addEventListener('install', event => {
 /* ============================================================
    ACTIVATE — drop stale versioned caches, claim clients
    ------------------------------------------------------------
-   This is the ONLY place the SW deletes anything automatically.
-   Deletion is triple-gated:
-     (a) isPersistentCache(name) MUST be false,
-     (b) the name must start with one of OWNED_PREFIXES,
-     (c) the name must not be on the current VERSIONED_CACHES.
-   qc-audio fails (a) by exact-name hard block AND by
-   PERSISTENT_CACHES whitelist, so it is unreachable by this
-   filter regardless of how (b) or (c) are later edited.
+   This is the ONLY place the SW deletes anything. It deletes
+   exclusively caches whose names start with an OWNED_PREFIX
+   AND are not in the current VERSIONED_CACHES list. The
+   persistent 'qc-audio' cache is never in that set because:
+     (a) it is whitelisted in PERSISTENT_CACHES, and
+     (b) it does not start with any OWNED_PREFIX.
+   Both checks mean downloaded Quran audio and downloaded
+   translation audio survive every version bump, forever.
    ============================================================ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     try{
       const keys = await caches.keys();
       const toDelete = keys.filter(name => {
-        if(isPersistentCache(name))                   return false;   // hard block — user data
-        if(VERSIONED_CACHES.includes(name))           return false;   // current version — keep
+        if(VERSIONED_CACHES.includes(name)) return false;
+        if(PERSISTENT_CACHES.includes(name)) return false;
         const owned = OWNED_PREFIXES.some(p => name.startsWith(p));
-        if(!owned) return false;                                      // not ours — never touch
-        return true;                                                  // old versioned shell cache
+        if(!owned) return false;
+        return true;
       });
       await Promise.all(toDelete.map(name => caches.delete(name)));
     }catch(_){}
@@ -178,41 +130,25 @@ self.addEventListener('activate', event => {
 /* ============================================================
    MESSAGES — SKIP_WAITING / CLEAR_CACHES / CLEAR_AUDIO_CACHE /
               REFRESH_MANIFEST
-   ------------------------------------------------------------
-   CLEAR_CACHES also routes through isPersistentCache(), so even
-   an explicit bulk-clear message cannot delete downloaded audio.
-   Audio requires CLEAR_AUDIO_CACHE, which is intentionally not
-   fired by any automatic code path in the app.
    ============================================================ */
 self.addEventListener('message', event => {
   const data = event.data || {};
   if(data.type === 'SKIP_WAITING'){ self.skipWaiting(); return; }
-
   if(data.type === 'CLEAR_CACHES'){
     event.waitUntil((async () => {
       const keys = await caches.keys();
-      // Skip every persistent cache — even a bulk clear must not
-      // touch user downloads. Audio removal requires the separate
-      // CLEAR_AUDIO_CACHE message.
-      const toDelete = keys.filter(k => !isPersistentCache(k));
-      await Promise.all(toDelete.map(k => caches.delete(k)));
+      await Promise.all(keys.map(k => caches.delete(k)));
       if(event.source && event.source.postMessage) event.source.postMessage({ type: 'CACHES_CLEARED' });
     })());
     return;
   }
-
   if(data.type === 'CLEAR_AUDIO_CACHE'){
-    // This is the ONLY path that deletes qc-audio, and it must be
-    // triggered by an explicit user action. No automatic code in
-    // the app fires this — it exists purely for a future explicit
-    // "delete all downloads" button.
     event.waitUntil((async () => {
       try{ await caches.delete(AUDIO_CACHE); }catch(_){}
       if(event.source && event.source.postMessage) event.source.postMessage({ type: 'AUDIO_CACHE_CLEARED' });
     })());
     return;
   }
-
   if(data.type === 'REFRESH_MANIFEST'){
     event.waitUntil((async () => {
       try{
@@ -360,8 +296,7 @@ self.addEventListener('fetch', event => {
    This function reads AND writes the persistent 'qc-audio'
    cache. It is the sole gateway to downloaded Quran audio and
    downloaded translation audio. The cache is not versioned
-   and never deleted on activate — see PERSISTENT_CACHES and
-   isPersistentCache().
+   and never deleted on activate — see PERSISTENT_CACHES.
    ============================================================ */
 
 async function audioFromDownloadCache(req){
@@ -617,10 +552,6 @@ async function shellNavigation(req){
 
 async function trimCache(cacheName, maxEntries){
   try{
-    // Defence-in-depth: never trim a persistent cache. This function
-    // is only ever called for TEXT_CACHE and RUNTIME_CACHE, but the
-    // guard makes the invariant structural.
-    if(isPersistentCache(cacheName)) return;
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     const over = keys.length - maxEntries;

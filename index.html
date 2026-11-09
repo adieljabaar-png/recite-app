@@ -2059,6 +2059,96 @@ html.ai-blocked #aiBlockOverlay code { background: rgba(255,255,255,.06); paddin
   text-underline-offset: 2px;
 }
 body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
+
+/* ── Size upgrade: larger tab text + icons across all screens ── */
+.home-menu-item                       { font-size: .95rem; }
+.home-menu-item .hmi-ico              { width: 38px; height: 38px; font-size: 1.1rem; }
+.home-menu-item.has-sub .hmi-ico      { width: 40px; height: 40px; font-size: 1.15rem; }
+.home-menu-item .hmi-text strong      { font-size: .95rem; }
+.home-menu-item .hmi-text small       { font-size: .72rem; }
+
+.tile-title                           { font-size: 1rem !important; }
+.tile-sub                             { font-size: .72rem !important; }
+.tile-icon                            { width: 46px !important; height: 46px !important; font-size: 1.55rem !important; }
+
+.ft-icon                              { width: 48px; height: 48px; font-size: 1.6rem; }
+.ft-text strong                       { font-size: .92rem; }
+.ft-text small                        { font-size: .7rem; }
+
+.pt-icon                              { width: 52px; height: 52px; font-size: 1.4rem; }
+.pt-text strong                       { font-size: 1.05rem; }
+.pt-text small                        { font-size: .78rem; }
+
+.pi-icon                              { width: 42px; height: 42px; font-size: 1.15rem; }
+.pi-text strong                       { font-size: .94rem; }
+.pi-text small                        { font-size: .72rem; }
+
+.back-pill                            { height: 40px; min-height: 40px; font-size: .84rem; }
+
+.rt-icon                              { width: 44px; height: 44px; font-size: 1.2rem; }
+.rt-label                             { font-size: .66rem; }
+.rt-value                             { font-size: .96rem; }
+.reciter-item                         { min-height: 50px; font-size: .92rem; }
+.reciter-item .ri-num                 { font-size: .76rem; }
+
+.surah-row .num                       { width: 44px; height: 44px; font-size: .84rem; }
+.surah-row .en                        { font-size: 1rem; }
+.surah-row .sub                       { font-size: .72rem; }
+.surah-row .ar                        { font-size: 1.35rem; }
+.surah-row .playbtn                   { width: 46px; height: 46px; font-size: 1.1rem; }
+.surah-row .dlbtn                     { width: 38px; height: 38px; font-size: .86rem; }
+
+.toggle.mode-pill,
+.toggle.hide-text                     { font-size: .85rem; padding: 11px 14px; min-height: 44px; }
+
+.gold-control-main                    { height: 58px; font-size: 1.02rem; }
+.gold-control-small                   { width: 58px; height: 58px; font-size: 1.3rem; }
+
+.qv-btn                               { width: 48px; height: 48px; font-size: 1.08rem; }
+.qv-play                              { width: 58px; height: 58px; font-size: 1.22rem; }
+.qv-btn.qv-back                       { height: 42px; font-size: .82rem; }
+
+.fs-controls button                   { width: 48px; height: 48px; font-size: 1.12rem; }
+.fs-controls .fs-text-tab             { font-size: .72rem; height: 38px; padding: 0 14px; }
+
+.ps-tab                               { font-size: .8rem; height: 40px; }
+
+.prayer-row .pr-name                  { font-size: 1.05rem; }
+.prayer-row .pr-time                  { font-size: 1.08rem; }
+.pr-bell                              { width: 34px; height: 34px; font-size: .92rem; }
+.prayer-settings-btn                  { width: 48px; height: 48px; font-size: 1.22rem; }
+
+.tj-chip                              { font-size: .74rem; padding: 6px 11px; }
+
+.hifz-mode .hm-icon                   { width: 44px; height: 44px; font-size: 1.55rem; }
+.hifz-mode strong                     { font-size: .92rem; }
+.hifz-mode small                      { font-size: .73rem; }
+
+#homeMenuBtn                          { width: 54px; height: 54px; font-size: 1.8rem; }
+#homeThemeBtn                         { width: 44px; height: 44px; font-size: 1.15rem; }
+
+.hijri-main                           { font-size: 1.22rem; }
+.hijri-sub                            { font-size: .66rem; }
+
+.islamic-dates-list .name             { font-size: .88rem; }
+.islamic-dates-list .hijri            { font-size: .72rem; }
+.islamic-dates-list .greg             { font-size: .78rem; }
+
+.juz-row .juz-num                     { width: 42px; height: 42px; font-size: .84rem; }
+.juz-row .juz-name                    { font-size: .92rem; }
+.juz-row .juz-range                   { font-size: .72rem; }
+
+.bookmark-row .bm-num                 { font-size: .78rem; }
+.bookmark-row .bm-en                  { font-size: .92rem; }
+.bookmark-row .bm-ar                  { font-size: 1.15rem; }
+
+.cal-cell                             { min-height: 48px; }
+.cal-cell .hnum                       { font-size: 1rem; }
+.cal-cell .gnum                       { font-size: .64rem; }
+
+.streak-fire                          { font-size: 1.6rem; }
+.streak-count                         { font-size: 1.22rem; }
+.streak-label                         { font-size: .7rem; }
 </style>
 </head>
 <body>
@@ -2367,15 +2457,15 @@ body.light-mode .copyright-footer { border-top-color: rgba(0, 0, 0, .08); }
   </section>
   <div class="barwrap"><div class="bar" id="bar"></div></div>
   <div class="toggles hide-immersive">
-    <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">👂 Follow</button>
-    <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">🎵 Tajweed</button>
+    <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">Follow</button>
+    <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">Tajweed</button>
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
     <span class="toggle" id="tajweedNoiseChip" hidden>
       ⚠️ Background noise may affect Tajweed accuracy
     </span>
     <label class="toggle hide-text" id="hideTextChip" hidden>
-      <input type="checkbox" id="chkHideText"> 🙈 Hide text
+      <input type="checkbox" id="chkHideText"> Hide text
     </label>
   </div>
   <div class="recite-controls">
@@ -2591,7 +2681,6 @@ const surahNavRow    = document.getElementById('surahNavRow');
 const surahEnEl      = document.getElementById('surahEn');
 const surahArEl      = document.getElementById('surahAr');
 const surahCountEl   = document.getElementById('surahCount');
-const fullscreenBtn  = document.getElementById('btnFullscreen');
 const themeBtn       = document.getElementById('btnTheme');
 const infoBtn        = document.getElementById('btnInfo');
 const chkHideText    = document.getElementById('chkHideText');
@@ -2814,10 +2903,6 @@ const MUQATTAAT_BY_SURAH = {
   68: [['ن', ['ن']]]
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   MUQATTAAT LETTER NAMES (lenient — expanded with ASR variants so
-   the pointer reliably sticks to these disconnected-letter words)
-   ═══════════════════════════════════════════════════════════════════ */
 const LETTER_NAMES = {
   'ا': ['الف', 'ألف', 'اليف', 'أليف', 'الفا', 'ألفا', 'الفي'],
   'ل': ['لام', 'لم', 'لامو', 'لامي'],
@@ -2835,7 +2920,6 @@ const LETTER_NAMES = {
   'ن': ['نون', 'نوني', 'نونو']
 };
 
-/* ── User-agent / platform detection ──────────────────────── */
 const UA = navigator.userAgent || '';
 const IS_IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IS_HUAWEI  = /Huawei|HUAWEI|HarmonyOS|Honor|HONOR/i.test(UA);
@@ -2864,7 +2948,6 @@ const STRICT_FEATURES = {
   hamWasl:   () => localStorage.getItem('qc.strictHamWasl')        !== '0'
 };
 
-/* ── Arabic normalization ─────────────────────────────────── */
 function normAr(s){
   return String(s).normalize('NFKC')
     .replace(TASHKEEL,'')
@@ -2886,7 +2969,6 @@ function cleanTranslation(s){
   return t;
 }
 
-/* ── Phonetic substitution maps ───────────────────────────── */
 const PHON = {
   '\u0621':'\u0627','\u0622':'\u0627','\u0623':'\u0627','\u0625':'\u0627','\u0671':'\u0627',
   '\u0624':'\u0648','\u0626':'\u064A','\u0629':'\u0647','\u0649':'\u064A',
@@ -2954,7 +3036,6 @@ function phonLooseArCached(s){
   return v;
 }
 
-/* ── Hijri calendar (arithmetic, tabular) ─────────────────── */
 function gregorianToJDN(y, m, d){
   const a  = Math.floor((14 - m) / 12);
   const yy = y + 4800 - a;
@@ -3000,7 +3081,6 @@ function gregorianToHijri(date){
   return jdnToHijri(jdn);
 }
 
-/* ── Persistent settings ──────────────────────────────────── */
 const matchLevel = 'strict';
 
 let followOnly   = localStorage.getItem('qc.followOnly') !== '0';
@@ -3018,7 +3098,6 @@ if(!isFinite(lastNonZeroVolume) || lastNonZeroVolume <= 0) lastNonZeroVolume = 1
 
 let reciter = localStorage.getItem('qc.reciter') || FALLBACK_RECITER;
 
-/* ── Reciter catalogue ────────────────────────────────────── */
 const RECITER_LABELS = {
   'Alafasy_128kbps':                 'Mishary Rashid Alafasy',
   'Abdul_Basit_Murattal_64kbps':     'Abdul Basit (Murattal)',
@@ -3061,7 +3140,6 @@ const TRANSLATION_AUDIO_OPTIONS = [
   }
 ];
 
-/* ── Levenshtein (bounded + cached) ──────────────────────── */
 const _levCache = new Map();
 const _LEV_MAX  = 50000;
 const LEV_CACHE_MAX = 6;
@@ -3132,7 +3210,6 @@ function lev(a, b){
   return r;
 }
 
-/* ── Word-match tolerances ───────────────────────────────── */
 const TOL_TABLE = { strict: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2] };
 function toleranceFor(L){
   const t = TOL_TABLE.strict;
@@ -3244,7 +3321,6 @@ function trySplitTokenMatch(heard, rawTok){
           lev(combinedNorm, target) <= 1);
 }
 
-/* ── Muqatta'at detection & letter-wise matching ──────────── */
 function detectMuqattaat(surahId, ayahNum, nrm){
   const entries = MUQATTAAT_BY_SURAH[surahId];
   if(!entries) return null;
@@ -3257,13 +3333,6 @@ function detectMuqattaat(surahId, ayahNum, nrm){
   return entry[1].slice();
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   NEW HELPER — isSingleLetterName(heard, letters)
-   Returns true when the heard token equals (after normalization) any
-   single letter name belonging to the given letters array. Used to
-   block premature whole-word completion on Muqattaat words such as
-   الم where the first letter-name (الف) shares a phon with الم.
-   ═══════════════════════════════════════════════════════════════════ */
 function isSingleLetterName(heard, letters){
   if(!heard || !letters || !letters.length) return false;
   for(let i = 0; i < letters.length; i++){
@@ -3275,16 +3344,6 @@ function isSingleLetterName(heard, letters){
   return false;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   MUQATTAAT PROGRESS — Rewritten (Fix A + Fix B)
-   ─ Fix A: guard the whole-word phon path so a single letter-name
-     (الف, لام, ميم …) never completes the whole Muqattaat word.
-   ─ Fix B: per-letter matching is now much more lenient.
-     * names ≥ 3 chars accept |Δlen| ≤ 3 and lev ≤ 2
-     * names ≤ 2 chars keep the tight |Δlen| ≤ 2 / lev ≤ 1 gate
-     * phon fallback (hPhon and hPhonLoose) mirrors the same tolerances
-     * concatenation fallback runs span from remaining … down to 1
-   ═══════════════════════════════════════════════════════════════════ */
 function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
   if(!w || !w.isMuqattaat) return 'no-match';
   if(!heard) return 'no-match';
@@ -3292,12 +3351,8 @@ function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
   const cursor  = w.muqattaatCursor || 0;
   if(cursor >= letters.length) return 'complete';
 
-  /* 1. Exact whole-word */
   if(heard === w.norm) return 'complete';
 
-  /* 2. Lenient whole-word phon match — but never when the heard token is
-        itself a single letter name of any letter in this word, otherwise
-        e.g. 'الف' would prematurely complete 'الم'. */
   if(heard.length >= 2 && w.phon && hPhon &&
      w.phon.length >= 2 && hPhon.length >= 2 &&
      !isSingleLetterName(heard, letters)){
@@ -3305,7 +3360,6 @@ function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
     if(ratio >= 0.75 && lev(hPhon, w.phon) <= 1) return 'complete';
   }
 
-  /* 3. Per-letter match at cursor — lenient */
   const target = letters[cursor];
   const names  = LETTER_NAMES[target] || [];
   for(let i = 0; i < names.length; i++){
@@ -3336,7 +3390,6 @@ function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
     }
   }
 
-  /* 4. Concatenation fallback — span from remaining down to 1 */
   for(let span = letters.length - cursor; span >= 1; span--){
     let concat = '';
     let concatPhon = '';
@@ -3376,7 +3429,6 @@ function isStrongPartialPrefix(heard){
   return (heard.length / target.length) >= 0.40;
 }
 
-/* ── Audio URL builders ───────────────────────────────────── */
 function buildAyahUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
@@ -3384,7 +3436,6 @@ function buildTranslationAudioUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
 
-/* ── Downloads / offline audio store ──────────────────────── */
 const AUDIO_CACHE_NAME = 'qc-audio';
 const DOWNLOADS_STORE_KEY = 'qc.downloads';
 const DOWNLOAD_CONCURRENCY = 3;
@@ -3474,7 +3525,6 @@ function getAudioDownloadBtn(surahNumber, type) {
   return audioSurahList.querySelector('.dlbtn[data-surah="' + surahNumber + '"][data-type="' + type + '"]');
 }
 
-/* ── Global mutable state (coach) ─────────────────────────── */
 let words=[], ptr=0, errors=0, finished=false;
 let mode = 'page';
 let pageNum = 1;
@@ -3544,7 +3594,6 @@ const STORE = {
   set surah(v){ localStorage.setItem('qc.surah', String(v)); }
 };
 
-/* ── Streak & achievements ────────────────────────────────── */
 const STREAK_KEY        = 'qc.streak';
 const ACHIEVEMENTS_KEY  = 'qc.achievements';
 const HIFZ_HISTORY_KEY  = 'qc.hifzHistory';
@@ -3638,7 +3687,6 @@ function saveHifzHistory(h){
   try{ localStorage.setItem(HIFZ_HISTORY_KEY, JSON.stringify(h.slice(-50))); }catch(e){}
 }
 
-/* ── Toast + escape ───────────────────────────────────────── */
 let toastEl = null;
 function showToast(html, ms){
   if(!toastEl){ toastEl = document.createElement('div'); toastEl.className = 'toast'; document.body.appendChild(toastEl); }
@@ -3652,7 +3700,6 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;' })[c]);
 }
 
-/* ── Islamic calendar constants ───────────────────────────── */
 const HIJRI_MONTHS_EN = ['Muharram','Safar','Rabi al-Awwal','Rabi al-Thani','Jumada al-Ula','Jumada al-Akhirah','Rajab','Shaban','Ramadan','Shawwal','Dhul Qadah','Dhul Hijjah'];
 const HIJRI_MONTHS_AR = ['محرم','صفر','ربيع الأول','ربيع الثاني','جمادى الأولى','جمادى الثانية','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
 const HIJRI_MONTHS_SHORT = ['Muh','Saf','Rab I','Rab II','Jum I','Jum II','Raj','Sha','Ram','Shaw','Dhul Q','Dhul H'];
@@ -3671,7 +3718,6 @@ const IMPORTANT_DATES = [
   { month: 12, day: 10, name: 'Eid al-Adha',       icon: '🐏' }
 ];
 
-/* ── QA / debug gates that future sections depend on ──────── */
 let chaptersCache = null;
 let surahIndexRendered = false;
 let juzIndexRendered   = false;
@@ -3695,7 +3741,6 @@ async function ensureChapters(){
   return chaptersCache;
 }
 
-/* ── RMS audio analyser (mic-side spectral & envelope features) ─────────── */
 const rmsAnalyser = (function(){
   const samples = [];
   const MAX_AGE_MS = 8000;
@@ -3958,7 +4003,6 @@ const rmsAnalyser = (function(){
   };
 })();
 
-/* ── Recognizer token buffer ──────────────────────────────── */
 function recPush(newToks){
   if(!newToks || !newToks.length) return;
   for(let i = 0; i < newToks.length; i++) recTokens.push(newToks[i]);
@@ -3970,7 +4014,6 @@ function recReset(){
   interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
 }
 
-/* ── Screen router ────────────────────────────────────────── */
 function showScreen(name){
   currentScreenName = name;
   const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed, dashboard: screenDashboard };
@@ -3995,7 +4038,6 @@ async function openCoachScreen(){
   } finally { coachLoading = false; }
 }
 
-/* ── Achievements modal ──────────────────────────────────── */
 function openAchievementsModal(){
   const a = loadAchievements();
   const unlocked = Object.keys(a).length;
@@ -4020,7 +4062,6 @@ function openAchievementsModal(){
   bg.querySelector('#achClose').addEventListener('click', close);
 }
 
-/* ── Hifz test state and functions ───────────────────────── */
 const hifzState = {
   active:false, mode:'silent', surah:1, ayahs:[], words:[],
   hints:0, completedAyahs:0, totalAyahs:0,
@@ -4262,7 +4303,6 @@ function finishHifzTest(){
   bg.querySelector('#hifzResultClose').addEventListener('click', close);
 }
 
-/* ── Tajweed Colors display state & fetchers ─────────────── */
 const TJ_API_BASE = 'https://api.quran.com/api/v4';
 const TJ_ALL_RULES = ['ham_wasl','laam_shamsiyah','madda_normal','madda_permissible','madda_necessary','qalqalah','ghunnah','ikhfa','idghaam_ghunnah','idghaam_no_ghunnah','iqlab','silent'];
 const tjState = { surah: null, ayahs: [], loading: false, enabledRules: new Set(TJ_ALL_RULES.slice()) };
@@ -4527,7 +4567,6 @@ async function applyTajweedColorsToCoach(){
     return pairs;
   };
 
-  /* ══════ FIX 5 — count alignment failures and surface them ══════ */
   let applied = 0, mismatches = 0;
   wordsByVerse.forEach((verseWords, verseKey) => {
     const tajWords = tajMap.get(verseKey);
@@ -4566,7 +4605,7 @@ async function applyTajweedColorsToCoach(){
   }
   updateTajweedStatusChip();
   const tjPill = document.getElementById('modeTajweedBtn');
-  if (tjPill){ tjPill.textContent = '🎵 Tajweed'; tjPill.setAttribute('aria-label', 'Tajweed mode'); }
+  if (tjPill){ tjPill.textContent = 'Tajweed'; tjPill.setAttribute('aria-label', 'Tajweed mode'); }
   if (mismatches > 0){ console.warn('[Coach] Tajweed: ' + mismatches + ' word(s) could not be aligned.'); }
   addFeedback('🎨 Tajweed colors applied — ' + applied + ' colored word' + (applied === 1 ? '' : 's') + '.', false, true);
 }
@@ -4577,7 +4616,7 @@ function removeTajweedColorsFromCoach(){
   coachTajweedDegraded = false;
   updateTajweedStatusChip();
   const tjPill = document.getElementById('modeTajweedBtn');
-  if (tjPill){ tjPill.textContent = '🎵 Tajweed'; tjPill.setAttribute('aria-label', 'Tajweed mode'); }
+  if (tjPill){ tjPill.textContent = 'Tajweed'; tjPill.setAttribute('aria-label', 'Tajweed mode'); }
   if (!coachTajweedApplied) return;
   words.forEach(w => { w.el.textContent = w.raw; w.tjRules = null; w.normNoSilent = null; w.el.removeAttribute('title'); w.el.removeAttribute('aria-label'); });
   coachTajweedApplied = false;
@@ -4606,9 +4645,6 @@ function updateTajweedStatusChip(){
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   UPGRADE 1 & 2 — Madd / Ghunnah / Qalqalah timing constants
-   ═══════════════════════════════════════════════════════════════════ */
 const MADD_MIN_DELTA_MS = { normal: 180, permissible: 380, necessary: 600 };
 const MADD_MIN_HARAKAT  = { normal: 1.7, permissible: 3.6, necessary: 5.5 };
 const MADD_MAX_HARAKAT  = { normal: 2.3, permissible: 5.4, necessary: 6.5 };
@@ -4678,7 +4714,6 @@ function ghunnahRequiredMs(kind){
   return Math.round(base * paceScale());
 }
 
-/* ── Strict-mode state ──────────────────────────────────── */
 let lastDirectCommitIdx = -1;
 let lastDirectCommitAt  = 0;
 let lastCommitBatchId   = -1;
@@ -4687,7 +4722,6 @@ let silentWarned        = false;
 let batchTimingCtx      = null;
 let prevWordAudio       = null;
 
-/* ── Tajweed rule info & parse helpers ──────────────────── */
 const TAJWEED_RULE_INFO = {
   ham_wasl:             { name: 'Hamzat al-Wasl',            desc: 'connecting hamza — silent when joining speech' },
   laam_shamsiyah:       { name: 'Laam Shamsiyyah',           desc: 'solar lām — assimilated into the following sun letter' },
@@ -4710,7 +4744,6 @@ function buildRuleTooltip(rules, sep){
   }).join(sep || '\n');
 }
 
-/* ══════ FIX 1 — parse idghaam_no_ghunnah ══════ */
 function parseTajweedWordRules(decoratedHtml){
   const rules = {
     madd: null, ghunnahLetters: [], silentLetters: [],
@@ -4760,7 +4793,6 @@ function parseTajweedWordRules(decoratedHtml){
   }
   if (decoratedHtml.indexOf('tj-ham_wasl') !== -1) rules.hamWasl = true;
 
-  /* NEW: idghaam_no_ghunnah parsing */
   if (decoratedHtml.indexOf('tj-idghaam_no_ghunnah') !== -1) {
     rules.hasIdghaamNoGhunnah = true;
     const iRe = /<span[^>]*class="(?:[^"]*\s)?tj-idghaam_no_ghunnah(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g;
@@ -4795,7 +4827,6 @@ function maybeExplainRules(w){
   addFeedback('🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b> — ' + escapeHtml(explanation), false, true);
 }
 
-/* ── Strict rule evaluators ─────────────────────────────── */
 function strict1MaddOk(prevW, deltaMs){
   if (!prevW || !prevW.tjRules || !prevW.tjRules.madd) return true;
   const need = maddRequiredMs(prevW.tjRules.madd);
@@ -4849,7 +4880,6 @@ function emphaticViolation(heardNorm, targetNorm){
   return viol;
 }
 
-/* ══════ UPGRADE 2 — Nasal band widened to 250–600 Hz ══════ */
 function nasalPresent(samples){
   if (!samples || samples.length < 4) return false;
   let count = 0, total = 0;
@@ -4915,12 +4945,10 @@ function checkExtraSyllable(w){
   return true;
 }
 
-/* ══════ FIX 4 — checkQalqalah accepts heard + text fallback ══════ */
 function checkQalqalah(w, heard){
   if (!w || !w.tjRules || !w.tjRules.allRules) return true;
   if (w.tjRules.allRules.indexOf('qalqalah') === -1) return true;
 
-  /* Segment-based burst detection (preferred) */
   if (w.audio && w.audio.durationMs >= 100 && rmsAnalyser.isRunning()){
     const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
     if (samples && samples.length >= 6){
@@ -4942,7 +4970,6 @@ function checkQalqalah(w, heard){
     }
   }
 
-  /* NEW: Text-only fallback when segment unavailable */
   if (heard && w.norm){
     const QALQALAH_LETTERS = '\u0642\u0637\u0628\u062C\u062F';
     for (let i = 0; i < w.norm.length; i++){
@@ -4957,7 +4984,6 @@ function checkQalqalah(w, heard){
   return true;
 }
 
-/* ══════ FIX 1b — new idghaam_no_ghunnah check ══════ */
 function checkIdghaamNoGhunnah(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasIdghaamNoGhunnah) return true;
   if (!w.audio || w.audio.durationMs < 100 || !rmsAnalyser.isRunning()) return true;
@@ -5079,13 +5105,6 @@ function markStrict1Warning(w, kind, detail){
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   FIX 3 + FIX 6a — runStrict1Checks with:
-   • Segment-based timing gate independent of adjacency
-   • Emphatic check runs on EVERY commit path
-   • Qalqalah gets `heard` for text fallback
-   • Idghaam-no-ghunnah check invoked
-   ═══════════════════════════════════════════════════════════════════ */
 function runStrict1Checks(idx, heard, opts){
   opts = opts || {};
   if (followOnly) return;
@@ -5094,7 +5113,6 @@ function runStrict1Checks(idx, heard, opts){
   if (!w) return;
   if (w.isMuqattaat) return;
 
-  /* ── FIX 6a — emphatic check on every commit path ── */
   if (STRICT_FEATURES.emphatics() && heard && w.norm && heard !== w.norm){
     const viol = emphaticViolation(heard, w.norm);
     if (viol.length){
@@ -5111,7 +5129,6 @@ function runStrict1Checks(idx, heard, opts){
   if (batchTimingCtx) batchTimingCtx.wordCount++;
   const prevInSameBatch = (lastDirectCommitIdx >= 0) && (lastCommitBatchId === currentBatchId);
 
-  /* ── FIX 3 — segment-based timing (independent of adjacency) ── */
   if (!opts.skipTiming && !prevInSameBatch){
     const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5 && rmsAnalyser.hasSignal();
     const hasSeg = rmsAvailable && w.audio && w.audio.durationMs >= 40;
@@ -5144,7 +5161,6 @@ function runStrict1Checks(idx, heard, opts){
       }
     }
 
-    /* Pace sampling — adjacency + segment required (unchanged behaviour) */
     if (opts.timingReliable && hasSeg && lastDirectCommitIdx >= 0 && idx === lastDirectCommitIdx + 1){
       const isMadd = !!(w.tjRules && w.tjRules.madd);
       const sampleMs = rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs;
@@ -5152,7 +5168,6 @@ function runStrict1Checks(idx, heard, opts){
     }
   }
 
-  /* ── Delta-based fallback (only when segment unavailable, adjacency required) ── */
   if (!opts.skipTiming && !prevInSameBatch && lastDirectCommitIdx >= 0 && idx === lastDirectCommitIdx + 1){
     const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5 && rmsAnalyser.hasSignal();
     const hasSeg = rmsAvailable && w.audio && w.audio.durationMs >= 40;
@@ -5210,7 +5225,6 @@ function runStrict1Checks(idx, heard, opts){
   }
 }
 
-/* ══════ FIX 2 — distribute merged transcript + split merged segment ══════ */
 function distributeMergedHeard(heard, wordsArr, startIdx, count){
   const out = new Array(count).fill('');
   if (!heard || count <= 0) return out;
@@ -5252,7 +5266,6 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
   return out;
 }
 
-/* ═══════ Follow-mode Finite-State Gate constants ═══════ */
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.85;
@@ -5345,7 +5358,6 @@ function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
   return false;
 }
 
-/* ── Speech pipeline ───────────────────────────────────── */
 let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
@@ -5632,7 +5644,6 @@ async function runMFAInference(w, seg, heard) {
   return durationOk && (normOk || phonOk);
 }
 
-/* ═══════ Follow-mode grade: FSM with τ_plausible / τ_jump / τ_exit ═══════ */
 function gradeFollowFast(tokens, startIdx){
   const start = startIdx || 0;
   let used = 0;
@@ -5645,7 +5656,6 @@ function gradeFollowFast(tokens, startIdx){
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w          = words[ptr];
 
-    /* ── Muqatta'at: letter-wise progress, no flagging ── */
     if (w && w.isMuqattaat) {
       const mr = tryMuqattaatProgress(heard, hPhon, hPhonLoose, w);
       if (mr === 'complete') {
@@ -5655,16 +5665,13 @@ function gradeFollowFast(tokens, startIdx){
         pendingHeard.length = 0;
         used++; continue;
       }
-      /* Fix C — bounded stuck escape: non-complete counts as a wrong
-         token so the existing 3-token / 10 s pin-and-stop timer applies. */
       noteFollowWrongToken();
-      used++; continue;   /* partial or no-match → stay on word, no error */
+      used++; continue;
     }
 
     const nextW        = words[ptr + 1];
     const isLastInAyah = !nextW || nextW.verse !== w.verse;
 
-    /* 1. Direct match */
     const directMatch = isMatchWord(heard, hPhon, hPhonLoose, w)
                      || followAlPrefixMatch(heard, w);
     if (directMatch){
@@ -5682,7 +5689,6 @@ function gradeFollowFast(tokens, startIdx){
       }
     }
 
-    /* 2. Split-token (blocked on last-in-ayah) */
     if (!isLastInAyah && trySplitTokenMatch(heard, rawTok)){
       commitCorrect(ptr, null);
       advancePast(1);
@@ -5691,7 +5697,6 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    /* 3. Merged-token */
     const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
     if (mergedN > 0){
       commitManyCorrect(ptr, ptr + mergedN, null);
@@ -5701,7 +5706,6 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    /* 4. Restricted look-ahead k ≤ 2, τ_jump = 0.85, same-ayah only */
     let jumped = false;
     for (let k = 1; k <= FOLLOW_MAX_LOOKAHEAD; k++){
       if (ptr + k >= words.length) break;
@@ -5720,7 +5724,6 @@ function gradeFollowFast(tokens, startIdx){
     }
     if (jumped){ used++; continue; }
 
-    /* 5. MFA phonetic */
     if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)){
       commitCorrect(ptr, null);
       advancePast(1);
@@ -5729,7 +5732,6 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    /* 6. Plausible fallback */
     if (isFollowPlausible(heard, hPhon, hPhonLoose, w)){
       commitCorrect(ptr, null);
       advancePast(1);
@@ -5738,7 +5740,6 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    /* 7. Hold state */
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if (pendingHeard.length > 5) pendingHeard.length = 0;
@@ -5747,7 +5748,6 @@ function gradeFollowFast(tokens, startIdx){
   return used;
 }
 
-/* ═══════ gradeFull — Tajweed mode ═══════ */
 const FULL_LOOKAHEAD = 5;
 
 async function gradeFull(tokens, startIdx){
@@ -5764,7 +5764,6 @@ async function gradeFull(tokens, startIdx){
       const hPhon = phonArCached(rawTok);
       const hPhonLoose = phonLooseArCached(rawTok);
 
-      /* ── Muqatta'at: letter-wise progress, no flagging ── */
       {
         const mqW = words[ptr];
         if (mqW && mqW.isMuqattaat) {
@@ -5779,8 +5778,6 @@ async function gradeFull(tokens, startIdx){
             mqW._muqStuckCount = 0;
             used++; continue;
           }
-          /* Fix C — soft warning after 6 consecutive non-completes on the
-             same Muqattaat word (Tajweed has no pin timer; this is a hint). */
           mqW._muqStuckCount = (mqW._muqStuckCount || 0) + 1;
           if (mqW._muqStuckCount === 6) {
             const names = (mqW.muqattaatLetters || []).map(l => (LETTER_NAMES[l] || [l])[0]).join(' · ');
@@ -5795,7 +5792,6 @@ async function gradeFull(tokens, startIdx){
       if(heard.length < 2 && heard !== words[ptr].norm && words[ptr].norm.length > 1){ used++; continue; }
 
       if(matchesCurrent){
-        /* FIX 6b — emphatic check now runs inside runStrict1Checks; removed duplicate here */
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
         commitCorrect(ptr, seg);
         runStrict1Checks(ptr, heard, { timingReliable: true });
@@ -5816,7 +5812,6 @@ async function gradeFull(tokens, startIdx){
         used++; continue;
       }
 
-      /* ══════ FIX 2 — distribute merged transcript/segment, run checks on every merged word ══════ */
       const mergedN = tryMergedTokenMatch(heard, hPhon, null);
       if(mergedN > 0){
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
@@ -5931,7 +5926,6 @@ async function gradeFull(tokens, startIdx){
   return used;
 }
 
-/* ── Adaptive pace tracking ─────────────────────────────── */
 function noteAdvance(n){
   if(n <= 0) return;
   const now = performance.now();
@@ -5957,7 +5951,6 @@ function resetPace(){
   advanceTimes = []; currentPaceWPS = 0; adaptiveSilenceMs = 10000; pendingJumpTarget = -1;
 }
 
-/* ── Status & feedback primitives ────────────────────────── */
 function setStatus(label, state, hint){
   if(!statusLabel) return;
   statusLabel.textContent = label;
@@ -6034,7 +6027,6 @@ function showPermissionHelp(msg){
   bg.querySelector('#permRetry').addEventListener('click', async () => { close(); const ok = await promptForMic(); if(ok && !wantMic) startReciting(); });
 }
 
-/* ── Audio context, beeps, prime ─────────────────────────── */
 let audioCtx=null, audioUnlocked=false;
 function unlockAudio(){
   if(audioUnlocked){ return audioCtx; }
@@ -6142,7 +6134,6 @@ function playUrl(url, opts){
 async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; }); } }catch(e){} }
 function releaseWakeLock(){ if(wakeLock){ try{wakeLock.release();}catch(e){} wakeLock=null; } }
 
-/* ── Volume + audio overlay ──────────────────────────────── */
 volumeSlider.value = String(currentVolume);
 function applyVolumeToCurrentAudio(){ if(currentAudio){ try{ currentAudio.volume = Math.max(0, Math.min(1, currentVolume)); }catch(e){} } }
 function handleVolumeChange(newVal, source){
@@ -6226,7 +6217,6 @@ volIcon.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === '
 window.addEventListener('resize', schedulePositionAudioOverlay);
 window.addEventListener('orientationchange', schedulePositionAudioOverlay);
 
-/* ── Mic stream lifecycle ────────────────────────────────── */
 async function ensureMicStream(){
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
@@ -6267,7 +6257,6 @@ function showBrokenMicWarning(){
   addFeedback('⚠️ The browser is not passing speech to the recognition service.', true);
 }
 
-/* ── Silence timer ──────────────────────────────────────── */
 let lastSilenceResetAt = 0;
 function resetSilenceTimer(force){
   const now = performance.now();
@@ -6285,10 +6274,8 @@ function resetSilenceTimer(force){
 }
 function clearSilenceTimer(){ clearTimeout(silenceTimer); silenceTimer = null; }
 
-/* ── Mode UI ─────────────────────────────────────────────── */
 let updatingMutex = false;
 function applyMutexUI(){
-  if(!followOnly && !beepOn){ followOnly = true; }
   beepOn = !followOnly;
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
@@ -6361,7 +6348,6 @@ function applyModeUI(){
   nextSurahBtn.disabled = (surahNum <= 1);
 }
 
-/* ── Load surah / render words ──────────────────────────── */
 function explainFetchFailure(settled){
   if(settled.status !== 'fulfilled'){ const reason = settled.reason; if(reason && reason.name === 'AbortError') return 'timed out after ' + (FETCH_TIMEOUT_MS/1000) + ' s'; return (reason && reason.message) || 'network error'; }
   if(!settled.value.ok) return 'HTTP ' + settled.value.status + ' ' + (settled.value.statusText || '');
@@ -6411,9 +6397,9 @@ function showLoadError(e){
   pageEl.innerHTML = '<div class="mushaf-inner"><div class="loading"><span class="err">⚠️ Could not load ' + label + '</span>' + (isOffline ? 'You are offline and this content is not cached yet.' : 'The Quran server did not respond. Check your connection and tap Retry.') + '<div class="detail">' + escapeHtml(detail) + '</div><button id="btnRetry" class="primary">↻ Retry</button></div></div>';
   ensureMushafFsBtn();
   const r = document.getElementById('btnRetry');
-  if(r) r.addEventListener('click', () => { if(mode === 'surah') loadSurah(surahNum, true); else loadPage(pageNum, true); });
+  if(r) r.addEventListener('click', () => loadSurah(surahNum, true));
   setStatus('Load failed', 'error', 'Tap Retry');
-  if(isOffline){ askForInternet(label).then(ok => { if(!ok) return; if(mode === 'surah') loadSurah(surahNum, true); else loadPage(pageNum, true); }); }
+  if(isOffline){ askForInternet(label).then(ok => { if(!ok) return; loadSurah(surahNum, true); }); }
 }
 
 function renderVerses(ayahs, translations){
@@ -6459,8 +6445,8 @@ function renderVerses(ayahs, translations){
       if(bisTokens){
         const bl = document.createElement('div');
         bl.className = 'ayah bismillah-line';
-        bl.dataset.surah = surahId; bl.dataset.ayah = '1';
-        bisTokens.forEach(tok => pushWord(tok, surahId, 1, bl));
+        bl.dataset.surah = surahId; bl.dataset.ayah = '0';
+        bisTokens.forEach(tok => pushWord(tok, surahId, 0, bl));
         inner.appendChild(bl);
       }
     }
@@ -6489,7 +6475,6 @@ function renderVerses(ayahs, translations){
   resetProgress(true);
 }
 
-/* ── HUD / progress / feedback ──────────────────────────── */
 let scrollScheduled = false;
 function scrollElementIntoView(el, force){
   if(!el) return;
@@ -6570,7 +6555,8 @@ function appendMistake(m){
     : '';
   const heardPart = m.heard ? '<span class="heard">→ ' + escapeHtml(m.heard) + '</span>' : '';
   const ayahPart = m.verse ? m.verse.split(':')[1] : '';
-  li.innerHTML = '<span class="idx">' + m.idx + '</span>' + kindBadge + '<span class="correct">' + escapeHtml(m.correct) + '</span>' + heardPart + '<span class="meta">Ayah ' + ayahPart + '</span>';
+  const ayahLabel = (ayahPart === '0') ? 'Bismillah' : ('Ayah ' + ayahPart);
+  li.innerHTML = '<span class="idx">' + m.idx + '</span>' + kindBadge + '<span class="correct">' + escapeHtml(m.correct) + '</span>' + heardPart + '<span class="meta">' + ayahLabel + '</span>';
   mistakesList.appendChild(li);
   mistakesList.scrollTop = mistakesList.scrollHeight;
 }
@@ -6587,8 +6573,10 @@ function completeVerse(verseKey){
   const count = mistakes.filter(m => m.verse === verseKey).length;
   if(count > 0){
     const ayahNum = verseKey.split(':')[1];
-    addFeedback('🔔 <b>End of ayah ' + ayahNum + '</b> — ' + count + ' mistake' + (count===1?'':'s') + '.', true);
-    setStatus('Ayah ' + ayahNum + ' — ' + count + ' mistake' + (count===1?'':'s'), 'correcting', '');
+    const label = (ayahNum === '0') ? 'Bismillah' : ('ayah ' + ayahNum);
+    const statusLabel = (ayahNum === '0') ? 'Bismillah' : ('Ayah ' + ayahNum);
+    addFeedback('🔔 <b>End of ' + label + '</b> — ' + count + ' mistake' + (count===1?'':'s') + '.', true);
+    setStatus(statusLabel + ' — ' + count + ' mistake' + (count===1?'':'s'), 'correcting', '');
   }
 }
 function advancePast(n){
@@ -6643,7 +6631,6 @@ function recordMistake(i, kind, heardRaw){
   if(beepOn && kind === 'misread') beepThrottled('error');
 }
 
-/* ── Reset / jump-to-word ──────────────────────────────── */
 function resetProgress(fullReset){
   ptr=0; errors=0; finished=false; recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
@@ -6678,7 +6665,6 @@ function jumpToWordAndListen(idx){
   else { startReciting(); addFeedback('🎯 Jumped — listening from here.', false, true); }
 }
 
-/* ── Word press / long-press handling ──────────────────── */
 const wordPress = { active: false, el: null, idx: -1, timer: null, startX: 0, startY: 0 };
 function beginWordPress(el, idx, x, y){
   if(viewerOpen && viewerMode === 'audio') return;
@@ -6742,7 +6728,6 @@ function installWordDelegates(){
   }
 }
 
-/* ── Mic button / recite / stop / finish ───────────────── */
 function setMicButton(){
   micButton.innerHTML = wantMic ? '⏹ Stop' : 'Start Reciting 🎤';
   micButton.classList.toggle('on',wantMic);
@@ -6853,7 +6838,6 @@ function stopPlayback(){
   hideAudioOverlay(); syncFsButtons();
 }
 
-/* ── Speech-service unreachable modal ───────────────────── */
 function notifySpeechServiceUnreachable(){
   setStatus('Speech service unreachable', 'error', 'Check your internet connection');
   addFeedback('⚠️ The speech recognition service could not be reached. Live recitation needs an internet connection.', true);
@@ -6868,7 +6852,6 @@ function notifySpeechServiceUnreachable(){
   bg.querySelector('#speechInfoClose').addEventListener('click', close);
 }
 
-/* ── Fullscreen reader controls ─────────────────────────── */
 function enterReaderFullscreen(){
   if(readerFullscreen) return;
   if(viewerOpen) return;
@@ -6894,7 +6877,6 @@ function hideFsBadge(){ fsBadge.classList.remove('visible'); clearTimeout(fsBadg
 function nativeFullscreenElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
 function updateFullscreenIcon(){
   const glyph = readerFullscreen ? '⤡' : '⛶';
-  if(fullscreenBtn) fullscreenBtn.textContent = glyph;
   const mfb = document.getElementById('mushafFsBtn'); if(mfb) mfb.textContent = glyph;
 }
 function ensureMushafFsBtn(){
@@ -6911,7 +6893,6 @@ function ensureMushafFsBtn(){
   pageEl.appendChild(btn);
   return btn;
 }
-if(fullscreenBtn){ fullscreenBtn.addEventListener('click', () => { if(readerFullscreen) exitReaderFullscreen(); else enterReaderFullscreen(); }); }
 document.addEventListener('pointerdown', (e) => {
   if(!readerFullscreen) return; if(viewerOpen) return;
   if(e.target.closest('.fs-controls')) return;
@@ -6970,7 +6951,6 @@ function syncFsButtons(){
   syncRevealButtons();
 }
 
-/* ── Progress persistence ──────────────────────────────── */
 let suppressProgressSave = false;
 let _saveProgressTimer = null;
 function progressKey(modeKey){ return 'qc.progress.' + modeKey; }
@@ -7007,8 +6987,9 @@ function findWordIndexInWords(surah, ayah, offset){
 }
 function refreshProgressMenu(){
   const f = loadSavedProgress('follow'); const t = loadSavedProgress('tajweed');
-  if(progressFollowSub) progressFollowSub.textContent = f ? ('Surah ' + f.surah + ' · ayah ' + f.ayah) : 'No saved session';
-  if(progressTajweedSub) progressTajweedSub.textContent = t ? ('Surah ' + t.surah + ' · ayah ' + t.ayah) : 'No saved session';
+  const fmt = d => d ? ('Surah ' + d.surah + ' · ' + (d.ayah === 0 ? 'Bismillah' : ('ayah ' + d.ayah))) : 'No saved session';
+  if(progressFollowSub) progressFollowSub.textContent = fmt(f);
+  if(progressTajweedSub) progressTajweedSub.textContent = fmt(t);
 }
 async function resumeRecitationSession(modeKey){
   const data = loadSavedProgress(modeKey);
@@ -7037,7 +7018,6 @@ async function resumeRecitationSession(modeKey){
   } finally { suppressProgressSave = false; }
 }
 
-/* ── Islamic dates + calendar modal ─────────────────────── */
 function fmtGregShort(date){ return GREG_MONTHS_SHORT[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear(); }
 function renderImportantDates(){
   if(!islamicDatesList) return;
@@ -7148,7 +7128,6 @@ function renderCalendar(){
   if(selGreg) selGreg.textContent = (selEv ? selEv.icon + ' ' + selEv.name + ' · ' : '') + fmtGregShort(selDateObj);
 }
 
-/* ── Offline prompt ──────────────────────────────────────── */
 function askForInternet(label){
   return new Promise(resolve => {
     const bg = document.createElement('div');
@@ -7167,7 +7146,6 @@ function askForInternet(label){
   });
 }
 
-/* ── Surah index / Juz index / Bookmarks ───────────────── */
 async function renderSurahIndex(){
   if(surahIndexRendered) return;
   surahIndexList.innerHTML = '<div class="loading">Loading…</div>';
@@ -7281,7 +7259,6 @@ function updateBookmarkButton(){
 }
 if(qvBookmark){ qvBookmark.addEventListener('click', () => { bookmarkCurrentPage(); showViewerChrome(); }); }
 
-/* ── Reciter dropdown UI ───────────────────────────────── */
 function renderReciterSelect(){
   if(!reciterMenu) return;
   reciterMenu.innerHTML = '';
@@ -7409,7 +7386,6 @@ function changeTextTranslation(id){
   if(viewerAudio.active && viewerAudio.surah && !viewerAudio.playTranslation){ reloadViewerTranslation(); }
 }
 
-/* ── Audio screen ──────────────────────────────────────── */
 async function renderAudioSurahList(){
   if(audioListRendered){ refreshAudioRowStates(); return; }
   audioSurahList.innerHTML = '<div class="loading">Loading…</div>';
@@ -7464,7 +7440,6 @@ function refreshAudioRowStates(){
   });
 }
 
-/* ── Download helpers ──────────────────────────────────── */
 function updateAudioDownloadBtn(btn, surahNumber, type){
   if(!btn) return;
   const key = type === 'ar' ? downloadKeyFor(reciter, surahNumber) : downloadKeyFor(viewerAudio.translationId, surahNumber);
@@ -7724,7 +7699,6 @@ async function handleAudioDownloadTap(surahNumber, type){
   else downloadTranslationSurahAudio(surahNumber);
 }
 
-/* ── QR generator ──────────────────────────────────────── */
 const QRGen = (function(){
   'use strict';
   const EXP = new Uint8Array(512); const LOG = new Uint8Array(256);
@@ -7788,7 +7762,6 @@ const QRGen = (function(){
   return { encode: encode, toSvg: toSvg };
 })();
 
-/* ── Reader pages (page-viewer) ────────────────────────── */
 const readerState = { pages: new Map(), currentPage: 0, token: 0, highlightVerse: null, loading: false };
 const _surahStartPageCache = new Map();
 async function getSurahStartPage(surahNumber){
@@ -8029,7 +8002,6 @@ async function openJuzInReader(juzNumber){
   loadReaderPage(pg);
 }
 
-/* ── Viewer (QV) state and mode ────────────────────────── */
 let viewerOpen = false;
 let viewerMode = 'read';
 let viewerChromeTimer = null;
@@ -8454,7 +8426,6 @@ async function playCurrentViewerAyah(){
   playCurrentViewerAyah();
 }
 
-/* ── Reader page-turn swipe gestures ────────────────────── */
 const SWIPE_MIN_X = 55;
 let readerGesture = null;
 let pageTurning = false;
@@ -8569,7 +8540,6 @@ document.addEventListener('pointermove', readerGestureMove, {passive:true});
 document.addEventListener('pointerup', readerGestureEnd);
 document.addEventListener('pointercancel', readerGestureCancel);
 
-/* ── Prayer times engine ───────────────────────────────── */
 const PRAYERS = [
   { key:'fajr',    label:'Fajr',    icon:'🌅' },
   { key:'sunrise', label:'Sunrise', icon:'☀️' },
@@ -8767,6 +8737,29 @@ let prayerAlarmTimer = null;
 let firedAlarms = new Set();
 let firedDay = '';
 let athaanAudio = null;
+
+/* ══════ NEW: Prayer alarm stop-on-tap ══════ */
+let prayerBeepOscillators = [];
+
+function stopPrayerBeep(){
+  prayerBeepOscillators.forEach(o => { try{ o.stop(); }catch(_){} });
+  prayerBeepOscillators = [];
+}
+
+function stopPrayerAlarm(){
+  stopPrayerBeep();
+  if(athaanAudio){
+    try{ athaanAudio.pause(); athaanAudio.currentTime = 0; }catch(_){}
+  }
+}
+
+/* Any tap or key press on any screen stops the prayer alarm instantly.
+   Capture-phase so it fires before child stopPropagation handlers. */
+document.addEventListener('click',   stopPrayerAlarm, { capture: true, passive: true });
+document.addEventListener('pointerdown', stopPrayerAlarm, { capture: true, passive: true });
+document.addEventListener('touchstart', stopPrayerAlarm, { capture: true, passive: true });
+document.addEventListener('keydown', stopPrayerAlarm, true);
+
 function requestNotificationPermission(){
   if(!('Notification' in window)) return;
   if(Notification.permission === 'default'){ try{ Notification.requestPermission(); }catch(e){} }
@@ -8810,6 +8803,7 @@ function firePrayerAlarm(p){
   tryNext();
 }
 function playPrayerBeep(){
+  stopPrayerBeep();
   try{
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -8827,6 +8821,7 @@ function playPrayerBeep(){
       g.gain.exponentialRampToValueAtTime(0.0001, start + beepDur);
       o.connect(g); g.connect(audioCtx.destination);
       o.start(start); o.stop(start + beepDur + 0.02);
+      prayerBeepOscillators.push(o);
     }
     if(navigator.vibrate) navigator.vibrate([180, 150, 180]);
   }catch(e){}
@@ -9036,7 +9031,6 @@ function initPrayerTimes(){
 }
 initPrayerTimes();
 
-/* ── Install prompt / QR / share / copyright ──────────── */
 const INSTALL_DONE_KEY = 'qc.installTabDone';
 let deferredPrompt = null;
 let appInstalledFlag = false;
@@ -9161,7 +9155,6 @@ function showInstallPromptModal(){
   });
 }
 
-/* ── Tile wiring + back buttons ────────────────────────── */
 tileSurahIndex.addEventListener('click', () => { showScreen('index'); renderSurahIndex(); });
 tileJuzIndex.addEventListener('click', () => { showScreen('juz'); renderJuzIndex(); });
 tilePlayAudio.addEventListener('click', () => {
@@ -9181,7 +9174,6 @@ backFromAudio.addEventListener('click', () => showScreen('home'));
 if(backFromDashboard) backFromDashboard.addEventListener('click', () => showScreen('home'));
 btnBackHome.addEventListener('click', () => { if(readerFullscreen) exitReaderFullscreen(); stopEverything(true); releaseMicStream(); showScreen('home'); });
 
-/* ── Home menu wiring + modals ─────────────────────────── */
 (function wireHomeMenu(){
   if(!homeMenuBtn || !homeMenu || !homeMenuWrap) return;
   const closeMenu = () => { homeMenu.hidden = true; homeMenuBtn.setAttribute('aria-expanded','false'); };
@@ -9282,7 +9274,7 @@ function openCopyrightModal(){
   const startBtn = document.getElementById('hifzStartBtn');
   const stopBtn  = document.getElementById('hifzStopBtn');
   const finishBtn = document.getElementById('hifzFinishBtn');
-  if(back) back.addEventListener('click', () => { stopHifzTest(true); showScreen('dashboard'); });
+  if(back) back.addEventListener('click', () => { stopHifzTest(); showScreen('dashboard'); });
   if(sel)  sel.addEventListener('change', refreshHifzAyahMax);
   if(fromEl) fromEl.addEventListener('change', refreshHifzAyahMax);
   if(toEl)   toEl.addEventListener('change', refreshHifzAyahMax);
@@ -9365,7 +9357,6 @@ prevSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum<114) flipSu
 nextSurahBtn.addEventListener('click',()=>{ if(!flipping && surahNum>1) flipSurah(-1); });
 surahButton.addEventListener('click',openSurahPicker);
 
-/* ── Surah picker (modal) ─────────────────────────────── */
 async function openSurahPicker(){
   const bg=document.createElement('div'); bg.className='modal-bg';
   const m=document.createElement('div'); m.className='modal';
@@ -9391,13 +9382,11 @@ async function openSurahPicker(){
   }catch(e){ list.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:14px;text-align:center">Could not load chapters.</div>'; }
 }
 
-/* ── Surah flip ────────────────────────────────────────── */
 let flipping = false;
 function nudgeEdge(dir){ if(navigator.vibrate) navigator.vibrate(18); }
 async function flipSurah(dir){ if(flipping) return; const next = surahNum + dir; if(next < 1 || next > 114){ nudgeEdge(dir); return; } flipping = true; try{ await loadSurah(next); } finally { flipping = false; } }
 async function flipNav(dir){ return flipSurah(dir); }
 
-/* ── Coach info modal ──────────────────────────────────── */
 function openCoachInfoModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -9475,7 +9464,6 @@ function openInfoModal(){
 }
 if(infoBtn) infoBtn.addEventListener('click', openCoachInfoModal);
 
-/* ── Share app ────────────────────────────────────────── */
 async function shareApp(){
   const url = location.href.split('#')[0];
   const data = { title: 'Quran Recitation Coach', text: 'Practice Quran recitation with live word-by-word feedback.', url };
@@ -9484,7 +9472,6 @@ async function shareApp(){
   catch(e){ window.prompt('Copy this link to share:', url); }
 }
 
-/* ── Feedback modal ───────────────────────────────────── */
 const FEEDBACK_ENDPOINT = '/api/feedback';
 const FEEDBACK_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function openFeedbackModal(){
@@ -9529,7 +9516,6 @@ function openFeedbackModal(){
   setTimeout(() => emailEl.focus(), 80);
 }
 
-/* ── Theme + hijri label ───────────────────────────────── */
 function applyTheme(){
   const isLight = theme === 'light';
   document.body.classList.toggle('light-mode', isLight);
@@ -9546,6 +9532,7 @@ if(themeBtn) themeBtn.addEventListener('click', flipTheme);
 if(homeThemeBtn) homeThemeBtn.addEventListener('click', flipTheme);
 window.addEventListener('error', e => { console.error('[QuranCoach] runtime error:', e.error || e.message); });
 (function applySupportBanner(){
+  if(!supportBox) return;
   if(!SPEECH_SUPPORTED){
     supportBox.hidden = false;
     supportBox.innerHTML = '⚠️ <b>Live recitation is not available in this browser.</b><br>Your browser does not expose the Web Speech API. Page text, English translation, Prayer Times, audio playback, Hifz Test, Tajweed Colors and offline downloads still work everywhere. For live recitation, please use <b>Chrome</b> on Android or desktop, or <b>Safari 14.5+</b> on iPhone.';
@@ -9568,14 +9555,12 @@ function updateHijriDate(){
   if(hijriAr) hijriAr.textContent = ar || '';
 }
 
-/* ── Connection badge (optional) ───────────────────────── */
 const connBadge = document.getElementById('connBadge');
 function updateConn(){ if(!connBadge) return; const dot = connBadge.querySelector('.dot'); if(!dot) return; dot.style.background = navigator.onLine ? 'var(--good)' : 'var(--warn)'; connBadge.title = navigator.onLine ? 'Online' : 'Offline'; }
 window.addEventListener('online',updateConn);
 window.addEventListener('offline',updateConn);
 updateConn();
 
-/* ── QR screen ─────────────────────────────────────────── */
 const SITE_URL = 'https://recite-hazel.vercel.app';
 let _qrSvgCache = null;
 function qrSvgForSite(){
@@ -9599,7 +9584,6 @@ function closeQrScreen(){ if(!qrFullscreen) return; qrFullscreen.hidden = true; 
 if(qrCloseBtn) qrCloseBtn.addEventListener('click', closeQrScreen);
 if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target === qrFullscreen) closeQrScreen(); }); }
 
-/* ── Global visibility / touch / keyboard handlers ────── */
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     if(wantMic && !finished && !fsPaused) resumeMic();
@@ -9658,7 +9642,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── Boot ─────────────────────────────────────────────── */
 (function boot(){
   initServiceWorker().catch(err => console.warn('[SW] boot init failed:', err));
   updateHijriDate(); setInterval(updateHijriDate, 30 * 60 * 1000);
