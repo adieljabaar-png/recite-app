@@ -2197,7 +2197,7 @@ body.light-mode .toggles .progress-trigger {
   background: #eef2f8;
 }
 
-/* ── Duah of the Day Card ── */
+/* ── Duah of the Day Card (legacy, unused) ── */
 .daily-duah-card {
   background: linear-gradient(135deg, rgba(201,162,39,.10), rgba(20,28,46,.72));
   border: 1px solid var(--gold);
@@ -2271,6 +2271,121 @@ body.light-mode .toggles .progress-trigger {
 }
 .duah-share-btn:hover { border-color: var(--gold); background: rgba(201,162,39,.15); }
 body.light-mode .daily-duah-card { background: linear-gradient(135deg, rgba(166,124,0,.1), rgba(255,255,255,.8)); }
+
+/* ── Share Card (Dashboard) ─────────────────────────────── */
+.share-card{
+  background:linear-gradient(135deg, rgba(201,162,39,.12), rgba(20,28,46,.88));
+  border:1px solid var(--gold);
+  border-radius:20px;
+  padding:16px;
+  margin-top:14px;
+  box-shadow:0 8px 22px rgba(0,0,0,.28);
+  position:relative;
+  overflow:hidden;
+}
+.share-card::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at top right, rgba(201,162,39,.16), transparent 60%);
+}
+.share-card-inner{position:relative;z-index:1;}
+
+.share-brand-top{
+  display:flex;align-items:center;gap:8px;
+  padding-bottom:10px;margin-bottom:12px;
+  border-bottom:1px solid rgba(201,162,39,.28);
+}
+.share-brand-logo{font-size:1.2rem;line-height:1;}
+.share-brand-name{font-size:1rem;font-weight:800;color:var(--gold-light);letter-spacing:.02em;}
+.share-brand-tag{
+  font-size:.6rem;color:var(--muted);font-weight:800;
+  text-transform:uppercase;letter-spacing:.12em;margin-left:auto;
+}
+
+.share-header{text-align:center;margin-bottom:12px;}
+.share-city{font-size:1.08rem;font-weight:800;color:var(--text);line-height:1.2;}
+.share-dates{font-size:.7rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.4;}
+
+.share-prayers{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;
+}
+.share-prayer{
+  text-align:center;padding:7px 2px;border-radius:10px;
+  background:rgba(79,140,255,.08);border:1px solid rgba(79,140,255,.22);
+  transition:background .2s, border-color .2s;
+}
+.share-prayer .sp-name{
+  display:block;font-size:.55rem;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em;line-height:1.2;
+}
+.share-prayer .sp-time{
+  display:block;font-size:.74rem;font-weight:800;color:var(--text);
+  margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.2;
+}
+.share-prayer.is-sunrise{
+  background:rgba(255,176,32,.10);border-color:rgba(255,176,32,.35);
+}
+.share-prayer.is-sunrise .sp-name{color:var(--warn);}
+.share-prayer.is-sunrise .sp-time{color:var(--warn);}
+
+.share-divider{
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(201,162,39,.55), transparent);
+  margin:12px 0;position:relative;
+}
+.share-divider::after{
+  content:'';
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);
+  width:8px;height:8px;background:var(--gold);border-radius:1px;
+}
+
+.share-block{margin:2px 0;}
+.share-block-title{
+  font-size:.66rem;font-weight:800;color:var(--gold-light);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;
+  text-align:center;
+}
+.share-arabic{
+  font-family:'Amiri','Amiri Quran',serif;
+  font-size:1.32rem;line-height:2;color:var(--text);text-align:center;
+  margin:0 0 8px;direction:rtl;
+}
+.share-translation{
+  font-size:.78rem;line-height:1.55;color:var(--muted);text-align:center;
+  margin:0 0 6px;font-style:italic;
+}
+.share-reference{
+  font-size:.62rem;color:var(--gold);font-weight:800;text-align:center;
+  margin:0;text-transform:uppercase;letter-spacing:.06em;
+}
+
+.share-footer{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  flex-wrap:wrap;padding-top:12px;margin-top:12px;
+  border-top:1px solid rgba(201,162,39,.28);
+  font-size:.7rem;color:var(--muted);font-weight:600;text-align:center;
+}
+.share-footer b{color:var(--gold-light);}
+.share-footer a{
+  color:var(--accent);text-decoration:underline;
+  text-decoration-style:dotted;text-underline-offset:2px;word-break:break-all;
+}
+
+.share-actions{
+  display:flex;gap:8px;margin-top:14px;position:relative;z-index:1;
+}
+.share-actions .ps-btn{flex:1;height:46px;font-size:.84rem;}
+
+body.light-mode .share-card{
+  background:linear-gradient(135deg, rgba(166,124,0,.10), rgba(255,255,255,.88));
+}
+body.light-mode .share-prayer{background:rgba(42,111,224,.07);border-color:rgba(42,111,224,.22);}
+body.light-mode .share-prayer .sp-name{color:#5a6884;}
+body.light-mode .share-arabic{color:#1a2233;}
+
+@media (max-width:420px){
+  .share-prayers{grid-template-columns:repeat(3,1fr);}
+  .share-prayer .sp-time{font-size:.78rem;}
+}
 </style>
 </head>
 <body>
@@ -2429,19 +2544,51 @@ body.light-mode .daily-duah-card { background: linear-gradient(135deg, rgba(166,
     </button>
   </div>
 
-  <!-- ── Duah of the Day ── -->
-  <div class="daily-duah-card" id="dailyDuahCard" style="margin-top: 14px;">
-    <div class="duah-header">
-      <span class="duah-icon">🤲</span>
-      <span class="duah-title">Duah of the Day</span>
+  <!-- ── Share Card: prayer times + duah + hadith ── -->
+  <section class="share-card" id="shareCard" aria-label="Daily share card">
+    <div class="share-card-inner">
+
+      <div class="share-brand-top">
+        <span class="share-brand-logo">📖</span>
+        <span class="share-brand-name">Recite</span>
+        <span class="share-brand-tag">Quran Recitation Coach</span>
+      </div>
+
+      <div class="share-header">
+        <div class="share-city" id="shareCityName">—</div>
+        <div class="share-dates" id="shareDates">—</div>
+      </div>
+
+      <div class="share-prayers" id="sharePrayers"></div>
+
+      <div class="share-divider" role="separator"></div>
+
+      <div class="share-block">
+        <div class="share-block-title">🤲 Duah of the Day</div>
+        <p class="share-arabic" id="shareDuahArabic" dir="rtl"></p>
+        <p class="share-translation" id="shareDuahTranslation"></p>
+        <p class="share-reference" id="shareDuahRef"></p>
+      </div>
+
+      <div class="share-divider" role="separator"></div>
+
+      <div class="share-block">
+        <div class="share-block-title">📜 Hadith of the Day</div>
+        <p class="share-arabic" id="shareHadithArabic" dir="rtl"></p>
+        <p class="share-translation" id="shareHadithTranslation"></p>
+        <p class="share-reference" id="shareHadithRef"></p>
+      </div>
+
+      <div class="share-footer">
+        <span>from <b>Recite</b>,</span>
+        <a href="https://recite-hazel.vercel.app/" target="_blank" rel="noopener">https://recite-hazel.vercel.app/</a>
+      </div>
     </div>
-    <div class="duah-content">
-      <p class="duah-arabic" id="duahArabic" dir="rtl"></p>
-      <p class="duah-translation" id="duahTranslation"></p>
-      <p class="duah-reference" id="duahReference"></p>
+
+    <div class="share-actions">
+      <button class="ps-btn primary" id="shareCardShareBtn" type="button">📤 Share as image</button>
     </div>
-    <button class="duah-share-btn" id="duahShareBtn" aria-label="Share this Duah">↗ Share</button>
-  </div>
+  </section>
 </div>
 
 <div class="app screen" id="screenSurahIndex" hidden>
@@ -4156,6 +4303,7 @@ function showScreen(name){
   Object.entries(map).forEach(([k, el]) => { if(!el) return; el.hidden = (k !== name); });
   if(name !== 'coach' && readerFullscreen) exitReaderFullscreen();
   if(name === 'home') refreshProgressMenu();
+  if(name === 'dashboard') loadShareCard();
   closeReciterMenu();
   closeTranslationMenu();
   closeTextTranslationMenu();
@@ -8873,7 +9021,7 @@ let firedAlarms = new Set();
 let firedDay = '';
 let athaanAudio = null;
 
-/* ══════ NEW: Prayer alarm stop-on-tap ══════ */
+/* ══════ Prayer alarm stop-on-tap ══════ */
 let prayerBeepOscillators = [];
 
 function stopPrayerBeep(){
@@ -8888,8 +9036,6 @@ function stopPrayerAlarm(){
   }
 }
 
-/* Any tap or key press on any screen stops the prayer alarm instantly.
-   Capture-phase so it fires before child stopPropagation handlers. */
 document.addEventListener('click',   stopPrayerAlarm, { capture: true, passive: true });
 document.addEventListener('pointerdown', stopPrayerAlarm, { capture: true, passive: true });
 document.addEventListener('touchstart', stopPrayerAlarm, { capture: true, passive: true });
@@ -8966,6 +9112,7 @@ function setPrayerLocation(name, lat, lng, quiet){
   savePrayerSettings();
   recomputePrayerTimes();
   renderPrayerScreen();
+  try{ loadShareCard(); }catch(_){}
   if(!quiet) showToast('📍 Location set to <b>' + escapeHtml(prayerState.city) + '</b>');
 }
 async function reverseGeocode(lat, lng){
@@ -9082,8 +9229,8 @@ function renderLocationPane(pane){
   };
   searchBtn.addEventListener('click', doSearch);
   input.addEventListener('keydown', e => { if(e.key === 'Enter') doSearch(); });
-  pane.querySelector('#psMethod').addEventListener('change', e => { prayerState.method = e.target.value; savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); });
-  pane.querySelector('#psAsr').addEventListener('change', e => { prayerState.asr = e.target.value; savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); });
+  pane.querySelector('#psMethod').addEventListener('change', e => { prayerState.method = e.target.value; savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); try{ loadShareCard(); }catch(_){} });
+  pane.querySelector('#psAsr').addEventListener('change', e => { prayerState.asr = e.target.value; savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); try{ loadShareCard(); }catch(_){} });
 }
 function renderAdjustPane(pane){
   let rows = '';
@@ -9102,9 +9249,10 @@ function renderAdjustPane(pane){
       prayerState.offsets[key] = v; savePrayerSettings(); recomputePrayerTimes();
       const el = document.getElementById('psOff_' + key); if(el) el.textContent = (v > 0 ? '+' : '') + v + ' min';
       renderPrayerScreen();
+      try{ loadShareCard(); }catch(_){}
     });
   });
-  pane.querySelector('#psResetOffsets').addEventListener('click', () => { Object.keys(prayerState.offsets).forEach(k => { prayerState.offsets[k] = 0; }); savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); renderPsPane(); });
+  pane.querySelector('#psResetOffsets').addEventListener('click', () => { Object.keys(prayerState.offsets).forEach(k => { prayerState.offsets[k] = 0; }); savePrayerSettings(); recomputePrayerTimes(); renderPrayerScreen(); renderPsPane(); try{ loadShareCard(); }catch(_){} });
 }
 function renderAlarmsPane(pane){
   const sounds = [
@@ -9991,41 +10139,495 @@ const DAILY_DUAHS = [
   }
 ];
 
-function loadDailyDuah() {
-  // Calculate the exact day of the year (1 to 365)
+// ── 25 Authentic Hadiths of the Day ──
+const DAILY_HADITHS = [
+  {
+    arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
+    translation: "Actions are but by intentions, and every person will have only what he intended.",
+    reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907"
+  },
+  {
+    arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ",
+    translation: "None of you truly believes until he loves for his brother what he loves for himself.",
+    reference: "Sahih al-Bukhari 13 · Sahih Muslim 45"
+  },
+  {
+    arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ",
+    translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.",
+    reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47"
+  },
+  {
+    arabic: "إِنَّ أَحْسَنَكُمْ أَخْلَاقًا أَحَاسِنُكُمْ إِيمَانًا",
+    translation: "The most complete of believers in faith are those with the best character.",
+    reference: "Sunan at-Tirmidhi 1162"
+  },
+  {
+    arabic: "إِنَّ اللَّهَ لاَ يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ",
+    translation: "Allah does not look at your appearance or your wealth, but He looks at your hearts and your deeds.",
+    reference: "Sahih Muslim 2564"
+  },
+  {
+    arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ",
+    translation: "The most beloved of deeds to Allah are those that are most consistent, even if they are small.",
+    reference: "Sahih al-Bukhari 6464 · Sahih Muslim 783"
+  },
+  {
+    arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ",
+    translation: "A Muslim is the one from whose tongue and hands the Muslims are safe.",
+    reference: "Sahih al-Bukhari 10 · Sahih Muslim 40"
+  },
+  {
+    arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ",
+    translation: "The strong man is not the one who can overpower others, but the one who controls himself when angry.",
+    reference: "Sahih al-Bukhari 6114 · Sahih Muslim 2609"
+  },
+  {
+    arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ",
+    translation: "Fear Allah wherever you are, follow a bad deed with a good one and it will wipe it out, and treat people with good character.",
+    reference: "Sunan at-Tirmidhi 1987"
+  },
+  {
+    arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ",
+    translation: "Cleanliness is half of faith.",
+    reference: "Sahih Muslim 223"
+  },
+  {
+    arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ",
+    translation: "The best of you are those who learn the Quran and teach it.",
+    reference: "Sahih al-Bukhari 5027"
+  },
+  {
+    arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا",
+    translation: "Make things easy and do not make them difficult, give glad tidings and do not repel people.",
+    reference: "Sahih al-Bukhari 69 · Sahih Muslim 1734"
+  },
+  {
+    arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ",
+    translation: "Whoever believes in Allah and the Last Day, let him honour his guest.",
+    reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47"
+  },
+  {
+    arabic: "لاَ تَحْقِرَنَّ مِنَ الْمَعْرُوفِ شَيْئًا، وَلَوْ أَنْ تَلْقَى أَخَاكَ بِوَجْهٍ طَلْقٍ",
+    translation: "Do not belittle any good deed, even meeting your brother with a cheerful face.",
+    reference: "Sahih Muslim 2626"
+  },
+  {
+    arabic: "لاَ يَشْكُرُ اللَّهَ مَنْ لاَ يَشْكُرُ النَّاسَ",
+    translation: "The one who is not grateful to people is not grateful to Allah.",
+    reference: "Sunan Abi Dawud 4811"
+  },
+  {
+    arabic: "ادْعُوا اللَّهَ وَأَنْتُمْ مُوقِنُونَ بِالإِجَابَةِ",
+    translation: "Make supplication to Allah while you are certain of a response.",
+    reference: "Sunan at-Tirmidhi 2949"
+  },
+  {
+    arabic: "وَالْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ",
+    translation: "A kind word is charity.",
+    reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009"
+  },
+  {
+    arabic: "وَأَمَاطَتُكَ الأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ",
+    translation: "Removing a harmful thing from the path is charity.",
+    reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009"
+  },
+  {
+    arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَرْحَمْ صَغِيرَنَا وَيَعْرِفْ شَرَفَ كَبِيرِنَا",
+    translation: "He who does not show mercy to our young or respect our elders is not from us.",
+    reference: "Sunan at-Tirmidhi 1919"
+  },
+  {
+    arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا",
+    translation: "The most complete of believers in faith are those with the best character.",
+    reference: "Sunan at-Tirmidhi 1162"
+  },
+  {
+    arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ",
+    translation: "Your smile in the face of your brother is charity.",
+    reference: "Sunan at-Tirmidhi 1956"
+  },
+  {
+    arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ، وَأَنَا خَيْرُكُمْ لأَهْلِي",
+    translation: "The best of you are those who are best to their families, and I am the best of you to my family.",
+    reference: "Sunan at-Tirmidhi 3895"
+  },
+  {
+    arabic: "وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ",
+    translation: "Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.",
+    reference: "Sahih Muslim 2699"
+  },
+  {
+    arabic: "الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ",
+    translation: "The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.",
+    reference: "Sunan at-Tirmidhi 2507"
+  },
+  {
+    arabic: "مَنْ لاَ يَرْحَمُ لاَ يُرْحَمُ",
+    translation: "Whoever does not show mercy will not be shown mercy.",
+    reference: "Sahih al-Bukhari 7376 · Sahih Muslim 2319"
+  }
+];
+
+function dayOfYearIndex(len){
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
-  const diff = now - start;
-  const oneDay = 1000 * 60 * 60 * 24;
-  const dayOfYear = Math.floor(diff / oneDay);
+  const day = Math.floor((now - start) / 86400000);
+  return len ? (day % len) : 0;
+}
+function pickDaily(list){ return list[dayOfYearIndex(list.length)]; }
 
-  // Use the day of the year to pick the Duah
-  const duah = DAILY_DUAHS[dayOfYear % DAILY_DUAHS.length];
-
-  // Update the HTML elements
-  const arEl = document.getElementById('duahArabic');
-  const trEl = document.getElementById('duahTranslation');
-  const refEl = document.getElementById('duahReference');
-  
-  if(arEl && trEl && refEl) {
-    arEl.textContent = duah.arabic;
-    trEl.textContent = duah.translation;
-    refEl.textContent = duah.reference;
+function getSharePrayerTimes(){
+  if(prayerState.lat !== null && prayerState.lng !== null){
+    if(prayerState.timesDateKey !== currentDateKey()) recomputePrayerTimes();
+    return { times: prayerState.todayTimes || {}, city: prayerState.city || 'My location' };
   }
+  // Makkah fallback
+  const raw = computePrayerTimes(new Date(), 21.4225, 39.8262, 'Makkah', 'Standard');
+  const times = {};
+  for(const p of PRAYERS){
+    const v = raw[p.key];
+    if(typeof v !== 'number' || !isFinite(v)){ times[p.key] = '--:--'; continue; }
+    let h = Math.floor(v), m = Math.round((v - h) * 60);
+    if(m === 60){ m = 0; h = (h + 1) % 24; }
+    times[p.key] = pad2(h) + ':' + pad2(m);
+  }
+  return { times, city: 'Makkah, SA' };
+}
 
-  // Add Share functionality
-  const shareBtn = document.getElementById('duahShareBtn');
-  if(shareBtn) {
-    shareBtn.onclick = async () => {
-      const text = `🤲 Duah of the Day:\n\n${duah.arabic}\n\n"${duah.translation}"\n\n— ${duah.reference}\n\nVia Quran Recitation Coach`;
-      if (navigator.share) {
-        try { await navigator.share({ title: 'Duah of the Day', text: text }); } catch(e) {}
-      } else {
-        try { await navigator.clipboard.writeText(text); showToast('🔗 Duah copied to clipboard.'); } catch(e) {}
+function getShareCardData(){
+  const pt = getSharePrayerTimes();
+  const duah   = pickDaily(DAILY_DUAHS);
+  const hadith = pickDaily(DAILY_HADITHS);
+  const now = new Date();
+  let hijriStr = '';
+  try{
+    const h = gregorianToHijri(now);
+    hijriStr = h.day + ' ' + HIJRI_MONTHS_EN[h.month - 1] + ' ' + h.year + ' AH';
+  }catch(_){}
+  const gregStr = fmtPrayerGreg(now);
+  return { city: pt.city, times: pt.times, duah, hadith, hijriStr, gregStr };
+}
+
+function loadShareCard(){
+  const d = getShareCardData();
+  const cityEl = document.getElementById('shareCityName');
+  if(cityEl) cityEl.textContent = d.city;
+  const datesEl = document.getElementById('shareDates');
+  if(datesEl) datesEl.textContent = d.hijriStr + '  ·  ' + d.gregStr;
+  const prayEl = document.getElementById('sharePrayers');
+  if(prayEl){
+    prayEl.innerHTML = '';
+    for(const p of PRAYERS){
+      const div = document.createElement('div');
+      div.className = 'share-prayer' + (p.key === 'sunrise' ? ' is-sunrise' : '');
+      const n = document.createElement('span'); n.className = 'sp-name'; n.textContent = p.label;
+      const t = document.createElement('span'); t.className = 'sp-time'; t.textContent = d.times[p.key] || '--:--';
+      div.appendChild(n); div.appendChild(t);
+      prayEl.appendChild(div);
+    }
+  }
+  const setText = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v || ''; };
+  setText('shareDuahArabic',      d.duah.arabic);
+  setText('shareDuahTranslation', d.duah.translation);
+  setText('shareDuahRef',         d.duah.reference);
+  setText('shareHadithArabic',      d.hadith.arabic);
+  setText('shareHadithTranslation', d.hadith.translation);
+  setText('shareHadithRef',         d.hadith.reference);
+}
+
+// ── Canvas helpers for PNG share card ──
+function _cvRoundRect(ctx, x, y, w, h, r){
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+function _cvWrapText(ctx, text, maxW){
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for(const w of words){
+    const test = line ? line + ' ' + w : w;
+    if(ctx.measureText(test).width > maxW && line){ lines.push(line); line = w; }
+    else line = test;
+  }
+  if(line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+function _cvDrawDivider(ctx, W, PAD, y){
+  const grad = ctx.createLinearGradient(PAD, 0, W - PAD, 0);
+  grad.addColorStop(0,   'rgba(201,162,39,0)');
+  grad.addColorStop(0.5, 'rgba(201,162,39,0.65)');
+  grad.addColorStop(1,   'rgba(201,162,39,0)');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(PAD, y);
+  ctx.lineTo(W - PAD, y);
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(W / 2, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(-4, -4, 8, 8);
+  ctx.restore();
+}
+
+async function shareCardAsImage(){
+  const shareBtn = document.getElementById('shareCardShareBtn');
+  if(shareBtn){ shareBtn.disabled = true; }
+  try{
+    try{ await document.fonts.ready; }catch(_){}
+    try{ await document.fonts.load('48px Amiri', 'بسم الله'); }catch(_){}
+    try{ await document.fonts.load('700 48px Amiri', 'بسم الله'); }catch(_){}
+
+    const d = getShareCardData();
+    const SCALE = 2;
+    const W = 1080;
+    const PAD = 64;
+    const INNER = W - PAD * 2;
+    const AR_FONT = '"Amiri","Amiri Quran","Noto Naskh Arabic",serif';
+    const UI_FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+    const AR_SIZE = 44;
+    const TR_SIZE = 28;
+    const LH_AR = 74;
+    const LH_TR = 42;
+
+    // ── measure pass ──
+    const mc = document.createElement('canvas').getContext('2d');
+    const measureAr = (text) => { mc.font = AR_SIZE + 'px ' + AR_FONT; return _cvWrapText(mc, text, INNER - 40); };
+    const measureTr = (text) => { mc.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT; return _cvWrapText(mc, text, INNER - 40); };
+
+    const duahAr   = measureAr(d.duah.arabic);
+    const duahTr   = measureTr('"' + d.duah.translation + '"');
+    const hadithAr = measureAr(d.hadith.arabic);
+    const hadithTr = measureTr('"' + d.hadith.translation + '"');
+
+    // ── compute height ──
+    let H = PAD;
+    H += 50 + 14;   // brand
+    H += 56 + 4;    // city
+    H += 30 + 30;   // dates + gap
+    H += 100 + 24;  // prayer row + gap
+    H += 30;        // divider
+    H += 32 + 8;    // title
+    H += duahAr.length * LH_AR;
+    H += 12;
+    H += duahTr.length * LH_TR;
+    H += 12;
+    H += 28 + 24;   // reference + gap
+    H += 30;        // divider
+    H += 32 + 8;    // title
+    H += hadithAr.length * LH_AR;
+    H += 12;
+    H += hadithTr.length * LH_TR;
+    H += 12;
+    H += 28 + 24;   // reference + gap
+    H += 30;        // divider
+    H += 30 + 30;   // footer
+    H += PAD;
+    H = Math.round(H);
+
+    // ── set up canvas ──
+    const canvas = document.createElement('canvas');
+    canvas.width  = W * SCALE;
+    canvas.height = H * SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(SCALE, SCALE);
+    ctx.textBaseline = 'middle';
+
+    // ── background ──
+    const bg = ctx.createRadialGradient(W / 2, -200, 100, W / 2, 0, H);
+    bg.addColorStop(0,    '#1a2540');
+    bg.addColorStop(0.55, '#0d1119');
+    bg.addColorStop(1,    '#0d1119');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // bottom subtle glow
+    const bg2 = ctx.createRadialGradient(W / 2, H + 60, 100, W / 2, H, H / 2);
+    bg2.addColorStop(0, 'rgba(79,140,255,0.08)');
+    bg2.addColorStop(1, 'rgba(79,140,255,0)');
+    ctx.fillStyle = bg2;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── gold double border ──
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = 4;
+    _cvRoundRect(ctx, 24, 24, W - 48, H - 48, 36);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(201,162,39,0.35)';
+    ctx.lineWidth = 1.5;
+    _cvRoundRect(ctx, 36, 36, W - 72, H - 72, 30);
+    ctx.stroke();
+
+    // ── brand bar ──
+    let y = PAD;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 44px ' + UI_FONT;
+    ctx.fillText('Recite', PAD, y + 25);
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.fillRect(PAD, y + 46, 86, 2);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = '700 18px ' + UI_FONT;
+    ctx.fillText('QURAN RECITATION COACH', W - PAD, y + 25);
+    y += 50 + 14;
+
+    // ── city ──
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e8edf7';
+    ctx.font = '800 48px ' + UI_FONT;
+    ctx.fillText(d.city, W / 2, y + 28);
+    y += 56 + 4;
+
+    // ── dates ──
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = '600 22px ' + UI_FONT;
+    ctx.fillText(d.hijriStr + '   ·   ' + d.gregStr, W / 2, y + 15);
+    y += 30 + 30;
+
+    // ── prayer row ──
+    const cellGap = 8;
+    const cellW = (INNER - cellGap * 5) / 6;
+    PRAYERS.forEach((p, i) => {
+      const cx = PAD + i * (cellW + cellGap);
+      const isSunrise = p.key === 'sunrise';
+      ctx.fillStyle = isSunrise ? 'rgba(255,176,32,0.10)' : 'rgba(79,140,255,0.10)';
+      _cvRoundRect(ctx, cx, y, cellW, 100, 14);
+      ctx.fill();
+      ctx.strokeStyle = isSunrise ? 'rgba(255,176,32,0.45)' : 'rgba(79,140,255,0.35)';
+      ctx.lineWidth = 1.5;
+      _cvRoundRect(ctx, cx, y, cellW, 100, 14);
+      ctx.stroke();
+
+      ctx.fillStyle = isSunrise ? '#ffb020' : '#8f9bb3';
+      ctx.font = '800 16px ' + UI_FONT;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.label.toUpperCase(), cx + cellW / 2, y + 32);
+
+      ctx.fillStyle = isSunrise ? '#ffb020' : '#e8edf7';
+      ctx.font = '800 28px ' + UI_FONT;
+      ctx.fillText(d.times[p.key] || '--:--', cx + cellW / 2, y + 70);
+    });
+    y += 100 + 24;
+
+    // ── divider + Duah ──
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 22px ' + UI_FONT;
+    ctx.fillText('DUAH OF THE DAY', PAD + 8, y + 16);
+    y += 32 + 8;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f5e6b8';
+    ctx.font = AR_SIZE + 'px ' + AR_FONT;
+    for(const line of duahAr){ ctx.fillText(line, W / 2, y + LH_AR / 2); y += LH_AR; }
+    y += 12;
+
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT;
+    for(const line of duahTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
+    y += 12;
+
+    ctx.fillStyle = '#c9a227';
+    ctx.font = '800 18px ' + UI_FONT;
+    ctx.fillText(d.duah.reference.toUpperCase(), W / 2, y + 14);
+    y += 28 + 24;
+
+    // ── divider + Hadith ──
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 22px ' + UI_FONT;
+    ctx.fillText('HADITH OF THE DAY', PAD + 8, y + 16);
+    y += 32 + 8;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f5e6b8';
+    ctx.font = AR_SIZE + 'px ' + AR_FONT;
+    for(const line of hadithAr){ ctx.fillText(line, W / 2, y + LH_AR / 2); y += LH_AR; }
+    y += 12;
+
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT;
+    for(const line of hadithTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
+    y += 12;
+
+    ctx.fillStyle = '#c9a227';
+    ctx.font = '800 18px ' + UI_FONT;
+    ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
+    y += 28 + 24;
+
+    // ── divider + footer ──
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = '600 20px ' + UI_FONT;
+    ctx.fillText('from Recite,', W / 2, y + 15);
+    y += 30;
+    ctx.fillStyle = '#4f8cff';
+    ctx.font = '700 22px ' + UI_FONT;
+    ctx.fillText('https://recite-hazel.vercel.app/', W / 2, y + 15);
+
+    // ── export PNG ──
+    canvas.toBlob(async (blob) => {
+      if(shareBtn) shareBtn.disabled = false;
+      if(!blob){ showToast('⚠️ Could not generate image.'); return; }
+      const file = new File([blob], 'recite-daily-card.png', { type: 'image/png' });
+      let canShareFiles = false;
+      try { canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch(_){}
+      if(canShareFiles){
+        try{
+          await navigator.share({
+            files: [file],
+            title: 'Recite — Daily Card',
+            text: 'from Recite, https://recite-hazel.vercel.app/'
+          });
+          return;
+        }catch(e){
+          if(e && e.name === 'AbortError') return;
+        }
       }
-    };
+      // Fallback: download
+      try{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'recite-daily-card.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(_){} }, 5000);
+        showToast('🖼️ Card saved — share it anywhere.');
+      }catch(e){
+        showToast('⚠️ Could not share or save the image.');
+      }
+    }, 'image/png');
+  } catch(err){
+    if(shareBtn) shareBtn.disabled = false;
+    console.warn('[ShareCard] failed:', err);
+    showToast('⚠️ Could not generate the share card.');
   }
 }
+
+(function wireShareCard(){
+  const btn = document.getElementById('shareCardShareBtn');
+  if(btn) btn.addEventListener('click', shareCardAsImage);
+})();
 
 (function boot(){
   initServiceWorker().catch(err => console.warn('[SW] boot init failed:', err));
@@ -10041,7 +10643,7 @@ function loadDailyDuah() {
   loadBookmarks(); renderBookmarksScreen(); renderJuzIndex(); refreshProgressMenu();
   updateInstallMenuItem(); maybeShowInstallPrompt();
   updateStreakUI(); renderStreakBadges();
-  loadDailyDuah();
+  loadShareCard();
   const hifzSel = document.getElementById('hifzSurahSelect');
   if(hifzSel){
     const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);

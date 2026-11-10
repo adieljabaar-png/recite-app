@@ -1,14 +1,32 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.0.13 — Version-only release. Forces SW reinstall + clean
-   cache rebuild so clients pick up the v2.0.13 index.html fixes
-   (Added "Duah of the Day" to the Dashboard).
+   v2.1.0 — Major feature release. Forces SW reinstall + clean
+   cache rebuild so clients pick up the v2.1.0 index.html which
+   adds:
+
+     • Share Card on Dashboard — daily prayer times, Duah of
+       the Day (45 in rotation), Hadith of the Day (25 in
+       rotation), rendered to a shareable PNG via canvas.
+     • Full Prayer Times screen with adhan alarms, per-prayer
+       offset adjusters, calculation methods, and a live Qibla
+       compass (DeviceOrientation).
+     • Hifz Test screen with three memorisation modes.
+     • Tajweed Colors screen (authoritative Hafs annotations).
+     • Dashboard with streaks and 10 achievements.
+     • Translation audio playback + offline download.
+     • Book-form mushaf reader with swipe page turning.
+     • Reader-fullscreen mode (fixed toolbar, Reveal-text tab).
+
+   Cache strategy is unchanged from v2.0.13 — this is a
+   version-only bump. The persistent 'qc-audio' cache continues
+   to hold every downloaded Arabic surah AND every downloaded
+   translation surah, and is never deleted on activate.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.0.13';
+const VERSION = '2.1.0';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -28,8 +46,8 @@ const OWNED_PREFIXES = ['qc-shell-', 'qc-text-', 'qc-fonts-', 'qc-runtime-'];
 /* Pre-cache the shell, manifest, AND the real app icons so they
    are available for the install prompt and offline usage. */
 const SHELL_URLS = [
-  './', 
-  './index.html', 
+  './',
+  './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -240,16 +258,22 @@ self.addEventListener('fetch', event => {
   // cache. networkFresh() caches successful responses for offline
   // fallback; if the network fails it will return the last-seen
   // cached version instead of a hard 504.
+  //
+  // Used by both the Coach's Tajweed mode and the standalone
+  // Tajweed Colors screen. Both request the same endpoint, so a
+  // single cache entry serves both screens.
   if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
     event.respondWith(networkFresh(req));
     return;
   }
 
   // Audio from everyayah.com — served from the persistent download
-  // cache first (works fully offline), network second. Respects
-  // req.cache ('no-store' / 'reload') so the app's healing path can
-  // actually fetch fresh bytes, and answers Range requests with a
-  // proper 206 for iOS Safari.
+  // cache first (works fully offline), network second. Covers BOTH
+  // Arabic recitation audio AND the downloaded English translation
+  // audio (they share the same host, just different folder paths).
+  // Respects req.cache ('no-store' / 'reload') so the app's healing
+  // path can actually fetch fresh bytes, and answers Range requests
+  // with a proper 206 for iOS Safari.
   if(url.hostname === HOST_EVERYAYAH){
     event.respondWith(audioFromDownloadCache(req));
     return;
@@ -262,6 +286,8 @@ self.addEventListener('fetch', event => {
   }
 
   // Quran text APIs — network-first with cache fallback.
+  // Covers surah pages (alquran.cloud), page reads (quran.com),
+  // verse translations (both hosts) and Juz metadata.
   if(url.hostname === HOST_QURAN_COM || url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
@@ -450,7 +476,11 @@ async function networkFirst(req, cacheName, maxEntries){
 
 /* networkFresh — always goes to the network first (bypassing the
    browser HTTP cache entirely). Caches successful responses in
-   TEXT_CACHE and falls back to them when the network fails. */
+   TEXT_CACHE and falls back to them when the network fails.
+   Used for Tajweed annotations by BOTH the Coach's Tajweed mode
+   and the standalone Tajweed Colors screen — a single successful
+   fetch populates the cache for both, so a surah opened once
+   online stays readable offline in either screen. */
 async function networkFresh(req){
   try{
     const freshReq = new Request(req, { cache: 'no-store' });
