@@ -10623,29 +10623,26 @@ async function shareCardAsImage(){
     console.warn('[ShareCard] failed:', err);
     showToast('⚠️ Could not generate the share card.');
   }
-}
-
-/* ── Plain-text version of the daily card ─────────────────── */
+} /* ── Plain-text version of the daily card ─────────────────── */
 function buildShareCardText(){
   const d = getShareCardData();
-  const PRAYER_EMOJI = { fajr:'🌅', sunrise:'☀️', dhuhr:'🌞', asr:'🌤️', maghrib:'🌇', isha:'🌙' };
   const lines = [];
 
   // Header
-  lines.push('🕌 *Prayer Times — ' + d.city + '*');
+  lines.push('*Prayer Times — ' + d.city + '*');
   lines.push('_' + d.hijriStr + ' · ' + d.gregStr + '_');
   lines.push('');
 
   // Prayer times
   for(const p of PRAYERS){
-    lines.push(PRAYER_EMOJI[p.key] + '  ' + p.label + ' — ' + (d.times[p.key] || '--:--'));
+    lines.push(p.label + ' — ' + (d.times[p.key] || '--:--'));
   }
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
 
   // Duah of the Day
-  lines.push('🤲 *Duah of the Day*');
+  lines.push('*Duah of the Day*');
   lines.push('');
   lines.push(d.duah.arabic);
   lines.push('');
@@ -10657,7 +10654,7 @@ function buildShareCardText(){
   lines.push('');
 
   // Hadith of the Day
-  lines.push('📜 *Hadith of the Day*');
+  lines.push('*Hadith of the Day*');
   lines.push('');
   lines.push(d.hadith.arabic);
   lines.push('');
