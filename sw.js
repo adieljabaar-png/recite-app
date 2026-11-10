@@ -1,13 +1,14 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.1.1 — Major feature release. Forces SW reinstall + clean
-   cache rebuild so clients pick up the v2.1.0 index.html which
-   adds:
+   v2.1.2 — Forces SW reinstall + clean cache rebuild so
+   clients pick up the latest index.html which includes:
 
      • Share Card on Dashboard — daily prayer times, Duah of
        the Day (45 in rotation), Hadith of the Day (25 in
-       rotation), rendered to a shareable PNG via canvas.
+       rotation). Shareable as a canvas-rendered PNG OR as
+       plain text — native share sheet on mobile, copyable
+       modal on desktop.
      • Full Prayer Times screen with adhan alarms, per-prayer
        offset adjusters, calculation methods, and a live Qibla
        compass (DeviceOrientation).
@@ -17,8 +18,10 @@
      • Translation audio playback + offline download.
      • Book-form mushaf reader with swipe page turning.
      • Reader-fullscreen mode (fixed toolbar, Reveal-text tab).
+     • QR code screen ("Scan barcode") — pure-JS generator,
+       works fully offline, no network dependency.
 
-   Cache strategy is unchanged from v2.0.13 — this is a
+   Cache strategy is unchanged from v2.1.1 — this is a
    version-only bump. The persistent 'qc-audio' cache continues
    to hold every downloaded Arabic surah AND every downloaded
    translation surah, and is never deleted on activate.
@@ -26,7 +29,7 @@
 
 'use strict';
 
-const VERSION = '2.1.0';
+const VERSION = '2.1.2';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

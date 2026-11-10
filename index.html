@@ -6270,7 +6270,7 @@ async function refreshPermissionState(){
 }
 async function promptForMic(){
   if(micRequestInFlight) return false;
-  if(micPermission === 'granted'){ await ensureMicStream(); return true; }
+  if(micPermission === 'granted'){ return true; }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     micPermission = 'denied'; addFeedback('⚠️ This browser does not support microphone access.', true); return false;
   }
@@ -7029,7 +7029,10 @@ async function startReciting(){
   if(!followOnly && mode === 'surah' && !coachTajweedReady && !coachTajweedDegraded){
     addFeedback('🎨 Tajweed rules are still loading — recitation will start now; rule checks will activate once ready.', false, true);
   }
-  await ensureMicStream().catch(() => {});
+  await Promise.race([
+    ensureMicStream().catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, 1500))
+  ]);
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
   recReset(); pendingJumpTarget = -1;
