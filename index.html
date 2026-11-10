@@ -2586,7 +2586,8 @@ body.light-mode .share-arabic{color:#1a2233;}
     </div>
 
     <div class="share-actions">
-      <button class="ps-btn primary" id="shareCardShareBtn" type="button">📤 Share as image</button>
+      <button class="ps-btn primary" id="shareCardShareBtn" type="button">🖼️ Share image</button>
+      <button class="ps-btn primary" id="shareCardTextBtn" type="button">📝 Share text</button>
     </div>
   </section>
 </div>
@@ -10624,9 +10625,144 @@ async function shareCardAsImage(){
   }
 }
 
+/* ── Plain-text version of the daily card ─────────────────── */
+function buildShareCardText(){
+  const d = getShareCardData();
+  const PRAYER_EMOJI = { fajr:'🌅', sunrise:'☀️', dhuhr:'🌞', asr:'🌤️', maghrib:'🌇', isha:'🌙' };
+  const lines = [];
+
+  // Header
+  lines.push('🕌 *Prayer Times — ' + d.city + '*');
+  lines.push('_' + d.hijriStr + ' · ' + d.gregStr + '_');
+  lines.push('');
+
+  // Prayer times
+  for(const p of PRAYERS){
+    lines.push(PRAYER_EMOJI[p.key] + '  ' + p.label + ' — ' + (d.times[p.key] || '--:--'));
+  }
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  // Duah of the Day
+  lines.push('🤲 *Duah of the Day*');
+  lines.push('');
+  lines.push(d.duah.arabic);
+  lines.push('');
+  lines.push('_"' + d.duah.translation + '"_');
+  lines.push('');
+  lines.push('— ' + d.duah.reference);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  // Hadith of the Day
+  lines.push('📜 *Hadith of the Day*');
+  lines.push('');
+  lines.push(d.hadith.arabic);
+  lines.push('');
+  lines.push('_"' + d.hadith.translation + '"_');
+  lines.push('');
+  lines.push('— ' + d.hadith.reference);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  // Footer
+  lines.push('from *Recite*,');
+  lines.push('https://recite-hazel.vercel.app/');
+
+  return lines.join('\n');
+}
+
+/* ── Share as text — native share sheet, then copy modal ──── */
+async function shareCardAsText(){
+  const shareBtn = document.getElementById('shareCardTextBtn');
+  if(shareBtn) shareBtn.disabled = true;
+  try{
+    const text = buildShareCardText();
+
+    // 1. Native share sheet (mobile) — text-only payload.
+    //    On iOS / Android this opens WhatsApp, Telegram,
+    //    Messages, etc. directly with the text ready to send.
+    if(navigator.share){
+      try{
+        await navigator.share({ title: 'Recite — Daily Card', text: text });
+        return;                                // shared — done
+      }catch(e){
+        if(e && e.name === 'AbortError') return; // user cancelled — silent
+        // any other error → fall through to the modal
+      }
+    }
+
+    // 2. Desktop / unsupported browser — show a modal with
+    //    the text pre-selected so a single Ctrl+C copies it.
+    showTextShareModal(text);
+  }catch(err){
+    console.warn('[ShareCard] text share failed:', err);
+    showToast('⚠️ Could not build the daily card text.');
+  }finally{
+    if(shareBtn) shareBtn.disabled = false;
+  }
+}
+
+/* ── Copyable modal for text sharing ──────────────────────── */
+function showTextShareModal(text){
+  const existing = document.getElementById('shareCardTextBg');
+  if(existing) existing.remove();
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.id = 'shareCardTextBg';
+  bg.innerHTML =
+    '<div class="modal">' +
+      '<div class="grabber"></div>' +
+      '<h2>📝 Daily card as text</h2>' +
+      '<p>Copy the text below and paste it in WhatsApp, Telegram, Messages — or anywhere else.</p>' +
+      '<textarea id="shareCardTextarea" class="ps-input" rows="16" readonly ' +
+        'style="font-family:ui-monospace,Menlo,monospace;font-size:.76rem;line-height:1.55;' +
+               'resize:vertical;min-height:220px;white-space:pre-wrap">' +
+      '</textarea>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">' +
+        '<button class="primary" id="shareCardCopyBtn" type="button">📋 Copy to clipboard</button>' +
+        '<button class="ghost"   id="shareCardTextClose" type="button">Close</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(bg);
+
+  const ta = bg.querySelector('#shareCardTextarea');
+  ta.value = text;
+
+  const close = () => bg.remove();
+  bg.addEventListener('click', e => { if(e.target === bg) close(); });
+  bg.querySelector('#shareCardTextClose').addEventListener('click', close);
+
+  bg.querySelector('#shareCardCopyBtn').addEventListener('click', async () => {
+    try{
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      } else {
+        document.execCommand('copy');
+      }
+      showToast('📋 Copied to clipboard.');
+    }catch(_){
+      try{ document.execCommand('copy'); showToast('📋 Copied to clipboard.'); }
+      catch(e){ showToast('⚠️ Could not copy — select the text and copy manually.'); }
+    }
+  });
+
+  // Auto-select so Ctrl+C / Cmd+C works immediately
+  setTimeout(() => { try{ ta.focus(); ta.select(); }catch(_){} }, 80);
+}
+
 (function wireShareCard(){
-  const btn = document.getElementById('shareCardShareBtn');
-  if(btn) btn.addEventListener('click', shareCardAsImage);
+  const imgBtn  = document.getElementById('shareCardShareBtn');
+  const textBtn = document.getElementById('shareCardTextBtn');
+  if(imgBtn)  imgBtn.addEventListener('click',  shareCardAsImage);
+  if(textBtn) textBtn.addEventListener('click', shareCardAsText);
 })();
 
 (function boot(){

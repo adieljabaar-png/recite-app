@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.1.0 — Major feature release. Forces SW reinstall + clean
+   v2.1.1 — Major feature release. Forces SW reinstall + clean
    cache rebuild so clients pick up the v2.1.0 index.html which
    adds:
 
