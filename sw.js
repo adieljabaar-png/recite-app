@@ -1,8 +1,27 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.1.2 — Forces SW reinstall + clean cache rebuild so
+   v2.2.0 — Forces SW reinstall + clean shell rebuild so
    clients pick up the latest index.html which includes:
+
+     • Microphone reliability fix (Coach screen):
+         - SpeechRecognition now owns the microphone first,
+           exactly mirroring the Hifz test path.
+         - getUserMedia (for the acoustic Tajweed analyser) is
+           deferred 1.5 s and gated to Tajweed mode only, so
+           Follow mode never touches it.
+         - New watchdog: if the mic is silent after getUserMedia
+           opens, the app auto-disables acoustic checks and
+           retries text-only — no dead-mic hang on devices where
+           the two APIs are mutually exclusive.
+         - Recognizer is marked dead on every stop/finish/pause,
+           so a second Start always builds a fresh instance.
+         - SpeechRecognitionPhrase path removed — it was causing
+           silent onstart-with-no-results stalls on Chrome 128+.
+         - Fullscreen no longer races the mic: it enters only
+           after the first recognition result (4 s fallback).
+         - Follow ⇄ Tajweed mode switching now opens/releases the
+           acoustic stream correctly mid-session.
 
      • Share Card on Dashboard — daily prayer times, Duah of
        the Day (45 in rotation), Hadith of the Day (25 in
@@ -21,15 +40,16 @@
      • QR code screen ("Scan barcode") — pure-JS generator,
        works fully offline, no network dependency.
 
-   Cache strategy is unchanged from v2.1.1 — this is a
-   version-only bump. The persistent 'qc-audio' cache continues
-   to hold every downloaded Arabic surah AND every downloaded
+   Cache strategy is unchanged from v2.1.x — this is a
+   version-only bump so the new index.html reaches installed
+   clients. The persistent 'qc-audio' cache continues to hold
+   every downloaded Arabic surah AND every downloaded
    translation surah, and is never deleted on activate.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.1.2';
+const VERSION = '2.2.0';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;

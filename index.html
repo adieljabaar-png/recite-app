@@ -2389,7 +2389,6 @@ body.light-mode .share-arabic{color:#1a2233;}
 </style>
 </head>
 <body>
-
 <script>
 (function () {
   'use strict';
@@ -5650,12 +5649,65 @@ let speechInFlight = false;
 const speechQueue = [];
 const SPEECH_THROTTLE_MS = 100;
 
+/* ══════════════════════════════════════════════════════════════
+   Acoustic stream gating — opened only in Tajweed mode,
+   1.5 s after SpeechRecognition starts, so the recognizer
+   owns the microphone first. Mirrors the Hifz path exactly.
+   ══════════════════════════════════════════════════════════════ */
+let acousticContentionTimer = null;
+let acousticOpenedAt = 0;
+
+function scheduleAcousticStream(rec){
+  if(!rec) rec = speechRecognition;
+  if(!rec) return;
+  if(followOnly || finished) return;
+  if(micStream) return;
+  if(rec.__acousticStarted) return;
+  rec.__acousticStarted = true;
+  setTimeout(async () => {
+    if(!wantMic || fsPaused || micPaused || followOnly || finished) return;
+    if(micStream) return;
+    const stream = await ensureMicStream().catch(() => null);
+    if(!stream) return;
+    if(!wantMic || followOnly || fsPaused || micPaused){ releaseMicStream(); return; }
+    armAcousticContentionCheck();
+  }, 1500);
+}
+
+function armAcousticContentionCheck(){
+  clearAcousticContentionCheck();
+  acousticOpenedAt = performance.now();
+  acousticContentionTimer = setTimeout(() => {
+    acousticContentionTimer = null;
+    if(!wantMic || fsPaused || micPaused) return;
+    if(!micStream) return;
+    if(lastResultAt > acousticOpenedAt + 200) return;   // results flowed after opening — fine
+    if(!sessionHadResult) return;                       // user never spoke — watchdog handles this
+    disableAcousticOnContention();
+  }, 8000);
+}
+
+function clearAcousticContentionCheck(){
+  if(acousticContentionTimer){ clearTimeout(acousticContentionTimer); acousticContentionTimer = null; }
+}
+
+function disableAcousticOnContention(){
+  clearAcousticContentionCheck();
+  rmsAnalyser.stop();
+  if(micStream){
+    try{ micStream.getTracks().forEach(t => t.stop()); }catch(_){}
+    micStream = null;
+  }
+  if(speechRecognition) speechRecognition.__acousticStarted = true;
+  addFeedback('⚠️ Acoustic Tajweed checks disabled — they were blocking the mic on this device. Text-based checks remain active.', true, false);
+  showToast('⚠️ Acoustic Tajweed checks disabled on this device.', 4200);
+}
+
 function resetSpeechPipeline(){
   speechQueue.length = 0;
   pendingSpeechEvent = null;
   if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
 }
-
 function scheduleSpeechResult(event) {
   if (!event || !wantMic || fsPaused || micPaused) return;
   let hasFinal = false;
@@ -5768,9 +5820,6 @@ async function runSpeechResultProcessing(snap) {
       if (statusHint && tail) statusHint.textContent = '… ' + tail;
     }
   }
-  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
-    buildPhraseObjects(speechRecognition);
-  }
 }
 
 function scoreAlternativeToks(toks, startPtr){
@@ -5797,6 +5846,10 @@ function scoreAlternativeToks(toks, startPtr){
 }
 
 function buildPhraseObjects(rec) {
+  // NOTE: Setting SpeechRecognition.phrases (Chrome 128+) causes onstart-with-no-results
+  // stalls on many builds. Disabled to keep the coach's mic path identical to Hifz,
+  // which never uses phrases. Re-enable only behind a capability probe.
+  return false;
   if (!rec) return false;
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
   if (!PhraseCtor) return false;
@@ -5824,13 +5877,13 @@ function createSpeechRecognition(){
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
   rec.interimResults   = true;
-  const phrasesAttached = buildPhraseObjects(rec);
-  rec.__hasPhrases = phrasesAttached;
+  rec.__hasPhrases = false;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
+    // ── Defer getUserMedia: Tajweed mode only, 1.5 s after recognition starts ──
+    scheduleAcousticStream(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -6276,7 +6329,17 @@ async function promptForMic(){
   }
   micRequestInFlight = true; micPermission = 'busy'; setStatus('Requesting microphone…', 'loading');
   const timeout = new Promise(res => setTimeout(() => res('timeout'), 20000));
-  const attempt = ensureMicStream().then(s => s ? 'ok' : 'error');
+  // Open the mic only long enough to trigger the permission prompt, then release it.
+  // SpeechRecognition must be the next holder of the mic (mirrors the Hifz path).
+  const attempt = (async () => {
+    try{
+      const s = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true }
+      });
+      s.getTracks().forEach(t => t.stop());
+      return 'ok';
+    }catch(e){ lastMicError = e; return 'error'; }
+  })();
   const result = await Promise.race([attempt, timeout]);
   micRequestInFlight = false;
   if(result === 'ok'){
@@ -6528,7 +6591,30 @@ function releaseMicStream(){
 }
 function startMicWatchdog(){
   clearTimeout(micWatchdogTimer); micAudioConfirmed = false;
-  micWatchdogTimer = setTimeout(() => { if(!wantMic || micAudioConfirmed) return; if(micWarningShown) return; micWarningShown = true; showBrokenMicWarning(); }, 10000);
+  micWatchdogTimer = setTimeout(() => {
+    if(!wantMic || micAudioConfirmed) return;
+    if(micWarningShown) return;
+    micWarningShown = true;
+    // If getUserMedia is open and there have been no results at all, try text-only retry first.
+    if(micStream && !sessionHadResult){
+      disableAcousticOnContention();
+      if(speechRecognition) speechRecognition.__dead = true;
+      micWarningShown = false; micAudioConfirmed = false;
+      setTimeout(() => {
+        if(!wantMic || finished) return;
+        try{
+          speechRecognition = createSpeechRecognition();
+          speechRecognition.start();
+          lastResultAt = performance.now();
+          startMicWatchdog();
+          armSpeechKeepalive();
+          addFeedback('🔄 Retrying with text-only mode…', false, true);
+        }catch(e){ console.warn('[Speech] retry without acoustic failed:', e); }
+      }, 300);
+      return;
+    }
+    showBrokenMicWarning();
+  }, 10000);
 }
 function stopMicWatchdog(){ clearTimeout(micWatchdogTimer); micWatchdogTimer = null; }
 function confirmMicAudio(){ micAudioConfirmed = true; clearTimeout(micWatchdogTimer); micWatchdogTimer = null; }
@@ -6586,9 +6672,15 @@ function setRecitationMode(modeName){
   if(followOnly){
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
     removeTajweedColorsFromCoach();
+    // Release the acoustic stream — Follow mode never uses it.
+    clearAcousticContentionCheck();
+    if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(_){} micStream = null; rmsAnalyser.stop(); }
+    if(speechRecognition) speechRecognition.__acousticStarted = true;
   } else {
     addFeedback('🎵 <b>Tajweed</b> mode — strict, rule-aware. Tajweed colours are shown; mispronunciations and rule violations are beeped and marked red.', false, true);
     applyTajweedColorsToCoach();
+    // If the user switched to Tajweed mid-session, open the acoustic stream now.
+    if(wantMic){ if(speechRecognition) speechRecognition.__acousticStarted = false; scheduleAcousticStream(speechRecognition); }
   }
   updatingMutex = false;
 }
@@ -7029,10 +7121,9 @@ async function startReciting(){
   if(!followOnly && mode === 'surah' && !coachTajweedReady && !coachTajweedDegraded){
     addFeedback('🎨 Tajweed rules are still loading — recitation will start now; rule checks will activate once ready.', false, true);
   }
-  await Promise.race([
-    ensureMicStream().catch(() => {}),
-    new Promise(resolve => setTimeout(resolve, 1500))
-  ]);
+  // NOTE: getUserMedia is NOT opened here. SpeechRecognition owns the microphone
+  // (mirrors the Hifz path). The acoustic stream is opened 1.5 s later via
+  // rec.onstart → scheduleAcousticStream, Tajweed mode only.
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
   recReset(); pendingJumpTarget = -1;
@@ -7069,22 +7160,31 @@ function stopReciting(silent){
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
   prevWordAudio = null;
   setMicButton(); recRunning = false; speechStarting = false;
-  if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
+  if(speechRecognition){
+    speechRecognition.__dead = true;
+    speechRecognition.__acousticStarted = false;
+    try{ speechRecognition.stop(); }catch(e){}
+    try{ speechRecognition.abort(); }catch(e){}
+  }
   releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
   releaseMicStream();
+  clearAcousticContentionCheck();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
 }
 function pauseMic(){
   micPaused = true; recRunning = false;
   disarmSpeechKeepalive(); stopMicWatchdog();
-  if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} }
+  if(speechRecognition){
+    try{ speechRecognition.stop(); }catch(e){}
+    speechRecognition.__acousticStarted = false;
+  }
   releaseMicStream();
+  clearAcousticContentionCheck();
 }
 function resumeMic(){
   if(wantMic && !finished && !fsPaused){
     micPaused = false;
-    ensureMicStream().catch(() => {});
     recRunning = true; speechFatalError = false; micWarningShown = false;
     lastResultAt = performance.now();
     startMicWatchdog(); armSpeechKeepalive();
@@ -7100,7 +7200,13 @@ function finish(){
   clearSilenceTimer(); stopMicWatchdog();
   cancelFollowPinTimer();
   releaseMicStream();
-  if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
+  clearAcousticContentionCheck();
+  if(speechRecognition){
+    speechRecognition.__dead = true;
+    speechRecognition.__acousticStarted = false;
+    try{ speechRecognition.stop(); }catch(e){}
+    try{ speechRecognition.abort(); }catch(e){}
+  }
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;
   const acc = total ? Math.max(0,Math.round(((total-errors)/total)*100)) : 100;
@@ -9618,9 +9724,22 @@ async function enableNotifications(){
 hijriCard.addEventListener('click', () => openCalendarModal());
 micButton.addEventListener('click', async () => {
   if(wantMic){ stopReciting(); return; }
-  enterReaderFullscreen();
   await startReciting();
-  if(!wantMic) exitReaderFullscreen();
+  if(!wantMic || finished) return;
+  // Enter fullscreen only once the recognizer confirms it is working
+  // (first result), with a 4 s safety fallback. Hifz never forces
+  // fullscreen mid-start — that Android transition races mic attach.
+  const rec = speechRecognition;
+  let entered = false;
+  const doEnter = () => {
+    if(entered) return;
+    entered = true;
+    if(wantMic && !finished && !readerFullscreen) enterReaderFullscreen();
+  };
+  if(!rec){ doEnter(); return; }
+  const onResult = () => { try{ rec.removeEventListener('result', onResult); }catch(_){} doEnter(); };
+  rec.addEventListener('result', onResult);
+  setTimeout(() => { try{ rec.removeEventListener('result', onResult); }catch(_){} doEnter(); }, 4000);
 });
 stopButton.addEventListener('click',()=>{
   if(wantMic){
@@ -10417,26 +10536,26 @@ async function shareCardAsImage(){
 
     // ── compute height ──
     let H = PAD;
-    H += 50 + 14;   // brand
-    H += 56 + 4;    // city
-    H += 30 + 30;   // dates + gap
-    H += 100 + 24;  // prayer row + gap
-    H += 30;        // divider
-    H += 32 + 8;    // title
+    H += 50 + 14;
+    H += 56 + 4;
+    H += 30 + 30;
+    H += 100 + 24;
+    H += 30;
+    H += 32 + 8;
     H += duahAr.length * LH_AR;
     H += 12;
     H += duahTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;   // reference + gap
-    H += 30;        // divider
-    H += 32 + 8;    // title
+    H += 28 + 24;
+    H += 30;
+    H += 32 + 8;
     H += hadithAr.length * LH_AR;
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;   // reference + gap
-    H += 30;        // divider
-    H += 30 + 30;   // footer
+    H += 28 + 24;
+    H += 30;
+    H += 30 + 30;
     H += PAD;
     H = Math.round(H);
 
@@ -10456,14 +10575,12 @@ async function shareCardAsImage(){
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // bottom subtle glow
     const bg2 = ctx.createRadialGradient(W / 2, H + 60, 100, W / 2, H, H / 2);
     bg2.addColorStop(0, 'rgba(79,140,255,0.08)');
     bg2.addColorStop(1, 'rgba(79,140,255,0)');
     ctx.fillStyle = bg2;
     ctx.fillRect(0, 0, W, H);
 
-    // ── gold double border ──
     ctx.strokeStyle = '#c9a227';
     ctx.lineWidth = 4;
     _cvRoundRect(ctx, 24, 24, W - 48, H - 48, 36);
@@ -10473,7 +10590,6 @@ async function shareCardAsImage(){
     _cvRoundRect(ctx, 36, 36, W - 72, H - 72, 30);
     ctx.stroke();
 
-    // ── brand bar ──
     let y = PAD;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e3bd45';
@@ -10488,20 +10604,17 @@ async function shareCardAsImage(){
     ctx.fillText('QURAN RECITATION COACH', W - PAD, y + 25);
     y += 50 + 14;
 
-    // ── city ──
     ctx.textAlign = 'center';
     ctx.fillStyle = '#e8edf7';
     ctx.font = '800 48px ' + UI_FONT;
     ctx.fillText(d.city, W / 2, y + 28);
     y += 56 + 4;
 
-    // ── dates ──
     ctx.fillStyle = '#8f9bb3';
     ctx.font = '600 22px ' + UI_FONT;
     ctx.fillText(d.hijriStr + '   ·   ' + d.gregStr, W / 2, y + 15);
     y += 30 + 30;
 
-    // ── prayer row ──
     const cellGap = 8;
     const cellW = (INNER - cellGap * 5) / 6;
     PRAYERS.forEach((p, i) => {
@@ -10526,7 +10639,6 @@ async function shareCardAsImage(){
     });
     y += 100 + 24;
 
-    // ── divider + Duah ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.textAlign = 'left';
@@ -10551,7 +10663,6 @@ async function shareCardAsImage(){
     ctx.fillText(d.duah.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    // ── divider + Hadith ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.textAlign = 'left';
@@ -10576,7 +10687,6 @@ async function shareCardAsImage(){
     ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    // ── divider + footer ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.fillStyle = '#8f9bb3';
@@ -10587,7 +10697,6 @@ async function shareCardAsImage(){
     ctx.font = '700 22px ' + UI_FONT;
     ctx.fillText('https://recite-hazel.vercel.app/', W / 2, y + 15);
 
-    // ── export PNG ──
     canvas.toBlob(async (blob) => {
       if(shareBtn) shareBtn.disabled = false;
       if(!blob){ showToast('⚠️ Could not generate image.'); return; }
@@ -10606,7 +10715,6 @@ async function shareCardAsImage(){
           if(e && e.name === 'AbortError') return;
         }
       }
-      // Fallback: download
       try{
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -10630,21 +10738,15 @@ async function shareCardAsImage(){
 function buildShareCardText(){
   const d = getShareCardData();
   const lines = [];
-
-  // Header
   lines.push('*Prayer Times — ' + d.city + '*');
   lines.push('_' + d.hijriStr + ' · ' + d.gregStr + '_');
   lines.push('');
-
-  // Prayer times
   for(const p of PRAYERS){
     lines.push(p.label + ' — ' + (d.times[p.key] || '--:--'));
   }
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Duah of the Day
   lines.push('*Duah of the Day*');
   lines.push('');
   lines.push(d.duah.arabic);
@@ -10655,8 +10757,6 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Hadith of the Day
   lines.push('*Hadith of the Day*');
   lines.push('');
   lines.push(d.hadith.arabic);
@@ -10667,36 +10767,24 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Footer
   lines.push('from *Recite*,');
   lines.push('https://recite-hazel.vercel.app/');
-
   return lines.join('\n');
 }
 
-/* ── Share as text — native share sheet, then copy modal ──── */
 async function shareCardAsText(){
   const shareBtn = document.getElementById('shareCardTextBtn');
   if(shareBtn) shareBtn.disabled = true;
   try{
     const text = buildShareCardText();
-
-    // 1. Native share sheet (mobile) — text-only payload.
-    //    On iOS / Android this opens WhatsApp, Telegram,
-    //    Messages, etc. directly with the text ready to send.
     if(navigator.share){
       try{
         await navigator.share({ title: 'Recite — Daily Card', text: text });
-        return;                                // shared — done
+        return;
       }catch(e){
-        if(e && e.name === 'AbortError') return; // user cancelled — silent
-        // any other error → fall through to the modal
+        if(e && e.name === 'AbortError') return;
       }
     }
-
-    // 2. Desktop / unsupported browser — show a modal with
-    //    the text pre-selected so a single Ctrl+C copies it.
     showTextShareModal(text);
   }catch(err){
     console.warn('[ShareCard] text share failed:', err);
@@ -10706,7 +10794,6 @@ async function shareCardAsText(){
   }
 }
 
-/* ── Copyable modal for text sharing ──────────────────────── */
 function showTextShareModal(text){
   const existing = document.getElementById('shareCardTextBg');
   if(existing) existing.remove();
@@ -10754,7 +10841,6 @@ function showTextShareModal(text){
     }
   });
 
-  // Auto-select so Ctrl+C / Cmd+C works immediately
   setTimeout(() => { try{ ta.focus(); ta.select(); }catch(_){} }, 80);
 }
 
