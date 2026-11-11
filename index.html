@@ -1063,6 +1063,17 @@ font-size:.76rem;direction:ltr;animation:slide-in .22s ease;min-height:32px;
 .mistakes-list .meta{margin-left:auto;color:var(--muted);font-size:.65rem;white-space:nowrap;flex-shrink:0;font-family:-apple-system,sans-serif;}
 .mistakes-list .tj-kind{display:inline-flex;align-items:center;background:rgba(155,110,255,.35);border:1px solid rgba(155,110,255,.75);color:#f0e6ff;font-size:.60rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:11em;flex-shrink:1;font-family:-apple-system,sans-serif;cursor:help;}
 body.light-mode .mistakes-list .tj-kind{background:rgba(120,80,220,.16);border-color:rgba(120,80,220,.55);color:#5b2d9e;}
+.mistakes-list li.severity-yellow{
+  background:rgba(255,176,32,.06);
+  border-color:rgba(255,176,32,.22);
+}
+.mistakes-list li.severity-yellow .idx{
+  background:var(--warn);
+}
+body.light-mode .mistakes-list li.severity-yellow{
+  background:rgba(198,138,0,.06);
+  border-color:rgba(198,138,0,.22);
+}
 @keyframes slide-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
 .mushaf{
@@ -3261,22 +3272,14 @@ const PHON = {
   '\u06C0':'\u0647','\u06C1':'\u0647','\u06D5':'\u0647'
 };
 
-/* ── PHON_LOOSE (Follow-mode tolerant phonetic map) ──────────
-   Requested equivalences for Follow mode:
-     • ط ≡ ت     (both → ت)  — already in PHON; kept explicit
-     • ظ ≡ ذ     (both → ز)  — already in PHON; kept explicit
-     • غ ≡ ح     (both → ه)  — NEW: غ was previously → ق, breaking match
-   Also collapses the whole ح/خ/غ/ه group to ه so any transcription
-   variance inside that family still lets the pointer advance.          */
 const PHON_LOOSE = Object.assign({}, PHON, {
   '\u062D':'\u0647',   // ح → ه
   '\u062E':'\u0647',   // خ → ه
-  '\u063A':'\u0647',   // غ → ه   (was ق — now غ ≡ ح in Follow mode)
+  '\u063A':'\u0647',   // غ → ه
   '\u0639':'\u0621',   // ع → ء
-  // ── Explicit equivalences required for Follow-mode tolerance ──
   '\u0637':'\u062A',   // ط ≡ ت
-  '\u0638':'\u0632',   // ظ ≡ ذ  (both collapse to ز)
-  '\u0630':'\u0632'    // ذ ≡ ظ  (both collapse to ز)
+  '\u0638':'\u0632',   // ظ ≡ ذ
+  '\u0630':'\u0632'
 });
 
 const EMPHATIC_FAMILY = {
@@ -4301,7 +4304,6 @@ const rmsAnalyser = (function(){
     sampleCount: () => samples.length
   };
 })();
-
 function recPush(newToks){
   if(!newToks || !newToks.length) return;
   for(let i = 0; i < newToks.length; i++) recTokens.push(newToks[i]);
@@ -4715,7 +4717,7 @@ let coachTajweedGen = 0;
 let coachTajweedApplied = false;
 let coachTajweedReady = false;
 let coachTajweedDegraded = false;
-/* ── NEW: true when Tajweed mic/RMS path is unreachable on this device ── */
+/* ── True when Tajweed mic/RMS path is unreachable on this device ── */
 let coachTajweedMicFailed = false;
 
 function decorateTajweedToSpans(html){
@@ -4943,10 +4945,17 @@ function updateTajweedStatusChip(){
     chip.title = 'Tajweed annotations could not be fully aligned — some rule checks may be disabled. Check your connection, then switch surahs or reload.';
     chip.setAttribute('aria-label', 'Tajweed rule checks partially unavailable');
   } else if(coachTajweedReady){
-    chip.className = 'toggle tj-status-ready';
-    chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready';
-    chip.title = 'Tajweed rule checks are active: madd length, ghunnah length & letters, qalqalah, silent letters.';
-    chip.setAttribute('aria-label', 'Tajweed rule checks active');
+    if(!isRmsSupported() || (wantMic && !rmsAnalyser.isRunning())){
+      chip.className = 'toggle tj-status-ready';
+      chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready · transcript-only';
+      chip.title = 'Tajweed rule checks are active. Acoustic analysis (RMS) is unavailable on this browser, so checks run on the speech transcript only.';
+      chip.setAttribute('aria-label', 'Tajweed rule checks active — transcript-only mode');
+    } else {
+      chip.className = 'toggle tj-status-ready';
+      chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready';
+      chip.title = 'Tajweed rule checks are active: madd length, ghunnah length & letters, qalqalah, silent letters.';
+      chip.setAttribute('aria-label', 'Tajweed rule checks active');
+    }
   } else {
     chip.className = 'toggle tj-status-loading';
     chip.innerHTML = '<span class="tj-status-dot"></span>Loading rules…';
@@ -4955,7 +4964,25 @@ function updateTajweedStatusChip(){
   }
 }
 
-/* ── NEW: called when Tajweed mic/RMS path is unreachable ── */
+/* ── Fix 8/9 helpers: RMS support probe + notice ───────────── */
+let _rmsSupportedCached = null;
+function isRmsSupported(){
+  if (_rmsSupportedCached !== null) return _rmsSupportedCached;
+  _rmsSupportedCached = !!(window.AudioContext || window.webkitAudioContext);
+  return _rmsSupportedCached;
+}
+let _rmsUnavailableNotified = false;
+
+function notifyRmsUnavailable(){
+  const msg = isRmsSupported()
+    ? '⚠️ Acoustic analysis could not start on this device. Tajweed rule checks will use transcript-only mode.'
+    : '⚠️ This browser does not support acoustic analysis (AudioContext). Tajweed rule checks will use transcript-only mode.';
+  showToast(msg, 6000);
+  addFeedback('ℹ️ ' + msg.replace(/^⚠️ /, ''), false, true);
+  try{ updateTajweedStatusChip(); }catch(_){}
+}
+
+/* ── Called when Tajweed mic/RMS path is unreachable ── */
 function markTajweedMicFailed(){
   coachTajweedMicFailed = true;
   updateTajweedStatusChip();
@@ -4964,7 +4991,7 @@ function markTajweedMicFailed(){
 }
 
 function showTajweedMicFailedModal(){
-  if(document.getElementById('tajweedMicFailedBg')) return;   // don't stack
+  if(document.getElementById('tajweedMicFailedBg')) return;
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.id = 'tajweedMicFailedBg';
@@ -5181,6 +5208,7 @@ function strict1MaddOk(prevW, deltaMs){
   return deltaMs >= need;
 }
 
+/* Fix 3 — nasal-dropped wired in; RMS optional. */
 function strict1GhunnahOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
   if (!STRICT_FEATURES.ghunnah()) return true;
@@ -5201,17 +5229,24 @@ function strict1GhunnahOk(w, heard){
     if (!hasN && !hasM) textOk = true;
     else textOk = (hasN && heard.indexOf(N) !== -1) || (hasM && heard.indexOf(M) !== -1);
   }
+
+  const rmsAvail = !!(w.audio && rmsAnalyser.isRunning());
   let spectralOk = true;
-  if (w.audio && rmsAnalyser.isRunning()){
+  if (rmsAvail){
     const smp = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
     spectralOk = nasalPresent(smp);
   }
-  if (!spectralOk && !textOk){
-    markStrict1Error(w, 'ghunnah-' + gType, 'nasal murmur absent (text + spectrum)');
-    return false;
-  }
-  if (!textOk && spectralOk){
-    markStrict1Warning(w, 'ghunnah-asr', 'ASR missed nasal, spectrum confirms');
+
+  if (!textOk){
+    if (rmsAvail && !spectralOk){
+      markStrict1Error(w, 'ghunnah-' + gType,
+        'nasal murmur absent (text + spectrum)');
+      return false;
+    }
+    markStrict1Warning(w, 'nasal-dropped',
+      rmsAvail
+        ? 'nasal letter missing from transcript, spectrum confirms presence'
+        : 'nasal letter missing from transcript (RMS unavailable — transcript-only check)');
   }
   return true;
 }
@@ -5396,6 +5431,7 @@ const TAJWEED_ERROR_NAMES = {
   'ghunnah-length-idghaam_ghunnah-batch': 'Idghaam (with ghunnah) — too short (fast batch)',
   'ghunnah-length-iqlab-batch':           'Iqlab — too short (fast batch)',
   'ghunnah-asr':             'Ghunnah confirmed by spectrum (ASR missed it)',
+  'nasal-dropped':           'Nasal letter dropped in transcript',
   'silent':                     'Silent letter — pronounced',
   'silent-laam-shamsiyyah':     'Solar lām — voiced instead of assimilated',
   'silent-extra-syllable':      'Extra syllable (silent letter voiced)',
@@ -5403,7 +5439,6 @@ const TAJWEED_ERROR_NAMES = {
   'qalqalah-letter-dropped':    'Qalqalah — letter dropped in transcript',
   'idghaam-no-ghunnah-nasalised': 'Idghaam (no ghunnah) — nasalisation detected',
   'hamzat-al-wasl':   'Hamzat al-Wasl — re-attacked (glottal stop inserted)',
-  'nasal-dropped':    'Nasal letter dropped in transcript',
   'emphatic-ص': 'Ṣād (ص) sounded as Sīn (س)',
   'emphatic-ض': 'Ḍād (ض) sounded as Dāl (د)',
   'emphatic-ط': 'Ṭāʾ (ط) sounded as Tāʾ (ت)',
@@ -5415,42 +5450,84 @@ const TAJWEED_ERROR_NAMES = {
   'emphatic-غ': 'Ghayn (غ) sounded as Qāf (ق)'
 };
 
-function markStrict1Error(w, kind, detail){
+/* ── Fix 2: Unified Tajweed issue marker + throttle ─────────── */
+const TAJWEED_WARN_THROTTLE_MS = 4000;
+const _tajweedWarnThrottle = new Map();
+
+function getTajweedRuleInfo(kind){
+  if (kind.startsWith('emphatic-')){
+    const letter = kind.slice(9);
+    const light  = EMPHATIC_FAMILY[letter];
+    const name   = TAJWEED_ERROR_NAMES[kind] || ('Emphatic ' + letter);
+    const expl   = light
+      ? 'Emphatic ' + letter + ' sounded as its light counterpart ' + light +
+        ' — the heaviness / pharyngeal weight is missing'
+      : 'Emphatic letter sounded without its heaviness';
+    return { tajweedName: name, tajweedExplanation: expl };
+  }
+  const directName = TAJWEED_ERROR_NAMES[kind];
+  const rule       = kind.split('-')[0];
+  const ruleInfo   = TAJWEED_RULE_INFO[rule];
+  const tajweedName = directName || (ruleInfo ? ruleInfo.name : ('Tajweed — ' + kind));
+  const tajweedExplanation = ruleInfo
+    ? (ruleInfo.name + ' — ' + ruleInfo.desc)
+    : tajweedName;
+  return { tajweedName, tajweedExplanation };
+}
+
+function markTajweedIssue(w, kind, detail, severity){
   if (!w) return;
-  if (w._tajweedErrs && w._tajweedErrs.has(kind)) return;
-  if (!w._tajweedErrs) w._tajweedErrs = new Set();
-  w._tajweedErrs.add(kind);
-  if (!w.el.classList.contains('error')) w.el.className = 'w error';
-  errors++;
-  const tajweedName = TAJWEED_ERROR_NAMES[kind] || ('Tajweed — ' + kind);
-  const rule = kind.split('-')[0];
-  const ruleInfo = TAJWEED_RULE_INFO[rule];
-  const tajweedExplanation = ruleInfo ? (ruleInfo.name + ' — ' + ruleInfo.desc) : tajweedName;
+  if (followOnly) return;
+  severity = severity || 'red';
+  const isRed = severity === 'red';
+
+  if (isRed){
+    if (w._tajweedErrs && w._tajweedErrs.has(kind)) return;
+    if (!w._tajweedErrs) w._tajweedErrs = new Set();
+    w._tajweedErrs.add(kind);
+    if (!w.el.classList.contains('error')) w.el.className = 'w error';
+    errors++;
+  } else {
+    if (w._tajweedWarns && w._tajweedWarns.has(kind)) return;
+    if (!w._tajweedWarns) w._tajweedWarns = new Set();
+    w._tajweedWarns.add(kind);
+    if (w.el.classList.contains('error')) return;
+    w.el.classList.remove('current', 'correct', 'corrected');
+    w.el.classList.add('warned');
+  }
+
+  const info = getTajweedRuleInfo(kind);
   const m = {
-    idx: mistakeCounter++, correct: w.raw.replace(TASHKEEL, ''), heard: detail,
-    verse: w.verse, kind: 'tajweed-' + kind, tajweedType: kind,
-    tajweedName: tajweedName, tajweedExplanation: tajweedExplanation
+    idx: mistakeCounter++,
+    correct: w.raw.replace(TASHKEEL, ''),
+    heard: detail,
+    verse: w.verse,
+    kind: 'tajweed-' + kind,
+    tajweedType: kind,
+    tajweedName: info.tajweedName,
+    tajweedExplanation: info.tajweedExplanation,
+    severity: severity
   };
-  mistakes.push(m); appendMistake(m); scheduleHUD();
-  /* Beep on Tajweed errors removed per user request. */
-  const now = performance.now();
-  if (now - (markStrict1Error._lastFeedbackAt || 0) > 1200){
-    markStrict1Error._lastFeedbackAt = now;
-    addFeedback('🎵 <b>Tajweed mistake — ' + escapeHtml(tajweedName) + '</b> · ' +
+  mistakes.push(m);
+  appendMistake(m);
+  scheduleHUD();
+
+  const now  = performance.now();
+  const last = _tajweedWarnThrottle.get(kind) || 0;
+  if (now - last > TAJWEED_WARN_THROTTLE_MS){
+    _tajweedWarnThrottle.set(kind, now);
+    const prefix = isRed ? '🎵 <b>Tajweed mistake — ' : '⚠️ <b>Tajweed warning — ';
+    addFeedback(prefix + escapeHtml(info.tajweedName) + '</b> · ' +
       '<span class="ar">' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</span> · ' +
-      escapeHtml(detail), true);
+      escapeHtml(detail || info.tajweedExplanation), isRed);
   }
 }
 
+function markStrict1Error(w, kind, detail){
+  markTajweedIssue(w, kind, detail, 'red');
+}
 function markStrict1Warning(w, kind, detail){
-  if (!w) return;
-  if (w.el.classList.contains('warned') || w.el.classList.contains('error')) return;
-  w.el.classList.add('warned');
-  if (!w.el.classList.contains('correct') && !w.el.classList.contains('corrected')) w.el.classList.add('correct');
-  if (!silentWarned){
-    silentWarned = true;
-    addFeedback('⚠️ <b>' + w.raw.replace(TASHKEEL,'') + '</b> — ' + detail, false, true);
-  }
+  markTajweedIssue(w, kind, detail, 'yellow');
 }
 
 function runStrict1Checks(idx, heard, opts){
@@ -5464,12 +5541,8 @@ function runStrict1Checks(idx, heard, opts){
   if (STRICT_FEATURES.emphatics() && heard && w.norm && heard !== w.norm){
     const viol = emphaticViolation(heard, w.norm);
     if (viol.length){
-      w.el.classList.add('warned');
-      if (!silentWarned){
-        silentWarned = true;
-        const label = TAJWEED_ERROR_NAMES['emphatic-' + viol[0].expected] || ('emphatic ' + viol[0].expected);
-        addFeedback('⚠️ <b>' + w.raw.replace(TASHKEEL, '') + '</b> — ' + label, false, true);
-      }
+      markTajweedIssue(w, 'emphatic-' + viol[0].expected,
+        'sounded as ' + viol[0].heard, 'yellow');
     }
   }
 
@@ -5572,7 +5645,6 @@ function runStrict1Checks(idx, heard, opts){
     lastDirectCommitIdx = idx; lastDirectCommitAt = now; lastCommitBatchId = currentBatchId;
   }
 }
-
 function distributeMergedHeard(heard, wordsArr, startIdx, count){
   const out = new Array(count).fill('');
   if (!heard || count <= 0) return out;
@@ -6236,7 +6308,6 @@ async function gradeFull(tokens, startIdx){
         errors++;
         const m = { idx: mistakeCounter++, correct: w.raw.replace(TASHKEEL,''), heard: rawTok, verse: w.verse, kind: 'misread' };
         mistakes.push(m); appendMistake(m); scheduleHUD();
-        /* Beep on Tajweed errors removed per user request. */
       }
       noteFollowWrongToken();
       lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
@@ -6245,26 +6316,33 @@ async function gradeFull(tokens, startIdx){
       used++;
     }
 
+    /* Fix 6 — batch timing with ASR fallback when RMS is unavailable */
     const ctx = batchTimingCtx;
     if(ctx && ctx.startTime > 0 && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 && ctx.contributions.length > 0){
       const now = performance.now();
       const rmsAvailable = rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 5 && rmsAnalyser.hasSignal();
+      let voiceMs = null;
       if(rmsAvailable){
-        const voiceMs = rmsAnalyser.voiceDurationMs(ctx.startTime, now);
-        if(voiceMs < ctx.cumulativeRequired){
-          let cumulative = 0;
-          for(let ci = 0; ci < ctx.contributions.length; ci++){
-            const c = ctx.contributions[ci];
-            cumulative += c.need;
-            if(voiceMs >= cumulative) continue;
-            const w = words[c.idx];
-            if(w && !w.el.classList.contains('error')){
-              const tag = (c.rule === 'madd') ? 'madd-' + ((w.tjRules && w.tjRules.madd) || 'normal') + '-batch'
-                                              : 'ghunnah-length-' + ((w.tjRules && w.tjRules.ghunnahType) || 'ghunnah') + '-batch';
-              markStrict1Error(w, tag, 'batch voice ' + Math.round(voiceMs) + ' ms < ' + Math.round(cumulative) + ' ms cumulative');
-            }
-            break;
+        voiceMs = rmsAnalyser.voiceDurationMs(ctx.startTime, now);
+      } else {
+        voiceMs = now - ctx.startTime;
+      }
+      if(voiceMs !== null && voiceMs < ctx.cumulativeRequired){
+        let cumulative = 0;
+        for(let ci = 0; ci < ctx.contributions.length; ci++){
+          const c = ctx.contributions[ci];
+          cumulative += c.need;
+          if(voiceMs >= cumulative) continue;
+          const w = words[c.idx];
+          if(w && !w.el.classList.contains('error')){
+            const tag = (c.rule === 'madd')
+              ? 'madd-' + ((w.tjRules && w.tjRules.madd) || 'normal') + '-batch'
+              : 'ghunnah-length-' + ((w.tjRules && w.tjRules.ghunnahType) || 'ghunnah') + '-batch';
+            markStrict1Error(w, tag,
+              (rmsAvailable ? 'batch voice ' : 'batch timing ') +
+              Math.round(voiceMs) + ' ms < ' + Math.round(cumulative) + ' ms cumulative');
           }
+          break;
         }
       }
     }
@@ -6406,7 +6484,6 @@ function beep(kind){
 }
 let lastBeepAt = -1e9;
 function beepThrottled(kind){ const now = performance.now(); if(now - lastBeepAt < 300) return; lastBeepAt = now; beep(kind); }
-
 let _audioPrimed = false;
 const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
 
@@ -6565,21 +6642,34 @@ volIcon.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === '
 window.addEventListener('resize', schedulePositionAudioOverlay);
 window.addEventListener('orientationchange', schedulePositionAudioOverlay);
 
+/* ── Fix 8: RMS-unavailable notice on stream open ──────────── */
 async function ensureMicStream(){
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
     if(live){
       try{ micStream.getAudioTracks().forEach(t => { t.enabled = true; }); }catch(_){}
-      if(!rmsAnalyser.isRunning()) rmsAnalyser.start(micStream);
+      if(!rmsAnalyser.isRunning()){
+        const ok = rmsAnalyser.start(micStream);
+        if(!ok && !_rmsUnavailableNotified){
+          _rmsUnavailableNotified = true;
+          notifyRmsUnavailable();
+        }
+      }
       return micStream;
     }
   }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
   try{
     lastMicError = null;
-    const s = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true } });
+    const s = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true }
+    });
     micStream = s;
-    rmsAnalyser.start(s);
+    const rmsOk = rmsAnalyser.start(s);
+    if(!rmsOk && !_rmsUnavailableNotified){
+      _rmsUnavailableNotified = true;
+      notifyRmsUnavailable();
+    }
     return s;
   }catch(e){ lastMicError = e; micStream = null; rmsAnalyser.stop(); return null; }
 }
@@ -6658,7 +6748,6 @@ function setRecitationMode(modeName){
   } else {
     addFeedback('🎵 <b>Tajweed</b> mode — strict, rule-aware. Tajweed colours are shown; mispronunciations and rule violations are marked red.', false, true);
     applyTajweedColorsToCoach();
-    // If already reciting in Follow (no RMS stream open), start it now.
     if(wantMic && !rmsAnalyser.isRunning()){
       ensureMicStream().then(s => {
         if(!s) markTajweedMicFailed();
@@ -6907,11 +6996,14 @@ function jumpToCurrent(){
   el.classList.add('pressing'); setTimeout(() => el.classList.remove('pressing'), 450);
   scrollCurrentIntoView(true);
 }
+
+/* ── Fix 7: appendMistake carries severity class ───────────── */
 function appendMistake(m){
   if(followOnly) return;
   mistakesPanel.hidden = false;
   mistakeCountBadge.textContent = String(mistakes.length);
   const li = document.createElement('li');
+  li.classList.add('severity-' + (m.severity || 'red'));
   const kindBadge = m.tajweedName
     ? '<span class="tj-kind" title="' + escapeHtml(m.tajweedExplanation || m.tajweedName) + '" aria-label="' + escapeHtml(m.tajweedExplanation || m.tajweedName) + '">' + escapeHtml(m.tajweedName) + '</span>'
     : '';
@@ -6990,9 +7082,9 @@ function recordMistake(i, kind, heardRaw){
   const heard   = heardRaw ? String(heardRaw).replace(TASHKEEL, '') : '';
   const m = { idx: mistakeCounter++, correct, heard, verse: w.verse, kind };
   mistakes.push(m); appendMistake(m); scheduleHUD();
-  /* Beep on Tajweed errors removed per user request. */
 }
 
+/* ── Fix 5a: resetProgress clears _tajweedWarns + throttle ── */
 function resetProgress(fullReset){
   ptr=0; errors=0; finished=false; recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
@@ -7004,12 +7096,15 @@ function resetProgress(fullReset){
     resetPaceSamples();
   }
   lastCurrentEl = null; longPressTriggered = false; hudPending = false;
-  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; w.muqattaatCursor = 0; w._muqStuckCount = 0; });
+  words.forEach(w=>{ w.el.className='w'; w.audio = null; w._tajweedErrs = null; w._tajweedWarns = null; w.muqattaatCursor = 0; w._muqStuckCount = 0; });
+  _tajweedWarnThrottle.clear();
   pageEl.querySelectorAll('.ayah').forEach(a=>a.classList.remove('done','playing'));
   document.body.classList.remove('listen-mode');
   updateCurrent(); updateHUD(); applyFollowOnlyUI(); applyHideTextUI();
   pageEl.scrollTop = 0;
 }
+
+/* ── Fix 5b: jumpToWordAndListen clears _tajweedWarns + throttle ── */
 function jumpToWordAndListen(idx){
   if(viewerOpen && viewerMode === 'audio') return;
   if(idx < 0 || idx >= words.length) return;
@@ -7017,7 +7112,8 @@ function jumpToWordAndListen(idx){
   errors = 0; mistakes = []; mistakeCounter = 0; completedVerses = new Set(); recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
-  words.forEach(w => { w.el.classList.remove('correct','error','skipped','corrected','model','current','located','warned'); w.muqattaatCursor = 0; w._muqStuckCount = 0; });
+  words.forEach(w => { w.el.classList.remove('correct','error','skipped','corrected','model','current','located','warned'); w._tajweedErrs = null; w._tajweedWarns = null; w.muqattaatCursor = 0; w._muqStuckCount = 0; });
+  _tajweedWarnThrottle.clear();
   pageEl.querySelectorAll('.ayah').forEach(a => a.classList.remove('done','playing'));
   mistakesList.innerHTML = ''; mistakesPanel.hidden = true; mistakeCountBadge.textContent = '0';
   resetPace();
@@ -7095,6 +7191,8 @@ function setMicButton(){
   micButton.classList.toggle('on',wantMic);
   syncFsButtons();
 }
+
+/* ── Fix 9: startReciting guards RMS on device ─────────────── */
 async function startReciting(){
   unlockAudio();
   if(!words.length){
@@ -7104,19 +7202,10 @@ async function startReciting(){
   if(!SPEECH_SUPPORTED){ addFeedback('⚠️ Browser speech recognition is not available here. Try <b>Chrome</b>, <b>Edge</b> or <b>Safari</b> on a device with internet.', true); setStatus('Speech not supported', 'error'); return; }
   if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
 
-  /* ── MICROPHONE SETUP — branches by mode ─────────────────────────
-     • Follow mode: identical to Hifz Test — do NOT call getUserMedia.
-       SpeechRecognition opens the mic itself. This fixes Android
-       devices where an open getUserMedia stream prevents the
-       recogniser from receiving audio.
-     • Tajweed mode: needs the RMS analyser for acoustic rule
-       detection, so getUserMedia is required.                         */
   if(followOnly){
     if(micPermission !== 'granted'){
       const ok = await promptForMic();
       if(!ok) return;
-      /* promptForMic opened the RMS stream via ensureMicStream();
-         close it now so it doesn't block SpeechRecognition. */
       releaseMicStream();
     }
   } else {
@@ -7137,6 +7226,10 @@ async function startReciting(){
     } else {
       coachTajweedMicFailed = false;
       updateTajweedStatusChip();
+      if(!rmsAnalyser.isRunning() && !_rmsUnavailableNotified){
+        _rmsUnavailableNotified = true;
+        notifyRmsUnavailable();
+      }
     }
   }
 
@@ -7192,7 +7285,6 @@ function resumeMic(){
   if(wantMic && !finished && !fsPaused){
     micPaused = false;
     if(!followOnly){
-      // Tajweed needs the RMS analyser stream; Follow does not.
       ensureMicStream().then(s => { if(!s) markTajweedMicFailed(); }).catch(() => {});
     }
     recRunning = true; speechFatalError = false; micWarningShown = false;
@@ -8936,7 +9028,6 @@ pageEl.addEventListener('pointerdown', readerGestureStart);
 document.addEventListener('pointermove', readerGestureMove, {passive:true});
 document.addEventListener('pointerup', readerGestureEnd);
 document.addEventListener('pointercancel', readerGestureCancel);
-
 const PRAYERS = [
   { key:'fajr',    label:'Fajr',    icon:'🌅' },
   { key:'sunrise', label:'Sunrise', icon:'☀️' },
@@ -9134,22 +9225,18 @@ let prayerAlarmTimer = null;
 let firedAlarms = new Set();
 let firedDay = '';
 let athaanAudio = null;
-
-/* ══════ Prayer alarm stop-on-tap ══════ */
 let prayerBeepOscillators = [];
 
 function stopPrayerBeep(){
   prayerBeepOscillators.forEach(o => { try{ o.stop(); }catch(_){} });
   prayerBeepOscillators = [];
 }
-
 function stopPrayerAlarm(){
   stopPrayerBeep();
   if(athaanAudio){
     try{ athaanAudio.pause(); athaanAudio.currentTime = 0; }catch(_){}
   }
 }
-
 document.addEventListener('click',   stopPrayerAlarm, { capture: true, passive: true });
 document.addEventListener('pointerdown', stopPrayerAlarm, { capture: true, passive: true });
 document.addEventListener('touchstart', stopPrayerAlarm, { capture: true, passive: true });
@@ -9692,6 +9779,8 @@ function openCopyrightModal(){
   chips.forEach(chip => { chip.addEventListener('click', () => toggleTajweedRule(chip.dataset.rule, chip)); });
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('tj-fs-open')){ toggleTajweedFullscreen(); } });
 })();
+
+/* ── Fix 11: chip click handler reflects transcript-only mode ── */
 (function wireTajweedStatusChip(){
   const chip = document.getElementById('tajweedStatusChip');
   if(!chip) return;
@@ -9700,7 +9789,13 @@ function openCopyrightModal(){
     if(followOnly) return;
     if(coachTajweedMicFailed){ showTajweedMicFailedModal(); }
     else if(coachTajweedDegraded){ showToast('⚠️ Tajweed annotations could not be fully aligned — some rule checks may be disabled. Check your connection, then switch surah or reload.', 5000); }
-    else if(coachTajweedReady){ showToast('✓ Tajweed rules active: madd length, ghunnah length & letters, qalqalah, silent letters.', 4200); }
+    else if(coachTajweedReady){
+      if(!isRmsSupported() || (wantMic && !rmsAnalyser.isRunning())){
+        showToast('ℹ️ Tajweed rules are active in transcript-only mode — acoustic analysis (RMS) is unavailable in this browser.', 5000);
+      } else {
+        showToast('✓ Tajweed rules active: madd length, ghunnah length & letters, qalqalah, silent letters.', 4200);
+      }
+    }
     else { showToast('⏳ Fetching Tajweed annotations from Quran.com…', 3000); }
   });
 })();
@@ -9809,7 +9904,7 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation.</li>' +
       '<li>On a mispronounced word the coach <b>marks the word red</b>, then <b>keeps following</b> the reciter.</li>' +
       '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> — Haraka-based bounds: Tabee\'i [1.7–2.3], Wajib/Ja\'iz [3.6–5.4], Lazim [5.5–6.5] × Haraka.<br>• <b>Ghunnah</b> — nasal formant band 250–600 Hz verified in both transcript and spectrum.<br>• <b>Qalqalah</b> — plosive-burst detector catches missing bounce.<br>• <b>Laam Shamsiyyah</b> — onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> — glottal re-attack detection.<br>• <b>Idghaam (no ghunnah)</b> — nasalisation-overrun check.<br>• <b>Emphatic letters</b> (ص→س, ط→ت…) surfaced as warnings on every commit path.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
-      '<li><b>Rule-ready chip:</b> shows whether rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules unavailable</b> · <b>● Rules not ready</b> (microphone unreachable).</li>' +
+      '<li><b>Rule-ready chip:</b> shows whether rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules ready · transcript-only</b> · <b>● Rules unavailable</b> · <b>● Rules not ready</b> (microphone unreachable).</li>' +
     '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">4</span> 🙈 Hide text &amp; Reveal text</h3><ul>' +
       '<li><b>Hide text</b> (available in Follow mode) hides the whole mushaf so you can recite from memory. Words become visible as you recite them.</li>' +
@@ -10039,348 +10134,79 @@ document.addEventListener('keydown', e => {
     else if(e.key === 'ArrowLeft'){ if(!flipping) flipNav(-1); }
   }
 });
-
 // ── 45 Quranic Duahs for Daily Rotation ──
 const DAILY_DUAHS = [
-  {
-    arabic: "رَبَّنَا تَقَبَّلْ مِنَّا ۖ إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ",
-    translation: "Our Lord, accept [this] from us. Indeed, You are the Hearing, the Knowing.",
-    reference: "Surah Al-Baqarah 2:127"
-  },
-  {
-    arabic: "رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِن ذُرِّيَّتِنَا أُمَّةً مُّسْلِمَةً لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا ۖ إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ",
-    translation: "Our Lord, and make us Muslims [in submission] to You and from our descendants a Muslim nation [in submission] to You. And show us our rites and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful.",
-    reference: "Surah Al-Baqarah 2:128"
-  },
-  {
-    arabic: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
-    translation: "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.",
-    reference: "Surah Al-Baqarah 2:201"
-  },
-  {
-    arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
-    translation: "Our Lord, pour upon us patience and plant firmly our feet and give us victory over the disbelieving people.",
-    reference: "Surah Al-Baqarah 2:250"
-  },
-  {
-    arabic: "رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ ۖ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا ۚ أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
-    translation: "Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people.",
-    reference: "Surah Al-Baqarah 2:286"
-  },
-  {
-    arabic: "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ الْوَهَّابُ",
-    translation: "Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.",
-    reference: "Surah Ali 'Imran 3:8"
-  },
-  {
-    arabic: "رَبَّنَا إِنَّنَا آمَنَّا فَاغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ النَّارِ",
-    translation: "Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire.",
-    reference: "Surah Ali 'Imran 3:16"
-  },
-  {
-    arabic: "رَبَّنَا آمَنَّا بِمَا أَنزَلْتَ وَاتَّبَعْنَا الرَّسُولَ فَاكْتُبْنَا مَعَ الشَّاهِدِينَ",
-    translation: "Our Lord, we have believed in what You revealed and have followed the messenger, so register us among the witnesses.",
-    reference: "Surah Ali 'Imran 3:53"
-  },
-  {
-    arabic: "رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
-    translation: "Our Lord, forgive us our sins and our excess in our affairs, and plant firmly our feet and give us victory over the disbelieving people.",
-    reference: "Surah Ali 'Imran 3:147"
-  },
-  {
-    arabic: "رَبَّنَا وَآتِنَا مَا وَعَدتَّنَا عَلَىٰ رُسُلِكَ وَلَا تُخْزِنَا يَوْمَ الْقِيَامَةِ ۗ إِنَّكَ لَا تُخْلِفُ الْمِيعَادَ",
-    translation: "Our Lord, and grant us what You promised us through Your messengers and do not disgrace us on the Day of Resurrection. Indeed, You do not fail in [Your] promise.",
-    reference: "Surah Ali 'Imran 3:194"
-  },
-  {
-    arabic: "رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ",
-    translation: "Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.",
-    reference: "Surah Al-A'raf 7:23 (Dua of Adam)"
-  },
-  {
-    arabic: "رَبِّ إِنِّي أَعُوذُ بِكَ أَنْ أَسْأَلَكَ مَا لَيْسَ لِي بِهِ عِلْمٌ ۖ وَإِلَّا تَغْفِرْ لِي وَتَرْحَمْنِي أَكُن مِّنَ الْخَاسِرِينَ",
-    translation: "My Lord, I seek refuge in You from asking that of which I have no knowledge. And unless You forgive me and have mercy upon me, I will be among the losers.",
-    reference: "Surah Hud 11:47 (Dua of Nuh)"
-  },
-  {
-    arabic: "رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي ۚ رَبَّنَا وَتَقَبَّلْ دُعَاءِ",
-    translation: "My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication.",
-    reference: "Surah Ibrahim 14:40 (Dua of Ibrahim)"
-  },
-  {
-    arabic: "رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ",
-    translation: "Our Lord, forgive me and my parents and the believers the Day the account is established.",
-    reference: "Surah Ibrahim 14:41"
-  },
-  {
-    arabic: "رَّبِّ أَدْخِلْنِي مُدْخَلَ صِدْقٍ وَأَخْرِجْنِي مُخْرَجَ صِدْقٍ وَاجْعَل لِّي مِن لَّدُنكَ سُلْطَانًا نَّصِيرًا",
-    translation: "My Lord, cause me to enter a sound entrance and to exit a sound exit and grant me from Yourself a supporting authority.",
-    reference: "Surah Al-Isra 17:80"
-  },
-  {
-    arabic: "رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي يَفْقَهُوا قَوْلِي",
-    translation: "My Lord, expand for me my breast [with assurance] and ease for me my task and untie the knot from my tongue that they may understand my speech.",
-    reference: "Surah Ta-Ha 20:25-28 (Dua of Musa)"
-  },
-  {
-    arabic: "رَّبِّ زِدْنِي عِلْمًا",
-    translation: "My Lord, increase me in knowledge.",
-    reference: "Surah Ta-Ha 20:114"
-  },
-  {
-    arabic: "لَّا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ",
-    translation: "There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.",
-    reference: "Surah Al-Anbya 21:87 (Dua of Yunus)"
-  },
-  {
-    arabic: "أَنِّي مَسَّنِيَ الضُّرُّ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ",
-    translation: "Indeed, adversity has touched me, and You are the Most Merciful of the merciful.",
-    reference: "Surah Al-Anbya 21:83 (Dua of Ayyub)"
-  },
-  {
-    arabic: "رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ الْوَارِثِينَ",
-    translation: "My Lord, do not leave me alone [with no heir], while you are the best of inheritors.",
-    reference: "Surah Al-Anbya 21:89 (Dua of Zakariyya)"
-  },
-  {
-    arabic: "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ",
-    translation: "My Lord, enable me to be grateful for Your favor which You have bestowed upon me and upon my parents and to do righteousness of which You approve. And admit me by Your mercy into [the ranks of] Your righteous servants.",
-    reference: "Surah An-Naml 27:19 (Dua of Sulayman)"
-  },
-  {
-    arabic: "رَبَّنَا آمَنَّا فَاغْفِرْ لَنَا وَارْحَمْنَا وَأَنتَ خَيْرُ الرَّاحِمِينَ",
-    translation: "Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful.",
-    reference: "Surah Al-Mu'minun 23:109"
-  },
-  {
-    arabic: "رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
-    translation: "Our Lord, grant us from among our wives and offspring comfort to our eyes and make us a leader [i.e., example] for the righteous.",
-    reference: "Surah Al-Furqan 25:74"
-  },
-  {
-    arabic: "رَبِّ هَبْ لِي حُكْمًا وَأَلْحِقْنِي بِالصَّالِحِينَ وَاجْعَل لِّي لِسَانَ صِدْقٍ فِي الْآخِرِينَ وَاجْعَلْنِي مِن وَرَثَةِ جَنَّةِ النَّعِيمِ",
-    translation: "My Lord, grant me wisdom and join me with the righteous. And grant me a reputation of honor among later generations. And make me among the inheritors of the Garden of Pleasure.",
-    reference: "Surah Ash-Shu'ara 26:83-85 (Dua of Ibrahim)"
-  },
-  {
-    arabic: "رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ",
-    translation: "My Lord, save me from the wrongdoing people.",
-    reference: "Surah Al-Qasas 28:21 (Dua of Musa)"
-  },
-  {
-    arabic: "رَبِّ إِنِّي ظَلَمْتُ نَفْسِي فَاغْفِرْ لِي",
-    translation: "My Lord, indeed I have wronged myself, so forgive me.",
-    reference: "Surah Al-Qasas 28:16 (Dua of Musa)"
-  },
-  {
-    arabic: "رَبَّنَا وَسِعْتَ كُلَّ شَيْءٍ رَّحْمَةً وَعِلْمًا فَاغْفِرْ لِلَّذِينَ تَابُوا وَاتَّبَعُوا سَبِيلَكَ وَقِهِمْ عَذَابَ الْجَحِيمِ",
-    translation: "Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who have repented and followed Your way and protect them from the punishment of Hellfire.",
-    reference: "Surah Ghafir 40:7"
-  },
-  {
-    arabic: "رَبَّنَا اكْشِفْ عَنَّا الْعَذَابَ إِنَّا مُؤْمِنُونَ",
-    translation: "Our Lord, remove from us the torment; indeed, we are believers.",
-    reference: "Surah Ad-Dukhan 44:12"
-  },
-  {
-    arabic: "رَبَّنَا اغْفِرْ لَنَا وَلِإِخْوَانِنَا الَّذِينَ سَبَقُونَا بِالْإِيمَانِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِّلَّذِينَ آمَنُوا رَبَّنَا إِنَّكَ رَءُوفٌ رَّحِيمٌ",
-    translation: "Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful.",
-    reference: "Surah Al-Hashr 59:10"
-  },
-  {
-    arabic: "رَّبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ",
-    translation: "Our Lord, upon You we have relied, and to You we have returned, and to You is the destination.",
-    reference: "Surah Al-Mumtahanah 60:4"
-  },
-  {
-    arabic: "رَّبَّنَا أَتْمِمْ لَنَا نُورَنَا وَاغْفِرْ لَنَا ۖ إِنَّكَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ",
-    translation: "Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.",
-    reference: "Surah At-Tahrim 66:8"
-  },
-  {
-    arabic: "رَّبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ وَأَعُوذُ بِكَ رَبِّ أَن يَحْضُرُونِ",
-    translation: "My Lord, I seek refuge in You from the incitements of the devils, and I seek refuge in You, my Lord, lest they be present with me.",
-    reference: "Surah Al-Mu'minun 23:97-98"
-  },
-  {
-    arabic: "رَبَّنَا آمَنَّا فَاكْتُبْنَا مَعَ الشَّاهِدِينَ",
-    translation: "Our Lord, we have believed, so register us among the witnesses.",
-    reference: "Surah Al-Ma'idah 5:83"
-  },
-  {
-    arabic: "رَبَّنَا أَخْرِجْنَا مِنْ هَٰذِهِ الْقَرْيَةِ الظَّالِمِ أَهْلُهَا وَاجْعَل لَّنَا مِن لَّدُنكَ وَلِيًّا وَاجْعَل لَّنَا مِن لَّدُنكَ نَصِيرًا",
-    translation: "Our Lord, take us out of this city of oppressive people and appoint for us from Yourself a protector and appoint for us from Yourself a helper.",
-    reference: "Surah An-Nisa 4:75"
-  },
-  {
-    arabic: "رَبَّنَا إِنَّنَا نَخَافُ أَن يَفْرُطَ عَلَيْنَا أَوْ أَن يَطْغَىٰ",
-    translation: "Our Lord, indeed we are afraid that he will hasten [punishment] against us or that he will transgress.",
-    reference: "Surah Ta-Ha 20:45"
-  },
-  {
-    arabic: "رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا",
-    translation: "Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance.",
-    reference: "Surah Al-Kahf 18:10"
-  },
-  {
-    arabic: "رَبِّ لَوْ شِئْتَ أَهْلَكْتَهُم مِّن قَبْلُ وَإِيَّايَ ۖ أَتُهْلِكُنَا بِمَا فَعَلَ السُّفَهَاءُ مِنَّا ۖ إِنْ هِيَ إِلَّا فِتْنَتُكَ تُضِلُّ بِهَا مَن تَشَاءُ وَتَهْدِي مَن تَشَاءُ ۖ أَنتَ وَلِيُّنَا فَاغْفِرْ لَنَا وَارْحَمْنَا ۖ وَأَنتَ خَيْرُ الْغَافِرِينَ",
-    translation: "My Lord, if You had willed, You could have destroyed them before and me [as well]. Would You destroy us for what the foolish among us have done? This is not but Your trial by which You send astray whom You will and guide whom You will. You are our Protector, so forgive us and have mercy upon us, and You are the best of forgivers.",
-    reference: "Surah Al-A'raf 7:155 (Dua of Musa)"
-  },
-  {
-    arabic: "رَبِّ اجْعَلْ هَٰذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ",
-    translation: "My Lord, make this city [Makkah] secure and keep me and my sons away from worshipping idols.",
-    reference: "Surah Ibrahim 14:35 (Dua of Ibrahim)"
-  },
-  {
-    arabic: "رَبَّنَا إِنَّكَ تَعْلَمُ مَا نُخْفِي وَمَا نُعْلِنُ ۗ وَمَا يَخْفَىٰ عَلَى اللَّهِ مِن شَيْءٍ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ",
-    translation: "Our Lord, indeed You know what we conceal and what we declare, and nothing is hidden from Allah on the earth or in the heaven.",
-    reference: "Surah Ibrahim 14:38"
-  },
-  {
-    arabic: "رَبَّنَا لَا تَجْعَلْنَا مَعَ الْقَوْمِ الظَّالِمِينَ",
-    translation: "Our Lord, do not place us with the wrongdoing people.",
-    reference: "Surah Al-A'raf 7:47"
-  },
-  {
-    arabic: "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ",
-    translation: "Our Lord, decide between us and our people in truth, and You are the best of those who give decision.",
-    reference: "Surah Al-A'raf 7:89"
-  },
-  {
-    arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ",
-    translation: "Our Lord, pour upon us patience and let us die as Muslims [in submission to You].",
-    reference: "Surah Al-A'raf 7:126"
-  }
+  { arabic: "رَبَّنَا تَقَبَّلْ مِنَّا ۖ إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ", translation: "Our Lord, accept [this] from us. Indeed, You are the Hearing, the Knowing.", reference: "Surah Al-Baqarah 2:127" },
+  { arabic: "رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِن ذُرِّيَّتِنَا أُمَّةً مُّسْلِمَةً لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا ۖ إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", translation: "Our Lord, and make us Muslims [in submission] to You and from our descendants a Muslim nation [in submission] to You. And show us our rites and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful.", reference: "Surah Al-Baqarah 2:128" },
+  { arabic: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", translation: "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.", reference: "Surah Al-Baqarah 2:201" },
+  { arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ", translation: "Our Lord, pour upon us patience and plant firmly our feet and give us victory over the disbelieving people.", reference: "Surah Al-Baqarah 2:250" },
+  { arabic: "رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ ۖ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا ۚ أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ", translation: "Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people.", reference: "Surah Al-Baqarah 2:286" },
+  { arabic: "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ الْوَهَّابُ", translation: "Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.", reference: "Surah Ali 'Imran 3:8" },
+  { arabic: "رَبَّنَا إِنَّنَا آمَنَّا فَاغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ النَّارِ", translation: "Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire.", reference: "Surah Ali 'Imran 3:16" },
+  { arabic: "رَبَّنَا آمَنَّا بِمَا أَنزَلْتَ وَاتَّبَعْنَا الرَّسُولَ فَاكْتُبْنَا مَعَ الشَّاهِدِينَ", translation: "Our Lord, we have believed in what You revealed and have followed the messenger, so register us among the witnesses.", reference: "Surah Ali 'Imran 3:53" },
+  { arabic: "رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ", translation: "Our Lord, forgive us our sins and our excess in our affairs, and plant firmly our feet and give us victory over the disbelieving people.", reference: "Surah Ali 'Imran 3:147" },
+  { arabic: "رَبَّنَا وَآتِنَا مَا وَعَدتَّنَا عَلَىٰ رُسُلِكَ وَلَا تُخْزِنَا يَوْمَ الْقِيَامَةِ ۗ إِنَّكَ لَا تُخْلِفُ الْمِيعَادَ", translation: "Our Lord, and grant us what You promised us through Your messengers and do not disgrace us on the Day of Resurrection. Indeed, You do not fail in [Your] promise.", reference: "Surah Ali 'Imran 3:194" },
+  { arabic: "رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ", translation: "Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.", reference: "Surah Al-A'raf 7:23 (Dua of Adam)" },
+  { arabic: "رَبِّ إِنِّي أَعُوذُ بِكَ أَنْ أَسْأَلَكَ مَا لَيْسَ لِي بِهِ عِلْمٌ ۖ وَإِلَّا تَغْفِرْ لِي وَتَرْحَمْنِي أَكُن مِّنَ الْخَاسِرِينَ", translation: "My Lord, I seek refuge in You from asking that of which I have no knowledge. And unless You forgive me and have mercy upon me, I will be among the losers.", reference: "Surah Hud 11:47 (Dua of Nuh)" },
+  { arabic: "رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي ۚ رَبَّنَا وَتَقَبَّلْ دُعَاءِ", translation: "My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication.", reference: "Surah Ibrahim 14:40 (Dua of Ibrahim)" },
+  { arabic: "رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ", translation: "Our Lord, forgive me and my parents and the believers the Day the account is established.", reference: "Surah Ibrahim 14:41" },
+  { arabic: "رَّبِّ أَدْخِلْنِي مُدْخَلَ صِدْقٍ وَأَخْرِجْنِي مُخْرَجَ صِدْقٍ وَاجْعَل لِّي مِن لَّدُنكَ سُلْطَانًا نَّصِيرًا", translation: "My Lord, cause me to enter a sound entrance and to exit a sound exit and grant me from Yourself a supporting authority.", reference: "Surah Al-Isra 17:80" },
+  { arabic: "رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي يَفْقَهُوا قَوْلِي", translation: "My Lord, expand for me my breast [with assurance] and ease for me my task and untie the knot from my tongue that they may understand my speech.", reference: "Surah Ta-Ha 20:25-28 (Dua of Musa)" },
+  { arabic: "رَّبِّ زِدْنِي عِلْمًا", translation: "My Lord, increase me in knowledge.", reference: "Surah Ta-Ha 20:114" },
+  { arabic: "لَّا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ", translation: "There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.", reference: "Surah Al-Anbya 21:87 (Dua of Yunus)" },
+  { arabic: "أَنِّي مَسَّنِيَ الضُّرُّ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ", translation: "Indeed, adversity has touched me, and You are the Most Merciful of the merciful.", reference: "Surah Al-Anbya 21:83 (Dua of Ayyub)" },
+  { arabic: "رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ الْوَارِثِينَ", translation: "My Lord, do not leave me alone [with no heir], while you are the best of inheritors.", reference: "Surah Al-Anbya 21:89 (Dua of Zakariyya)" },
+  { arabic: "رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ", translation: "My Lord, enable me to be grateful for Your favor which You have bestowed upon me and upon my parents and to do righteousness of which You approve. And admit me by Your mercy into [the ranks of] Your righteous servants.", reference: "Surah An-Naml 27:19 (Dua of Sulayman)" },
+  { arabic: "رَبَّنَا آمَنَّا فَاغْفِرْ لَنَا وَارْحَمْنَا وَأَنتَ خَيْرُ الرَّاحِمِينَ", translation: "Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful.", reference: "Surah Al-Mu'minun 23:109" },
+  { arabic: "رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا", translation: "Our Lord, grant us from among our wives and offspring comfort to our eyes and make us a leader [i.e., example] for the righteous.", reference: "Surah Al-Furqan 25:74" },
+  { arabic: "رَبِّ هَبْ لِي حُكْمًا وَأَلْحِقْنِي بِالصَّالِحِينَ وَاجْعَل لِّي لِسَانَ صِدْقٍ فِي الْآخِرِينَ وَاجْعَلْنِي مِن وَرَثَةِ جَنَّةِ النَّعِيمِ", translation: "My Lord, grant me wisdom and join me with the righteous. And grant me a reputation of honor among later generations. And make me among the inheritors of the Garden of Pleasure.", reference: "Surah Ash-Shu'ara 26:83-85 (Dua of Ibrahim)" },
+  { arabic: "رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ", translation: "My Lord, save me from the wrongdoing people.", reference: "Surah Al-Qasas 28:21 (Dua of Musa)" },
+  { arabic: "رَبِّ إِنِّي ظَلَمْتُ نَفْسِي فَاغْفِرْ لِي", translation: "My Lord, indeed I have wronged myself, so forgive me.", reference: "Surah Al-Qasas 28:16 (Dua of Musa)" },
+  { arabic: "رَبَّنَا وَسِعْتَ كُلَّ شَيْءٍ رَّحْمَةً وَعِلْمًا فَاغْفِرْ لِلَّذِينَ تَابُوا وَاتَّبَعُوا سَبِيلَكَ وَقِهِمْ عَذَابَ الْجَحِيمِ", translation: "Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who have repented and followed Your way and protect them from the punishment of Hellfire.", reference: "Surah Ghafir 40:7" },
+  { arabic: "رَبَّنَا اكْشِفْ عَنَّا الْعَذَابَ إِنَّا مُؤْمِنُونَ", translation: "Our Lord, remove from us the torment; indeed, we are believers.", reference: "Surah Ad-Dukhan 44:12" },
+  { arabic: "رَبَّنَا اغْفِرْ لَنَا وَلِإِخْوَانِنَا الَّذِينَ سَبَقُونَا بِالْإِيمَانِ وَلَا تَجْعَلْ فِي قُلُوبِنَا غِلًّا لِّلَّذِينَ آمَنُوا رَبَّنَا إِنَّكَ رَءُوفٌ رَّحِيمٌ", translation: "Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful.", reference: "Surah Al-Hashr 59:10" },
+  { arabic: "رَّبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ", translation: "Our Lord, upon You we have relied, and to You we have returned, and to You is the destination.", reference: "Surah Al-Mumtahanah 60:4" },
+  { arabic: "رَّبَّنَا أَتْمِمْ لَنَا نُورَنَا وَاغْفِرْ لَنَا ۖ إِنَّكَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ", translation: "Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.", reference: "Surah At-Tahrim 66:8" },
+  { arabic: "رَّبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ وَأَعُوذُ بِكَ رَبِّ أَن يَحْضُرُونِ", translation: "My Lord, I seek refuge in You from the incitements of the devils, and I seek refuge in You, my Lord, lest they be present with me.", reference: "Surah Al-Mu'minun 23:97-98" },
+  { arabic: "رَبَّنَا آمَنَّا فَاكْتُبْنَا مَعَ الشَّاهِدِينَ", translation: "Our Lord, we have believed, so register us among the witnesses.", reference: "Surah Al-Ma'idah 5:83" },
+  { arabic: "رَبَّنَا أَخْرِجْنَا مِنْ هَٰذِهِ الْقَرْيَةِ الظَّالِمِ أَهْلُهَا وَاجْعَل لَّنَا مِن لَّدُنكَ وَلِيًّا وَاجْعَل لَّنَا مِن لَّدُنكَ نَصِيرًا", translation: "Our Lord, take us out of this city of oppressive people and appoint for us from Yourself a protector and appoint for us from Yourself a helper.", reference: "Surah An-Nisa 4:75" },
+  { arabic: "رَبَّنَا إِنَّنَا نَخَافُ أَن يَفْرُطَ عَلَيْنَا أَوْ أَن يَطْغَىٰ", translation: "Our Lord, indeed we are afraid that he will hasten [punishment] against us or that he will transgress.", reference: "Surah Ta-Ha 20:45" },
+  { arabic: "رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا", translation: "Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance.", reference: "Surah Al-Kahf 18:10" },
+  { arabic: "رَبِّ لَوْ شِئْتَ أَهْلَكْتَهُم مِّن قَبْلُ وَإِيَّايَ ۖ أَتُهْلِكُنَا بِمَا فَعَلَ السُّفَهَاءُ مِنَّا ۖ إِنْ هِيَ إِلَّا فِتْنَتُكَ تُضِلُّ بِهَا مَن تَشَاءُ وَتَهْدِي مَن تَشَاءُ ۖ أَنتَ وَلِيُّنَا فَاغْفِرْ لَنَا وَارْحَمْنَا ۖ وَأَنتَ خَيْرُ الْغَافِرِينَ", translation: "My Lord, if You had willed, You could have destroyed them before and me [as well]. Would You destroy us for what the foolish among us have done? This is not but Your trial by which You send astray whom You will and guide whom You will. You are our Protector, so forgive us and have mercy upon us, and You are the best of forgivers.", reference: "Surah Al-A'raf 7:155 (Dua of Musa)" },
+  { arabic: "رَبِّ اجْعَلْ هَٰذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ", translation: "My Lord, make this city [Makkah] secure and keep me and my sons away from worshipping idols.", reference: "Surah Ibrahim 14:35 (Dua of Ibrahim)" },
+  { arabic: "رَبَّنَا إِنَّكَ تَعْلَمُ مَا نُخْفِي وَمَا نُعْلِنُ ۗ وَمَا يَخْفَىٰ عَلَى اللَّهِ مِن شَيْءٍ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ", translation: "Our Lord, indeed You know what we conceal and what we declare, and nothing is hidden from Allah on the earth or in the heaven.", reference: "Surah Ibrahim 14:38" },
+  { arabic: "رَبَّنَا لَا تَجْعَلْنَا مَعَ الْقَوْمِ الظَّالِمِينَ", translation: "Our Lord, do not place us with the wrongdoing people.", reference: "Surah Al-A'raf 7:47" },
+  { arabic: "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ", translation: "Our Lord, decide between us and our people in truth, and You are the best of those who give decision.", reference: "Surah Al-A'raf 7:89" },
+  { arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ", translation: "Our Lord, pour upon us patience and let us die as Muslims [in submission to You].", reference: "Surah Al-A'raf 7:126" }
 ];
 
 // ── 25 Authentic Hadiths of the Day ──
 const DAILY_HADITHS = [
-  {
-    arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى",
-    translation: "Actions are but by intentions, and every person will have only what he intended.",
-    reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907"
-  },
-  {
-    arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ",
-    translation: "None of you truly believes until he loves for his brother what he loves for himself.",
-    reference: "Sahih al-Bukhari 13 · Sahih Muslim 45"
-  },
-  {
-    arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ",
-    translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.",
-    reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47"
-  },
-  {
-    arabic: "إِنَّ أَحْسَنَكُمْ أَخْلَاقًا أَحَاسِنُكُمْ إِيمَانًا",
-    translation: "The most complete of believers in faith are those with the best character.",
-    reference: "Sunan at-Tirmidhi 1162"
-  },
-  {
-    arabic: "إِنَّ اللَّهَ لاَ يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ",
-    translation: "Allah does not look at your appearance or your wealth, but He looks at your hearts and your deeds.",
-    reference: "Sahih Muslim 2564"
-  },
-  {
-    arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ",
-    translation: "The most beloved of deeds to Allah are those that are most consistent, even if they are small.",
-    reference: "Sahih al-Bukhari 6464 · Sahih Muslim 783"
-  },
-  {
-    arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ",
-    translation: "A Muslim is the one from whose tongue and hands the Muslims are safe.",
-    reference: "Sahih al-Bukhari 10 · Sahih Muslim 40"
-  },
-  {
-    arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ",
-    translation: "The strong man is not the one who can overpower others, but the one who controls himself when angry.",
-    reference: "Sahih al-Bukhari 6114 · Sahih Muslim 2609"
-  },
-  {
-    arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ",
-    translation: "Fear Allah wherever you are, follow a bad deed with a good one and it will wipe it out, and treat people with good character.",
-    reference: "Sunan at-Tirmidhi 1987"
-  },
-  {
-    arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ",
-    translation: "Cleanliness is half of faith.",
-    reference: "Sahih Muslim 223"
-  },
-  {
-    arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ",
-    translation: "The best of you are those who learn the Quran and teach it.",
-    reference: "Sahih al-Bukhari 5027"
-  },
-  {
-    arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا",
-    translation: "Make things easy and do not make them difficult, give glad tidings and do not repel people.",
-    reference: "Sahih al-Bukhari 69 · Sahih Muslim 1734"
-  },
-  {
-    arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ",
-    translation: "Whoever believes in Allah and the Last Day, let him honour his guest.",
-    reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47"
-  },
-  {
-    arabic: "لاَ تَحْقِرَنَّ مِنَ الْمَعْرُوفِ شَيْئًا، وَلَوْ أَنْ تَلْقَى أَخَاكَ بِوَجْهٍ طَلْقٍ",
-    translation: "Do not belittle any good deed, even meeting your brother with a cheerful face.",
-    reference: "Sahih Muslim 2626"
-  },
-  {
-    arabic: "لاَ يَشْكُرُ اللَّهَ مَنْ لاَ يَشْكُرُ النَّاسَ",
-    translation: "The one who is not grateful to people is not grateful to Allah.",
-    reference: "Sunan Abi Dawud 4811"
-  },
-  {
-    arabic: "ادْعُوا اللَّهَ وَأَنْتُمْ مُوقِنُونَ بِالإِجَابَةِ",
-    translation: "Make supplication to Allah while you are certain of a response.",
-    reference: "Sunan at-Tirmidhi 2949"
-  },
-  {
-    arabic: "وَالْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ",
-    translation: "A kind word is charity.",
-    reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009"
-  },
-  {
-    arabic: "وَأَمَاطَتُكَ الأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ",
-    translation: "Removing a harmful thing from the path is charity.",
-    reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009"
-  },
-  {
-    arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَرْحَمْ صَغِيرَنَا وَيَعْرِفْ شَرَفَ كَبِيرِنَا",
-    translation: "He who does not show mercy to our young or respect our elders is not from us.",
-    reference: "Sunan at-Tirmidhi 1919"
-  },
-  {
-    arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا",
-    translation: "The most complete of believers in faith are those with the best character.",
-    reference: "Sunan at-Tirmidhi 1162"
-  },
-  {
-    arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ",
-    translation: "Your smile in the face of your brother is charity.",
-    reference: "Sunan at-Tirmidhi 1956"
-  },
-  {
-    arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ، وَأَنَا خَيْرُكُمْ لأَهْلِي",
-    translation: "The best of you are those who are best to their families, and I am the best of you to my family.",
-    reference: "Sunan at-Tirmidhi 3895"
-  },
-  {
-    arabic: "وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ",
-    translation: "Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.",
-    reference: "Sahih Muslim 2699"
-  },
-  {
-    arabic: "الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ",
-    translation: "The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.",
-    reference: "Sunan at-Tirmidhi 2507"
-  },
-  {
-    arabic: "مَنْ لاَ يَرْحَمُ لاَ يُرْحَمُ",
-    translation: "Whoever does not show mercy will not be shown mercy.",
-    reference: "Sahih al-Bukhari 7376 · Sahih Muslim 2319"
-  }
+  { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907" },
+  { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45" },
+  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
+  { arabic: "إِنَّ أَحْسَنَكُمْ أَخْلَاقًا أَحَاسِنُكُمْ إِيمَانًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162" },
+  { arabic: "إِنَّ اللَّهَ لاَ يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ", translation: "Allah does not look at your appearance or your wealth, but He looks at your hearts and your deeds.", reference: "Sahih Muslim 2564" },
+  { arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ", translation: "The most beloved of deeds to Allah are those that are most consistent, even if they are small.", reference: "Sahih al-Bukhari 6464 · Sahih Muslim 783" },
+  { arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ", translation: "A Muslim is the one from whose tongue and hands the Muslims are safe.", reference: "Sahih al-Bukhari 10 · Sahih Muslim 40" },
+  { arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ", translation: "The strong man is not the one who can overpower others, but the one who controls himself when angry.", reference: "Sahih al-Bukhari 6114 · Sahih Muslim 2609" },
+  { arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ", translation: "Fear Allah wherever you are, follow a bad deed with a good one and it will wipe it out, and treat people with good character.", reference: "Sunan at-Tirmidhi 1987" },
+  { arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ", translation: "Cleanliness is half of faith.", reference: "Sahih Muslim 223" },
+  { arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", translation: "The best of you are those who learn the Quran and teach it.", reference: "Sahih al-Bukhari 5027" },
+  { arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا", translation: "Make things easy and do not make them difficult, give glad tidings and do not repel people.", reference: "Sahih al-Bukhari 69 · Sahih Muslim 1734" },
+  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ", translation: "Whoever believes in Allah and the Last Day, let him honour his guest.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
+  { arabic: "لاَ تَحْقِرَنَّ مِنَ الْمَعْرُوفِ شَيْئًا، وَلَوْ أَنْ تَلْقَى أَخَاكَ بِوَجْهٍ طَلْقٍ", translation: "Do not belittle any good deed, even meeting your brother with a cheerful face.", reference: "Sahih Muslim 2626" },
+  { arabic: "لاَ يَشْكُرُ اللَّهَ مَنْ لاَ يَشْكُرُ النَّاسَ", translation: "The one who is not grateful to people is not grateful to Allah.", reference: "Sunan Abi Dawud 4811" },
+  { arabic: "ادْعُوا اللَّهَ وَأَنْتُمْ مُوقِنُونَ بِالإِجَابَةِ", translation: "Make supplication to Allah while you are certain of a response.", reference: "Sunan at-Tirmidhi 2949" },
+  { arabic: "وَالْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ", translation: "A kind word is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009" },
+  { arabic: "وَأَمَاطَتُكَ الأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ", translation: "Removing a harmful thing from the path is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009" },
+  { arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَرْحَمْ صَغِيرَنَا وَيَعْرِفْ شَرَفَ كَبِيرِنَا", translation: "He who does not show mercy to our young or respect our elders is not from us.", reference: "Sunan at-Tirmidhi 1919" },
+  { arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162" },
+  { arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ", translation: "Your smile in the face of your brother is charity.", reference: "Sunan at-Tirmidhi 1956" },
+  { arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ، وَأَنَا خَيْرُكُمْ لأَهْلِي", translation: "The best of you are those who are best to their families, and I am the best of you to my family.", reference: "Sunan at-Tirmidhi 3895" },
+  { arabic: "وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ", translation: "Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.", reference: "Sahih Muslim 2699" },
+  { arabic: "الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ", translation: "The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.", reference: "Sunan at-Tirmidhi 2507" },
+  { arabic: "مَنْ لاَ يَرْحَمُ لاَ يُرْحَمُ", translation: "Whoever does not show mercy will not be shown mercy.", reference: "Sahih al-Bukhari 7376 · Sahih Muslim 2319" }
 ];
 
 function dayOfYearIndex(len){
@@ -10396,7 +10222,6 @@ function getSharePrayerTimes(){
     if(prayerState.timesDateKey !== currentDateKey()) recomputePrayerTimes();
     return { times: prayerState.todayTimes || {}, city: prayerState.city || 'My location' };
   }
-  // Makkah fallback
   const raw = computePrayerTimes(new Date(), 21.4225, 39.8262, 'Makkah', 'Standard');
   const times = {};
   for(const p of PRAYERS){
@@ -10450,7 +10275,6 @@ function loadShareCard(){
   setText('shareHadithRef',         d.hadith.reference);
 }
 
-// ── Canvas helpers for PNG share card ──
 function _cvRoundRect(ctx, x, y, w, h, r){
   r = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -10516,7 +10340,6 @@ async function shareCardAsImage(){
     const LH_AR = 74;
     const LH_TR = 42;
 
-    // ── measure pass ──
     const mc = document.createElement('canvas').getContext('2d');
     const measureAr = (text) => { mc.font = AR_SIZE + 'px ' + AR_FONT; return _cvWrapText(mc, text, INNER - 40); };
     const measureTr = (text) => { mc.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT; return _cvWrapText(mc, text, INNER - 40); };
@@ -10526,32 +10349,30 @@ async function shareCardAsImage(){
     const hadithAr = measureAr(d.hadith.arabic);
     const hadithTr = measureTr('"' + d.hadith.translation + '"');
 
-    // ── compute height ──
     let H = PAD;
-    H += 50 + 14;   // brand
-    H += 56 + 4;    // city
-    H += 30 + 30;   // dates + gap
-    H += 100 + 24;  // prayer row + gap
-    H += 30;        // divider
-    H += 32 + 8;    // title
+    H += 50 + 14;
+    H += 56 + 4;
+    H += 30 + 30;
+    H += 100 + 24;
+    H += 30;
+    H += 32 + 8;
     H += duahAr.length * LH_AR;
     H += 12;
     H += duahTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;   // reference + gap
-    H += 30;        // divider
-    H += 32 + 8;    // title
+    H += 28 + 24;
+    H += 30;
+    H += 32 + 8;
     H += hadithAr.length * LH_AR;
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;   // reference + gap
-    H += 30;        // divider
-    H += 30 + 30;   // footer
+    H += 28 + 24;
+    H += 30;
+    H += 30 + 30;
     H += PAD;
     H = Math.round(H);
 
-    // ── set up canvas ──
     const canvas = document.createElement('canvas');
     canvas.width  = W * SCALE;
     canvas.height = H * SCALE;
@@ -10559,7 +10380,6 @@ async function shareCardAsImage(){
     ctx.scale(SCALE, SCALE);
     ctx.textBaseline = 'middle';
 
-    // ── background ──
     const bg = ctx.createRadialGradient(W / 2, -200, 100, W / 2, 0, H);
     bg.addColorStop(0,    '#1a2540');
     bg.addColorStop(0.55, '#0d1119');
@@ -10567,14 +10387,12 @@ async function shareCardAsImage(){
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // bottom subtle glow
     const bg2 = ctx.createRadialGradient(W / 2, H + 60, 100, W / 2, H, H / 2);
     bg2.addColorStop(0, 'rgba(79,140,255,0.08)');
     bg2.addColorStop(1, 'rgba(79,140,255,0)');
     ctx.fillStyle = bg2;
     ctx.fillRect(0, 0, W, H);
 
-    // ── gold double border ──
     ctx.strokeStyle = '#c9a227';
     ctx.lineWidth = 4;
     _cvRoundRect(ctx, 24, 24, W - 48, H - 48, 36);
@@ -10584,7 +10402,6 @@ async function shareCardAsImage(){
     _cvRoundRect(ctx, 36, 36, W - 72, H - 72, 30);
     ctx.stroke();
 
-    // ── brand bar ──
     let y = PAD;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e3bd45';
@@ -10599,20 +10416,17 @@ async function shareCardAsImage(){
     ctx.fillText('QURAN RECITATION COACH', W - PAD, y + 25);
     y += 50 + 14;
 
-    // ── city ──
     ctx.textAlign = 'center';
     ctx.fillStyle = '#e8edf7';
     ctx.font = '800 48px ' + UI_FONT;
     ctx.fillText(d.city, W / 2, y + 28);
     y += 56 + 4;
 
-    // ── dates ──
     ctx.fillStyle = '#8f9bb3';
     ctx.font = '600 22px ' + UI_FONT;
     ctx.fillText(d.hijriStr + '   ·   ' + d.gregStr, W / 2, y + 15);
     y += 30 + 30;
 
-    // ── prayer row ──
     const cellGap = 8;
     const cellW = (INNER - cellGap * 5) / 6;
     PRAYERS.forEach((p, i) => {
@@ -10637,7 +10451,6 @@ async function shareCardAsImage(){
     });
     y += 100 + 24;
 
-    // ── divider + Duah ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.textAlign = 'left';
@@ -10662,7 +10475,6 @@ async function shareCardAsImage(){
     ctx.fillText(d.duah.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    // ── divider + Hadith ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.textAlign = 'left';
@@ -10687,7 +10499,6 @@ async function shareCardAsImage(){
     ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    // ── divider + footer ──
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
     ctx.fillStyle = '#8f9bb3';
@@ -10698,7 +10509,6 @@ async function shareCardAsImage(){
     ctx.font = '700 22px ' + UI_FONT;
     ctx.fillText('https://recite-hazel.vercel.app/', W / 2, y + 15);
 
-    // ── export PNG ──
     canvas.toBlob(async (blob) => {
       if(shareBtn) shareBtn.disabled = false;
       if(!blob){ showToast('⚠️ Could not generate image.'); return; }
@@ -10707,17 +10517,10 @@ async function shareCardAsImage(){
       try { canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch(_){}
       if(canShareFiles){
         try{
-          await navigator.share({
-            files: [file],
-            title: 'Recite — Daily Card',
-            text: 'from Recite, https://recite-hazel.vercel.app/'
-          });
+          await navigator.share({ files: [file], title: 'Recite — Daily Card', text: 'from Recite, https://recite-hazel.vercel.app/' });
           return;
-        }catch(e){
-          if(e && e.name === 'AbortError') return;
-        }
+        }catch(e){ if(e && e.name === 'AbortError') return; }
       }
-      // Fallback: download
       try{
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -10728,34 +10531,25 @@ async function shareCardAsImage(){
         a.remove();
         setTimeout(() => { try{ URL.revokeObjectURL(url); }catch(_){} }, 5000);
         showToast('🖼️ Card saved — share it anywhere.');
-      }catch(e){
-        showToast('⚠️ Could not share or save the image.');
-      }
+      }catch(e){ showToast('⚠️ Could not share or save the image.'); }
     }, 'image/png');
   } catch(err){
     if(shareBtn) shareBtn.disabled = false;
     console.warn('[ShareCard] failed:', err);
     showToast('⚠️ Could not generate the share card.');
   }
-} /* ── Plain-text version of the daily card ─────────────────── */
+}
+
 function buildShareCardText(){
   const d = getShareCardData();
   const lines = [];
-
-  // Header
   lines.push('*Prayer Times — ' + d.city + '*');
   lines.push('_' + d.hijriStr + ' · ' + d.gregStr + '_');
   lines.push('');
-
-  // Prayer times
-  for(const p of PRAYERS){
-    lines.push(p.label + ' — ' + (d.times[p.key] || '--:--'));
-  }
+  for(const p of PRAYERS){ lines.push(p.label + ' — ' + (d.times[p.key] || '--:--')); }
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Duah of the Day
   lines.push('*Duah of the Day*');
   lines.push('');
   lines.push(d.duah.arabic);
@@ -10766,8 +10560,6 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Hadith of the Day
   lines.push('*Hadith of the Day*');
   lines.push('');
   lines.push(d.hadith.arabic);
@@ -10778,36 +10570,22 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-
-  // Footer
   lines.push('from *Recite*,');
   lines.push('https://recite-hazel.vercel.app/');
-
   return lines.join('\n');
 }
 
-/* ── Share as text — native share sheet, then copy modal ──── */
 async function shareCardAsText(){
   const shareBtn = document.getElementById('shareCardTextBtn');
   if(shareBtn) shareBtn.disabled = true;
   try{
     const text = buildShareCardText();
-
-    // 1. Native share sheet (mobile) — text-only payload.
-    //    On iOS / Android this opens WhatsApp, Telegram,
-    //    Messages, etc. directly with the text ready to send.
     if(navigator.share){
       try{
         await navigator.share({ title: 'Recite — Daily Card', text: text });
-        return;                                // shared — done
-      }catch(e){
-        if(e && e.name === 'AbortError') return; // user cancelled — silent
-        // any other error → fall through to the modal
-      }
+        return;
+      }catch(e){ if(e && e.name === 'AbortError') return; }
     }
-
-    // 2. Desktop / unsupported browser — show a modal with
-    //    the text pre-selected so a single Ctrl+C copies it.
     showTextShareModal(text);
   }catch(err){
     console.warn('[ShareCard] text share failed:', err);
@@ -10817,11 +10595,9 @@ async function shareCardAsText(){
   }
 }
 
-/* ── Copyable modal for text sharing ──────────────────────── */
 function showTextShareModal(text){
   const existing = document.getElementById('shareCardTextBg');
   if(existing) existing.remove();
-
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.id = 'shareCardTextBg';
@@ -10840,14 +10616,11 @@ function showTextShareModal(text){
       '</div>' +
     '</div>';
   document.body.appendChild(bg);
-
   const ta = bg.querySelector('#shareCardTextarea');
   ta.value = text;
-
   const close = () => bg.remove();
   bg.addEventListener('click', e => { if(e.target === bg) close(); });
   bg.querySelector('#shareCardTextClose').addEventListener('click', close);
-
   bg.querySelector('#shareCardCopyBtn').addEventListener('click', async () => {
     try{
       ta.focus();
@@ -10864,8 +10637,6 @@ function showTextShareModal(text){
       catch(e){ showToast('⚠️ Could not copy — select the text and copy manually.'); }
     }
   });
-
-  // Auto-select so Ctrl+C / Cmd+C works immediately
   setTimeout(() => { try{ ta.focus(); ta.select(); }catch(_){} }, 80);
 }
 
