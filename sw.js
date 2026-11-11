@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.2.1 — Forces SW reinstall + clean shell rebuild s
+   v2.2.2 — Forces SW reinstall + clean shell rebuild s
    clients pick up the latest index.html which includes:
 
      • Microphone reliability fix (Coach screen):
