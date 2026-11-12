@@ -5694,77 +5694,23 @@ const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.85;
 const FOLLOW_MAX_LOOKAHEAD  = 2;
 
-/* ── Per-word similarity (norm + phon + loose-phon, best-of) ── */
-function followWordSimilarity(spoken, refWord){
-  if (spoken.norm === refWord.norm) return 1.0;
-  const maxLen = Math.max(spoken.norm.length, refWord.norm.length);
-  if (maxLen === 0) return 1.0;
-  let sim = (maxLen - lev(spoken.norm, refWord.norm)) / maxLen;
-
-  const hPhon = phonArCached(spoken.raw);
-  if (hPhon.length >= 2 && refWord.phon && refWord.phon.length >= 2){
-    const maxP = Math.max(hPhon.length, refWord.phon.length);
-    const simP = (maxP - lev(hPhon, refWord.phon)) / maxP;
-    if (simP > sim) sim = simP;
+function followSimilarity(heard, hPhon, hPhonLoose, w){
+  if (!w || !heard) return 0;
+  const wNorm   = w.norm;
+  const maxLenN = Math.max(heard.length, wNorm.length, 1);
+  const simN    = Math.max(0, 1 - lev(heard, wNorm) / maxLenN);
+  let best = simN;
+  if (hPhon && hPhon.length >= 2 && w.phon && w.phon.length >= 2){
+    const maxP = Math.max(hPhon.length, w.phon.length);
+    const simP = Math.max(0, 1 - lev(hPhon, w.phon) / maxP);
+    if (simP > best) best = simP;
   }
-  if (followOnly && refWord.phonLoose && refWord.phonLoose.length >= 2){
-    const hPhonLoose = phonLooseArCached(spoken.raw);
-    if (hPhonLoose.length >= 2){
-      const maxPL = Math.max(hPhonLoose.length, refWord.phonLoose.length);
-      const simPL = (maxPL - lev(hPhonLoose, refWord.phonLoose)) / maxPL;
-      if (simPL > sim) sim = simPL;
-    }
+  if (followOnly && hPhonLoose && hPhonLoose.length >= 2 && w.phonLoose && w.phonLoose.length >= 2){
+    const maxPL  = Math.max(hPhonLoose.length, w.phonLoose.length);
+    const simPL  = Math.max(0, 1 - lev(hPhonLoose, w.phonLoose) / maxPL);
+    if (simPL > best) best = simPL;
   }
-  return sim;
-}
-
-/* ── Bounded multi-token sequential jump (Follow mode only) ───
-   Returns { newPtr, consumed } on success, otherwise null.
-   - Requires >=2 spoken tokens (single-token streaming unaffected).
-   - Scans at most FOLLOW_SEQ_LOOKAHEAD reference words ahead.
-   - Every match must be contiguous within the same verse.
-   - Fails fast on Muqattaat (handled by its own state machine).  */
-function tryFollowSequenceJump(tokens, tokenIdx, refIdx){
-  if (!followOnly) return null;
-  if (refIdx >= words.length) return null;
-
-  const remaining = tokens.length - tokenIdx;
-  if (remaining < 2) return null;
-
-  const spokenCount = Math.min(remaining, FOLLOW_SEQ_MAX_SPOKEN);
-  const spoken = [];
-  for (let k = 0; k < spokenCount; k++){
-    const raw = tokens[tokenIdx + k];
-    const n = normArCached(raw);
-    if (!n) return null;
-    spoken.push({ raw: raw, norm: n });
-  }
-
-  const maxStart = Math.min(refIdx + FOLLOW_SEQ_LOOKAHEAD, words.length);
-
-  for (let start = refIdx; start < maxStart; start++){
-    if (words[start].isMuqattaat) continue;
-    const firstVerse = words[start].verse;
-
-    let matchCount = 0;
-    for (let j = 0; j < spokenCount; j++){
-      if (start + j >= words.length) break;
-      if (words[start + j].verse !== firstVerse) break;
-      if (words[start + j].isMuqattaat) break;
-
-      const sim = followWordSimilarity(spoken[j], words[start + j]);
-      if (sim >= FOLLOW_SEQ_MIN_SIM) matchCount++;
-      else break;                           // contiguous only
-    }
-
-    if (matchCount >= 2){
-      const newPtr = start + matchCount;
-      if (newPtr > refIdx){
-        return { newPtr: newPtr, consumed: matchCount };
-      }
-    }
-  }
-  return null;
+  return best;
 }
 
 function followExitConfidence(heard, hPhon, hPhonLoose, w){
@@ -5778,24 +5724,7 @@ function followExitConfidence(heard, hPhon, hPhonLoose, w){
 const FOLLOW_LOOKAHEAD = 1;
 const FOLLOW_WRONG_LIMIT = 3;
 const FOLLOW_PIN_STOP_MS = 10000;
-
-/* ── Sequential lookahead (Follow-mode only) ──────────────────
-   Prevents the highlight from jumping to arbitrary matching
-   words elsewhere in the mushaf when a wrong verse is recited.
-   Only multi-word ASR sequences (>=2 tokens) can trigger a jump,
-   and every jumped-over reference word must be contiguous and
-   within a strict similarity threshold.                        */
-
-const FOLLOW_SEQ_LOOKAHEAD  = 5;    // ← try 6 or 7 if jumps beyond 5 words fail
-const FOLLOW_SEQ_MIN_SIM    = 0.8;  // ← try 0.70 – 0.75 for lenient, 0.85+ for strict
-const FOLLOW_SEQ_MAX_SPOKEN = 4;    // ← try 5 if ASR returns long chunks
-
-const FOLLOW_SEQ_LOOKAHEAD  = 6;
-const FOLLOW_SEQ_MIN_SIM    = 0.72;
-const FOLLOW_SEQ_MAX_SPOKEN = 5;
-
 let followWrongTokens = 0;
-
 let followPinTimer    = null;
 let followPinPtr      = -1;
 
@@ -6191,7 +6120,7 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
+    const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
     if (mergedN > 0){
       commitManyCorrect(ptr, ptr + mergedN, null);
       advancePast(mergedN);
@@ -6200,25 +6129,7 @@ const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
       used++; continue;
     }
 
-    /* ── Sequential lookahead (Follow mode only) ──────────────
-       Uses the next 2–4 spoken tokens to validate any forward
-       jump. Only fires on multi-token results, so single-token
-       streaming is unaffected and normal speed is preserved.  */
-    if (followOnly && w && !w.isMuqattaat){
-      const seq = tryFollowSequenceJump(tokens, ti, ptr);
-      if (seq){
-        commitManyCorrect(ptr, seq.newPtr, null);
-        advancePast(seq.newPtr - ptr);
-        noteFollowProgress();
-        pendingHeard.length = 0;
-        used += seq.consumed;
-        ti   += (seq.consumed - 1);   // adjust for the for-loop ++
-        continue;
-      }
-    }
-
     let jumped = false;
-
     for (let k = 1; k <= FOLLOW_MAX_LOOKAHEAD; k++){
       if (ptr + k >= words.length) break;
       const futureW = words[ptr + k];
