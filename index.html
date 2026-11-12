@@ -3183,8 +3183,8 @@ const TEXT_TRANSLATION_OPTIONS = [
   // Français — audio from QuranEnc (french_montada)
   { id: 'fr.hamidullah', quranComId: 31,  lang: 'fr', audioFolder: 'French/French_Hamidullah_128kbps', quranEncKey: 'french_montada', label: 'Français — Hamidullah', shortLabel: 'Hamidullah' },
 
-  // 中文 (Mandarin) — audio from QuranEnc (chinese_makin)
-  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps', quranEncKey: 'chinese_makin', label: '中文 — Ma Jian', shortLabel: 'Ma Jian' }
+  // 中文 (Mandarin) — audio from QuranEnc (chinese_suliman)
+  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps', quranEncKey: 'chinese_suliman', label: '中文 — Ma Jian', shortLabel: 'Ma Jian' }
 ];
 
 const LANG_OPTIONS = [
@@ -3845,14 +3845,23 @@ function buildTranslationAudioUrl(folder, surah, ayah){
   const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
 
   // ── Türkçe ────────────────────────────────────────────────────────────────
-  // EveryAyah's "Turkish/Turkish_Kamili_128kbps" folder is no longer served.
-  // Route Turkish requests to QuranEnc, which hosts per-ayah Turkish audio
-  // with predictable URL pattern: /data/audio/{key}/{sura_3}{aya_3}.mp3
-  if (opt && opt.lang === 'tr' && opt.quranEncKey) {
+
+  function buildTranslationAudioUrl(folder, surah, ayah){
+  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
+
+  // Route ANY translation that has a QuranEnc key to the QuranEnc CDN
+  if (opt && opt.quranEncKey) {
     const s = String(surah).padStart(3, '0');
     const a = String(ayah).padStart(3, '0');
     return 'https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3';
   }
+
+  // Fallback for English (EveryAyah)
+  let resolvedFolder = folder;
+  if (opt) resolvedFolder = opt.audioFolder;
+  return AYAH_AUDIO_BASE + resolvedFolder + '/' +
+         String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
+}
 
   // ── EveryAyah path (English / German / French / Chinese) ─────────────────
   let resolvedFolder = folder;
@@ -8543,12 +8552,8 @@ async function handleAudioDownloadTap(surahNumber, type){
   if(downloads[key]){ const yes = await confirmRemoveDownload(surahNumber, type); if(yes) await removeSurahDownload(surahNumber, type); return; }
   if(!navigator.onLine){ showToast('📶 Connect to the internet to download audio.', 3800); return; }
   if(!('caches' in window)){ showToast('⚠️ This browser cannot store audio offline.', 4200); return; }
-  if(type === 'tr'){
-    const probeUrl = buildTranslationAudioUrl(viewerAudio.translationId, surahNumber, 1);
-    showToast('⏳ Checking translation availability…', 6000);
-    const available = await probeTranslationAudio(probeUrl);
-    if(!available){ showToast('⚠️ This English translation isn\'t available on the audio server.', 6000); return; }
-  }
+
+ // Probe removed — download function handles CORS safely.
   const yes = await confirmSurahDownload(surahNumber, type);
   if(!yes) return;
   if(type === 'ar') downloadSurahAudio(surahNumber);
