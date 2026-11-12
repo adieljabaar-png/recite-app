@@ -5786,7 +5786,7 @@ let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
 const speechQueue = [];
-const SPEECH_THROTTLE_MS = 100;
+const SPEECH_THROTTLE_MS = 50;
 
 function resetSpeechPipeline(){
   speechQueue.length = 0;
@@ -5890,9 +5890,22 @@ async function runSpeechResultProcessing(snap) {
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
       scheduleHUD();
-    } else {
+
+} else {
       const already = interimProgress.get(i) || 0;
-      const safeEnd = Math.max(already, toks.length - 1);
+      let safeEnd = Math.max(already, toks.length - 1);
+      // In Follow mode, try to commit the withheld last token early when it
+      // is safe: >= 3 normalized letters AND not a strong prefix of the
+      // current expected word (that is the case where the ASR is still
+      // building the word and we must keep waiting).
+      if (followOnly && toks.length > already && safeEnd < toks.length) {
+        const tailNorm = normArCached(toks[toks.length - 1]);
+        const currentTarget = (ptr < words.length) ? words[ptr].norm : '';
+        const isSafeTail =
+          tailNorm.length >= 3 &&
+          !(currentTarget && currentTarget.startsWith(tailNorm));
+        if (isSafeTail) safeEnd = toks.length;
+      }
       const newToks = toks.slice(already, safeEnd);
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
@@ -5905,6 +5918,7 @@ async function runSpeechResultProcessing(snap) {
       const tail = toks.slice(-4).join(' ');
       if (statusHint && tail) statusHint.textContent = '… ' + tail;
     }
+
   }
   if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
     buildPhraseObjects(speechRecognition);
