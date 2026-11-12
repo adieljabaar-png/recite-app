@@ -2364,9 +2364,25 @@ body.light-mode .daily-duah-card { background: linear-gradient(135deg, rgba(166,
   font-size:.78rem;line-height:1.55;color:var(--muted);text-align:center;
   margin:0 0 6px;font-style:italic;
 }
+
 .share-reference{
   font-size:.62rem;color:var(--gold);font-weight:800;text-align:center;
   margin:0;text-transform:uppercase;letter-spacing:.06em;
+}
+.share-tafsir{
+  font-size:.8rem;
+  line-height:1.6;
+  color:var(--muted);
+  text-align:left;
+  margin:0;
+  padding:9px 12px;
+  background:rgba(79,140,255,.05);
+  border-left:3px solid var(--gold);
+  border-radius:6px;
+}
+body.light-mode .share-tafsir{
+  background:rgba(42,111,224,.05);
+  color:#4a5878;
 }
 
 .share-footer{
@@ -2583,14 +2599,22 @@ body.light-mode .share-arabic{color:#1a2233;}
 
       <div class="share-divider" role="separator"></div>
 
-      <div class="share-block">
+<div class="share-block">
         <div class="share-block-title">📜 Hadith of the Day</div>
         <p class="share-arabic" id="shareHadithArabic" dir="rtl"></p>
         <p class="share-translation" id="shareHadithTranslation"></p>
         <p class="share-reference" id="shareHadithRef"></p>
       </div>
 
+      <div class="share-divider" role="separator"></div>
+
+      <div class="share-block">
+        <div class="share-block-title">📚 Tafsir of the Duah</div>
+        <p class="share-tafsir" id="shareTafsirText"></p>
+      </div>
+
       <div class="share-footer">
+
         <span>from <b>Recite</b>,</span>
         <a href="https://recite-hazel.vercel.app/" target="_blank" rel="noopener">https://recite-hazel.vercel.app/</a>
       </div>
@@ -10198,8 +10222,103 @@ const DAILY_DUAHS = [
   { arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ", translation: "Our Lord, pour upon us patience and let us die as Muslims [in submission to You].", reference: "Surah Al-A'raf 7:126" }
 ];
 
+{ arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ", translation: "Our Lord, pour upon us patience and let us die as Muslims [in submission to You].", reference: "Surah Al-A'raf 7:126" }
+];
+
+// ── Short tafsir for each Quranic duah of the day ──
+const DUAH_TAFSIR = {
+  "Surah Al-Baqarah 2:127":
+    "When Ibrahim and Ismail raised the foundations of the Ka'bah, they asked Allah to accept their service. This teaches us that even the greatest deeds of worship require Allah's acceptance — the doer is never self-sufficient.",
+  "Surah Al-Baqarah 2:128":
+    "Ibrahim continues his supplication, asking to be made submissive to Allah and for his descendants to form a Muslim nation. He also asks to be shown the rites of worship and for his repentance to be accepted — a model for every parent who prays for righteous offspring.",
+  "Surah Al-Baqarah 2:201":
+    "This is the most balanced of all duas — seeking good in both this world and the Hereafter while being protected from the Fire. The Prophet ﷺ frequently recited this dua, as recorded in Sahih al-Bukhari.",
+  "Surah Al-Baqarah 2:250":
+    "Talut's believing army made this dua before facing Jalut's forces. They asked for patience, steadfast feet, and victory — demonstrating that triumph comes from Allah, not from numbers or strength.",
+  "Surah Al-Baqarah 2:286":
+    "This is the closing verse of Al-Baqarah, a sweeping dua covering forgiveness, mercy, and protection from burdens beyond our capacity. Allah responds directly in the following verse by affirming that He does not burden a soul beyond what it can bear.",
+  "Surah Ali 'Imran 3:8":
+    "A dua after the description of those with sound hearts. It asks Allah not to let the heart deviate after guidance — a reminder that steadfastness is a gift from Allah, not something earned alone.",
+  "Surah Ali 'Imran 3:16":
+    "The declaration of the people of understanding who affirm their faith and ask for forgiveness of sins. It shows that faith and seeking forgiveness are inseparable companions.",
+  "Surah Ali 'Imran 3:53":
+    "The disciples of Isa (Jesus) affirming belief in what Allah revealed and following the messenger. They asked to be recorded among the witnesses of truth — those who testify to the oneness of Allah.",
+  "Surah Ali 'Imran 3:147":
+    "The believers' dua after the Battle of Uhud, asking forgiveness for sins and excesses. Despite their wounds, they asked for steadfastness and victory over the disbelievers — a lesson in perseverance.",
+  "Surah Ali 'Imran 3:194":
+    "Asking Allah to fulfil what He promised through the messengers and to protect from disgrace on the Day of Judgment. It reflects both certainty in Allah's promise and fear of His reckoning.",
+  "Surah Al-A'raf 7:23 (Dua of Adam)":
+    "Adam and Hawwa's dua after eating from the forbidden tree. They admitted their wrong and sought Allah's forgiveness — establishing the model of repentance for all humanity: acknowledge, ask, and turn back.",
+  "Surah Hud 11:47 (Dua of Nuh)":
+    "Nuh's dua after asking Allah about his drowned son. He sought refuge from speaking without knowledge and asked for forgiveness and mercy — a reminder to be careful in our speech before Allah.",
+  "Surah Ibrahim 14:40 (Dua of Ibrahim)":
+    "Ibrahim's dua for himself and his descendants to establish prayer. He asked Allah to accept his supplication — a dua for continuity of worship across generations.",
+  "Surah Ibrahim 14:41":
+    "Ibrahim's dua for forgiveness for himself, his parents, and all believers on the Day of Reckoning. This was made before his father's death was confirmed as disbelief — an example of compassionate prayer.",
+  "Surah Al-Isra 17:80":
+    "A dua for a truthful entrance and a truthful exit, and for divine authority. The Prophet ﷺ recited this dua when entering and leaving Madinah — a supplication for protection and guidance in every transition.",
+  "Surah Ta-Ha 20:25-28 (Dua of Musa)":
+    "Musa's dua before facing Pharaoh. He asked for expansion of his breast, ease in his task, and eloquence of speech — showing complete dependence on Allah for difficult missions.",
+  "Surah Ta-Ha 20:114":
+    "A short but profound dua for increased knowledge. This is the only place in the Quran where the Prophet ﷺ was commanded to ask for more of something — highlighting the exalted status of knowledge.",
+  "Surah Al-Anbya 21:87 (Dua of Yunus)":
+    "Yunus's dua from the belly of the whale, containing tawheed, tasbih, and confession. The Prophet ﷺ said this dua brings relief to the distressed — a powerful prescription for hardship.",
+  "Surah Al-Anbya 21:83 (Dua of Ayyub)":
+    "Ayyub's brief dua after long illness. He did not complain but simply stated his condition and praised Allah as the Most Merciful — a lesson in patience and etiquette with Allah.",
+  "Surah Al-Anbya 21:89 (Dua of Zakariyya)":
+    "Zakariyya's dua for an heir. He feared no one would carry his legacy and asked Allah, the best of inheritors, not to leave him alone — a supplication for righteous continuity.",
+  "Surah An-Naml 27:19 (Dua of Sulayman)":
+    "Sulayman's dua upon hearing the ant. He asked for gratitude for Allah's favors and to do righteous deeds — connecting every blessing to thankfulness and right action.",
+  "Surah Al-Mu'minun 23:109":
+    "The believers' dua affirming faith and asking for forgiveness and mercy. This verse shows that humility in dua is a mark of the believers — they know their need for Allah.",
+  "Surah Al-Furqan 25:74":
+    "A dua for righteous spouses and children, and to be leaders of the righteous. It prioritizes family excellence in faith — the home is where spiritual leadership begins.",
+  "Surah Ash-Shu'ara 26:83-85 (Dua of Ibrahim)":
+    "Ibrahim's dua for wisdom, to join the righteous, for an honorable mention among later generations, and to be among the inheritors of Paradise.",
+  "Surah Al-Qasas 28:21 (Dua of Musa)":
+    "Musa's dua when fleeing Egypt. He asked Allah to save him from the wrongdoing people — a supplication for protection from oppression.",
+  "Surah Al-Qasas 28:16 (Dua of Musa)":
+    "Musa's dua after accidentally killing an Egyptian. He acknowledged his wrong and asked Allah to forgive him — showing the model of turning back to Allah after a mistake.",
+  "Surah Ghafir 40:7":
+    "The angels who carry the Throne ask forgiveness for the believers. This verse shows the honor of angels praying for us — a reason to be grateful for unseen intercession.",
+  "Surah Ad-Dukhan 44:12":
+    "The disbelievers' plea during punishment, promising faith in exchange for relief. It shows that dua at the wrong time may not be accepted — the time for faith is now.",
+  "Surah Al-Hashr 59:10":
+    "A dua for forgiveness of earlier believers and for no resentment toward them. This is a foundational dua for unity among Muslims — the heart must be free of grudges.",
+  "Surah Al-Mumtahanah 60:4":
+    "Ibrahim's declaration of reliance on Allah and return to Him. It is the essence of tawakkul (trust) and inabah (turning back) — the believer's twin anchors.",
+  "Surah At-Tahrim 66:8":
+    "A dua for perfect light and forgiveness. The Prophet ﷺ said this is a dua no one should forget on the Day of Judgment — light is what the believer will need most.",
+  "Surah Al-Mu'minun 23:97-98":
+    "A dua for refuge from the whispers of Shaytan and their presence. It shows we need Allah's protection from both inner whispers and outer harm.",
+  "Surah Al-Ma'idah 5:83":
+    "The believers' affirmation of faith and request to be recorded among the witnesses. This shows that sincere hearts are quick to testify to the truth.",
+  "Surah An-Nisa 4:75":
+    "A dua for deliverance from an oppressive city and for a protector and helper from Allah. It is the prayer of the weak against injustice.",
+  "Surah Ta-Ha 20:45":
+    "Musa and Harun's fear before Pharaoh. They expressed their human concern; Allah reassured them in the next verse — showing that fear is human, but trust in Allah is the cure.",
+  "Surah Al-Kahf 18:10":
+    "The youths of the cave's dua for mercy and right guidance. It was answered by Allah's protection and guidance — a supplication of the young who trust in Allah.",
+  "Surah Al-A'raf 7:155 (Dua of Musa)":
+    "Musa's dua after the golden calf incident. He expressed concern about collective punishment and appealed to Allah's mercy — a lesson in interceding with humility.",
+  "Surah Ibrahim 14:35 (Dua of Ibrahim)":
+    "Ibrahim's dua for the safety of Makkah and protection of his descendants from idol worship. A dua for security and pure monotheism.",
+  "Surah Ibrahim 14:38":
+    "Ibrahim's declaration that Allah knows all things. This verse is a reminder of Allah's complete knowledge — nothing is hidden from Him.",
+  "Surah Al-A'raf 7:47":
+    "A dua not to be placed with the wrongdoing people. It shows the importance of separating from evil and seeking safety in Allah.",
+  "Surah Al-A'raf 7:89":
+    "A dua for a just decision between the believers and their opponents. It reflects trust in Allah's justice — the believer is content with His verdict.",
+  "Surah Al-A'raf 7:126":
+    "The magicians' dua after believing in Musa. They asked for patience and to die as Muslims despite the threat of Pharaoh — showing that faith is a gift beyond all worldly terror."
+};
+
 // ── 25 Authentic Hadiths of the Day ──
 const DAILY_HADITHS = [
+
+// ── 25 Authentic Hadiths of the Day ──
+const DAILY_HADITHS = [
+
   { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907" },
   { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45" },
   { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
@@ -10288,9 +10407,11 @@ function loadShareCard(){
   setText('shareDuahArabic',      d.duah.arabic);
   setText('shareDuahTranslation', d.duah.translation);
   setText('shareDuahRef',         d.duah.reference);
-  setText('shareHadithArabic',      d.hadith.arabic);
+
+setText('shareHadithArabic',      d.hadith.arabic);
   setText('shareHadithTranslation', d.hadith.translation);
   setText('shareHadithRef',         d.hadith.reference);
+  setText('shareTafsirText', DUAH_TAFSIR[d.duah.reference] || '');
 }
 
 function _cvRoundRect(ctx, x, y, w, h, r){
@@ -10362,10 +10483,19 @@ async function shareCardAsImage(){
     const measureAr = (text) => { mc.font = AR_SIZE + 'px ' + AR_FONT; return _cvWrapText(mc, text, INNER - 40); };
     const measureTr = (text) => { mc.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT; return _cvWrapText(mc, text, INNER - 40); };
 
-    const duahAr   = measureAr(d.duah.arabic);
+const duahAr   = measureAr(d.duah.arabic);
     const duahTr   = measureTr('"' + d.duah.translation + '"');
     const hadithAr = measureAr(d.hadith.arabic);
     const hadithTr = measureTr('"' + d.hadith.translation + '"');
+
+    const TAFSIR_SIZE = 26;
+    const LH_TAFSIR = 38;
+    const tafsirText = DUAH_TAFSIR[d.duah.reference] || '';
+    const measureTafsir = (text) => {
+      mc.font = TAFSIR_SIZE + 'px ' + UI_FONT;
+      return _cvWrapText(mc, text, INNER - 40);
+    };
+    const tafsirLines = measureTafsir(tafsirText);
 
     let H = PAD;
     H += 50 + 14;
@@ -10385,7 +10515,11 @@ async function shareCardAsImage(){
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;
+   H += 28 + 24;
+    H += 30;
+    H += 32 + 8;
+    H += tafsirLines.length * LH_TAFSIR;
+    H += 12;
     H += 30;
     H += 30 + 30;
     H += PAD;
@@ -10512,10 +10646,28 @@ async function shareCardAsImage(){
     for(const line of hadithTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
     y += 12;
 
-    ctx.fillStyle = '#c9a227';
+ ctx.fillStyle = '#c9a227';
     ctx.font = '800 18px ' + UI_FONT;
     ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
+
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 22px ' + UI_FONT;
+    ctx.fillText('TAFSIR OF THE DUAH', PAD + 8, y + 16);
+    y += 32 + 8;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
+    for (const line of tafsirLines) {
+      ctx.fillText(line, W / 2, y + LH_TAFSIR / 2);
+      y += LH_TAFSIR;
+    }
+    y += 12;
 
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
@@ -10584,7 +10736,15 @@ function buildShareCardText(){
   lines.push('');
   lines.push('_"' + d.hadith.translation + '"_');
   lines.push('');
-  lines.push('— ' + d.hadith.reference);
+ 
+
+lines.push('— ' + d.hadith.reference);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('*Tafsir of the Duah*');
+  lines.push('');
+  lines.push(DUAH_TAFSIR[d.duah.reference] || '');
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');

@@ -1,33 +1,19 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.2.5 — Forces SW reinstall + clean shell rebuild s
+   v2.3.0 — Forces SW reinstall + clean shell rebuild so
    clients pick up the latest index.html which includes:
-
-     • Microphone reliability fix (Coach screen):
-         - SpeechRecognition now owns the microphone first,
-           exactly mirroring the Hifz test path.
-         - getUserMedia (for the acoustic Tajweed analyser) is
-           deferred 1.5 s and gated to Tajweed mode only, so
-           Follow mode never touches it.
-         - New watchdog: if the mic is silent after getUserMedia
-           opens, the app auto-disables acoustic checks and
-           retries text-only — no dead-mic hang on devices where
-           the two APIs are mutually exclusive.
-         - Recognizer is marked dead on every stop/finish/pause,
-           so a second Start always builds a fresh instance.
-         - SpeechRecognitionPhrase path removed — it was causing
-           silent onstart-with-no-results stalls on Chrome 128+.
-         - Fullscreen no longer races the mic: it enters only
-           after the first recognition result (4 s fallback).
-         - Follow ⇄ Tajweed mode switching now opens/releases the
-           acoustic stream correctly mid-session.
 
      • Share Card on Dashboard — daily prayer times, Duah of
        the Day (45 in rotation), Hadith of the Day (25 in
-       rotation). Shareable as a canvas-rendered PNG OR as
-       plain text — native share sheet on mobile, copyable
-       modal on desktop.
+       rotation), AND a new "Tafsir of the Duah" section that
+       explains the context and meaning of the current day's
+       Quranic duah. All three sections (duah, hadith, tafsir)
+       are included in the share outputs:
+         - canvas-rendered PNG (image share)
+         - plain text (WhatsApp / Telegram / Messages)
+       Shareable via native share sheet on mobile or a
+       copyable modal on desktop.
      • Full Prayer Times screen with adhan alarms, per-prayer
        offset adjusters, calculation methods, and a live Qibla
        compass (DeviceOrientation).
@@ -40,7 +26,28 @@
      • QR code screen ("Scan barcode") — pure-JS generator,
        works fully offline, no network dependency.
 
-   Cache strategy is unchanged from v2.1.x — this is a
+     • Microphone reliability (Coach screen):
+         - SpeechRecognition owns the microphone first,
+           exactly mirroring the Hifz test path.
+         - getUserMedia (for the acoustic Tajweed analyser) is
+           deferred 1.5 s and gated to Tajweed mode only, so
+           Follow mode never touches it.
+         - Watchdog: if the mic is silent after getUserMedia
+           opens, the app auto-disables acoustic checks and
+           retries text-only — no dead-mic hang on devices
+           where the two APIs are mutually exclusive.
+         - Recognizer is marked dead on every stop/finish/
+           pause, so a second Start always builds a fresh
+           instance.
+         - SpeechRecognitionPhrase path removed — it was
+           causing silent onstart-with-no-results stalls on
+           Chrome 128+.
+         - Fullscreen no longer races the mic: it enters only
+           after the first recognition result (4 s fallback).
+         - Follow ⇄ Tajweed mode switching opens/releases the
+           acoustic stream correctly mid-session.
+
+   Cache strategy is unchanged from v2.2.x — this is a
    version-only bump so the new index.html reaches installed
    clients. The persistent 'qc-audio' cache continues to hold
    every downloaded Arabic surah AND every downloaded
@@ -49,7 +56,7 @@
 
 'use strict';
 
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
