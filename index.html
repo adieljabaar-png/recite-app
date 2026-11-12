@@ -2364,9 +2364,25 @@ body.light-mode .daily-duah-card { background: linear-gradient(135deg, rgba(166,
   font-size:.78rem;line-height:1.55;color:var(--muted);text-align:center;
   margin:0 0 6px;font-style:italic;
 }
+
 .share-reference{
   font-size:.62rem;color:var(--gold);font-weight:800;text-align:center;
   margin:0;text-transform:uppercase;letter-spacing:.06em;
+}
+.share-tafsir{
+  font-size:.8rem;
+  line-height:1.6;
+  color:var(--muted);
+  text-align:left;
+  margin:0;
+  padding:9px 12px;
+  background:rgba(79,140,255,.05);
+  border-left:3px solid var(--gold);
+  border-radius:6px;
+}
+body.light-mode .share-tafsir{
+  background:rgba(42,111,224,.05);
+  color:#4a5878;
 }
 
 .share-footer{
@@ -2583,14 +2599,22 @@ body.light-mode .share-arabic{color:#1a2233;}
 
       <div class="share-divider" role="separator"></div>
 
-      <div class="share-block">
+<div class="share-block">
         <div class="share-block-title">📜 Hadith of the Day</div>
         <p class="share-arabic" id="shareHadithArabic" dir="rtl"></p>
         <p class="share-translation" id="shareHadithTranslation"></p>
         <p class="share-reference" id="shareHadithRef"></p>
       </div>
 
+      <div class="share-divider" role="separator"></div>
+
+      <div class="share-block">
+        <div class="share-block-title">📚 Tafsir of the Duah</div>
+        <p class="share-tafsir" id="shareTafsirText"></p>
+      </div>
+
       <div class="share-footer">
+
         <span>from <b>Recite</b>,</span>
         <a href="https://recite-hazel.vercel.app/" target="_blank" rel="noopener">https://recite-hazel.vercel.app/</a>
       </div>
@@ -10200,6 +10224,7 @@ const DAILY_DUAHS = [
 
 // ── 25 Authentic Hadiths of the Day ──
 const DAILY_HADITHS = [
+
   { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907" },
   { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45" },
   { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
@@ -10288,9 +10313,11 @@ function loadShareCard(){
   setText('shareDuahArabic',      d.duah.arabic);
   setText('shareDuahTranslation', d.duah.translation);
   setText('shareDuahRef',         d.duah.reference);
-  setText('shareHadithArabic',      d.hadith.arabic);
+
+setText('shareHadithArabic',      d.hadith.arabic);
   setText('shareHadithTranslation', d.hadith.translation);
   setText('shareHadithRef',         d.hadith.reference);
+  setText('shareTafsirText', DUAH_TAFSIR[d.duah.reference] || '');
 }
 
 function _cvRoundRect(ctx, x, y, w, h, r){
@@ -10362,10 +10389,19 @@ async function shareCardAsImage(){
     const measureAr = (text) => { mc.font = AR_SIZE + 'px ' + AR_FONT; return _cvWrapText(mc, text, INNER - 40); };
     const measureTr = (text) => { mc.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT; return _cvWrapText(mc, text, INNER - 40); };
 
-    const duahAr   = measureAr(d.duah.arabic);
+const duahAr   = measureAr(d.duah.arabic);
     const duahTr   = measureTr('"' + d.duah.translation + '"');
     const hadithAr = measureAr(d.hadith.arabic);
     const hadithTr = measureTr('"' + d.hadith.translation + '"');
+
+    const TAFSIR_SIZE = 26;
+    const LH_TAFSIR = 38;
+    const tafsirText = DUAH_TAFSIR[d.duah.reference] || '';
+    const measureTafsir = (text) => {
+      mc.font = TAFSIR_SIZE + 'px ' + UI_FONT;
+      return _cvWrapText(mc, text, INNER - 40);
+    };
+    const tafsirLines = measureTafsir(tafsirText);
 
     let H = PAD;
     H += 50 + 14;
@@ -10385,7 +10421,11 @@ async function shareCardAsImage(){
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;
+   H += 28 + 24;
+    H += 30;
+    H += 32 + 8;
+    H += tafsirLines.length * LH_TAFSIR;
+    H += 12;
     H += 30;
     H += 30 + 30;
     H += PAD;
@@ -10512,10 +10552,28 @@ async function shareCardAsImage(){
     for(const line of hadithTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
     y += 12;
 
-    ctx.fillStyle = '#c9a227';
+ ctx.fillStyle = '#c9a227';
     ctx.font = '800 18px ' + UI_FONT;
     ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
+
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 22px ' + UI_FONT;
+    ctx.fillText('TAFSIR OF THE DUAH', PAD + 8, y + 16);
+    y += 32 + 8;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
+    for (const line of tafsirLines) {
+      ctx.fillText(line, W / 2, y + LH_TAFSIR / 2);
+      y += LH_TAFSIR;
+    }
+    y += 12;
 
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
@@ -10584,14 +10642,21 @@ function buildShareCardText(){
   lines.push('');
   lines.push('_"' + d.hadith.translation + '"_');
   lines.push('');
-  lines.push('— ' + d.hadith.reference);
+ 
+
+lines.push('— ' + d.hadith.reference);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('*Tafsir of the Duah*');
+  lines.push('');
+  lines.push(DUAH_TAFSIR[d.duah.reference] || '');
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
   lines.push('from *Recite*,');
   lines.push('https://recite-hazel.vercel.app/');
   return lines.join('\n');
-}
 
 async function shareCardAsText(){
   const shareBtn = document.getElementById('shareCardTextBtn');
