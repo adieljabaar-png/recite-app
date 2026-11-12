@@ -3520,7 +3520,8 @@ function toleranceFor(L){
   const t = followOnly ? TOL_TABLE.follow : TOL_TABLE.strict;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
-function confidenceFloor(){ return 0.35; }
+
+function confidenceFloor(){ return followOnly ? 0.20 : 0.35; }
 
 function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   const wNorm = w.norm;
