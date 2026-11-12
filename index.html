@@ -1593,7 +1593,9 @@ body.light-mode .ip-checkbox{background:rgba(42,111,224,.05);border-color:rgba(4
   background:rgba(155,110,255,.14);border:1px solid rgba(155,110,255,.35);
 }
 .feature-tab:nth-child(2) .ft-icon{background:rgba(255,176,32,.14);border-color:rgba(255,176,32,.35)}
-.ft-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+
+.ft-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+
 .ft-text strong{font-size:.86rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ft-text small{font-size:.64rem;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.light-mode .streak-bar{background:linear-gradient(135deg, rgba(198,138,0,.12), rgba(238,242,248,.95));border-color:rgba(198,138,0,.35)}
@@ -2566,12 +2568,11 @@ body.light-mode .share-arabic{color:#1a2233;}
       <span class="ft-icon">🎨</span>
       <div class="ft-text">
         <strong>Tajweed Colors</strong>
-        <small>Authoritative · any surah</small>
+        <small>Authoritative</small>
       </div>
     </button>
   </div>
 
-  <!-- ── Share Card: prayer times + duah + hadith ── -->
   <section class="share-card" id="shareCard" aria-label="Daily share card">
     <div class="share-card-inner">
 
@@ -2695,7 +2696,6 @@ body.light-mode .share-arabic{color:#1a2233;}
 
   <div class="surah-list" id="audioSurahList"><div class="loading">Loading…</div></div>
 </div>
-
 <div class="app screen" id="screenPrayer" hidden>
   <div class="sub-header">
     <button id="backFromPrayer" class="back-pill" type="button" aria-label="Back to home">Back</button>
@@ -2758,7 +2758,6 @@ body.light-mode .share-arabic{color:#1a2233;}
     <button class="toggle mode-pill" id="modeFollowBtn" type="button" data-mode="follow" aria-pressed="true">Follow</button>
     <button class="toggle mode-pill" id="modeTajweedBtn" type="button" data-mode="tajweed" aria-pressed="false">Tajweed</button>
     
-    <!-- MOVED PROGRESS TAB -->
     <div class="progress-section" id="progressSection">
      
     <button class="progress-trigger" id="progressTrigger" type="button" aria-expanded="false" aria-haspopup="menu">
@@ -3189,7 +3188,6 @@ const SAJDAH_VERSES = new Set([
   '27:26','32:15','38:24','41:38','53:62','84:21','96:19'
 ]);
 
-/* ── Muqatta'at (disconnected openers) ────────────────────── */
 const MUQATTAAT_BY_SURAH = {
   2:  [['الم', ['ا','ل','م']]],
   3:  [['الم', ['ا','ل','م']]],
@@ -3291,18 +3289,18 @@ function cleanTranslation(s){
 const PHON = {
   '\u0621':'\u0627','\u0622':'\u0627','\u0623':'\u0627','\u0625':'\u0627','\u0671':'\u0627',
   '\u0624':'\u0648','\u0626':'\u064A','\u0629':'\u0647','\u0649':'\u064A',
-  '\u0637':'\u062A','\u0635':'\u0633','\u0636':'\u062F','\u0638':'\u0632','\u0630':'\u0632',
+  '\u0637':'\u062A','\u0635':'\u0633','\u0636':'\u0632'===0?'\u0632':'\u0632','\u0638':'\u0632','\u0630':'\u0632',
   '\u0642':'\u0643','\u062B':'\u0633','\u06CC':'\u064A','\u06D2':'\u064A',
   '\u06C0':'\u0647','\u06C1':'\u0647','\u06D5':'\u0647'
 };
 
 const PHON_LOOSE = Object.assign({}, PHON, {
-  '\u062D':'\u0647',   // ح → ه
-  '\u062E':'\u0647',   // خ → ه
-  '\u063A':'\u0647',   // غ → ه
-  '\u0639':'\u0627',   // ع → ا  (join hamza/alif bucket so أ/إ/آ match too)
-  '\u0637':'\u062A',   // ط ≡ ت
-  '\u0638':'\u0632',   // ظ ≡ ذ
+  '\u062D':'\u0647',
+  '\u062E':'\u0647',
+  '\u063A':'\u0647',
+  '\u0639':'\u0627',
+  '\u0637':'\u062A',
+  '\u0638':'\u0632',
   '\u0630':'\u0632'
 });
 
@@ -3894,6 +3892,7 @@ let recCursor = 0;
 let pendingHeard = [];
 let consecutiveReds = 0;
 const interimProgress = new Map();
+let currentConsensusSet = new Set();
 
 let speechRecognition = null;
 let speechStarting = false;
@@ -3903,6 +3902,8 @@ let lastResultAt = 0;
 let sessionHadResult = false;
 let speechServiceNotified = false;
 let speechKeepaliveTimer = null;
+/* ── CHANGE 4: module-level retry flag for phrase-free recognizer ── */
+let _phrasesRetryDone = false;
 const SPEECH_KEEPALIVE_MS = 40000;
 
 let micStream = null;
@@ -4332,6 +4333,7 @@ const rmsAnalyser = (function(){
     sampleCount: () => samples.length
   };
 })();
+
 function recPush(newToks){
   if(!newToks || !newToks.length) return;
   for(let i = 0; i < newToks.length; i++) recTokens.push(newToks[i]);
@@ -4341,6 +4343,7 @@ function recPush(newToks){
 function recReset(){
   recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
   interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
+  currentConsensusSet = new Set();
 }
 
 function showScreen(name){
@@ -4745,7 +4748,6 @@ let coachTajweedGen = 0;
 let coachTajweedApplied = false;
 let coachTajweedReady = false;
 let coachTajweedDegraded = false;
-/* ── True when Tajweed mic/RMS path is unreachable on this device ── */
 let coachTajweedMicFailed = false;
 
 function decorateTajweedToSpans(html){
@@ -4992,7 +4994,6 @@ function updateTajweedStatusChip(){
   }
 }
 
-/* ── Fix 8/9 helpers: RMS support probe + notice ───────────── */
 let _rmsSupportedCached = null;
 function isRmsSupported(){
   if (_rmsSupportedCached !== null) return _rmsSupportedCached;
@@ -5010,11 +5011,17 @@ function notifyRmsUnavailable(){
   try{ updateTajweedStatusChip(); }catch(_){}
 }
 
-/* ── Called when Tajweed mic/RMS path is unreachable ── */
+let _lastTajweedMicFailedAt = 0;
 function markTajweedMicFailed(){
+  const now = performance.now();
   coachTajweedMicFailed = true;
   updateTajweedStatusChip();
-  showTajweedMicFailedModal();
+  /* Suppress the modal for 60 s so rapid Follow ↔ Tajweed toggling
+     cannot flood the user with the same "mic is broken" dialog. */
+  if(now - _lastTajweedMicFailedAt > 60000){
+    _lastTajweedMicFailedAt = now;
+    showTajweedMicFailedModal();
+  }
   addFeedback('⚠️ <b>Tajweed rules not ready</b> — the microphone is not reaching the Tajweed engine. Try updating Chrome, checking microphone permissions, or switching to Follow mode.', true);
 }
 
@@ -5236,7 +5243,6 @@ function strict1MaddOk(prevW, deltaMs){
   return deltaMs >= need;
 }
 
-/* Fix 3 — nasal-dropped wired in; RMS optional. */
 function strict1GhunnahOk(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasGhunnahContext) return true;
   if (!STRICT_FEATURES.ghunnah()) return true;
@@ -5478,7 +5484,6 @@ const TAJWEED_ERROR_NAMES = {
   'emphatic-غ': 'Ghayn (غ) sounded as Qāf (ق)'
 };
 
-/* ── Fix 2: Unified Tajweed issue marker + throttle ─────────── */
 const TAJWEED_WARN_THROTTLE_MS = 4000;
 const _tajweedWarnThrottle = new Map();
 
@@ -5810,12 +5815,28 @@ let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
 const speechQueue = [];
-const SPEECH_THROTTLE_MS = 50;
+const SPEECH_THROTTLE_MS = 25;
 
 function resetSpeechPipeline(){
   speechQueue.length = 0;
   pendingSpeechEvent = null;
   if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
+}
+
+function buildConsensusSet(alternatives){
+  currentConsensusSet = new Set();
+  if (!alternatives || alternatives.length < 2) return;
+  const counts = new Map();
+  for (let ai = 0; ai < alternatives.length; ai++){
+    const toks = String((alternatives[ai] && alternatives[ai].transcript) || '').trim().split(/\s+/).filter(Boolean);
+    for (let ti = 0; ti < toks.length; ti++){
+      const n = normArCached(toks[ti]);
+      if (n.length >= 2) counts.set(n, (counts.get(n) || 0) + 1);
+    }
+  }
+  for (const [k, v] of counts){
+    if (v >= 2) currentConsensusSet.add(k);
+  }
 }
 
 function scheduleSpeechResult(event) {
@@ -5902,6 +5923,12 @@ async function runSpeechResultProcessing(snap) {
     if (!bestAlt || !bestTranscript) continue;
     const toks = bestTranscript.split(/\s+/).filter(Boolean);
     if (!toks.length) continue;
+
+    /* N-best consensus (Follow mode only) — feeds both the interim tail-unlock
+       and the followOnly fast path in gradeFollowFast. */
+    if (followOnly) buildConsensusSet(alternatives);
+    else currentConsensusSet = new Set();
+
     if (isFinal) {
       const already = interimProgress.get(i) || 0;
       interimProgress.delete(i);
@@ -5918,16 +5945,13 @@ async function runSpeechResultProcessing(snap) {
 } else {
       const already = interimProgress.get(i) || 0;
       let safeEnd = Math.max(already, toks.length - 1);
-      // In Follow mode, try to commit the withheld last token early when it
-      // is safe: >= 3 normalized letters AND not a strong prefix of the
-      // current expected word (that is the case where the ASR is still
-      // building the word and we must keep waiting).
       if (followOnly && toks.length > already && safeEnd < toks.length) {
         const tailNorm = normArCached(toks[toks.length - 1]);
         const currentTarget = (ptr < words.length) ? words[ptr].norm : '';
+        const isConsensusTail = currentConsensusSet.has(tailNorm);
         const isSafeTail =
-          tailNorm.length >= 3 &&
-          !(currentTarget && currentTarget.startsWith(tailNorm));
+          isConsensusTail ||
+          (tailNorm.length >= 3 && !(currentTarget && currentTarget.startsWith(tailNorm)));
         if (isSafeTail) safeEnd = toks.length;
       }
       const newToks = toks.slice(already, safeEnd);
@@ -5985,14 +6009,19 @@ function buildPhraseObjects(rec) {
     const clean = String(words[i].raw || '').normalize('NFKC').replace(TASHKEEL, '').replace(/[^\u0621-\u064A\s]/g, '').trim();
     if (!clean || seen.has(clean)) continue;
     seen.add(clean);
-    try { phrases.push(new PhraseCtor(clean, 6.0)); } catch (_) {}
+    /* Phrase-boost decay — 8.0 for the next ~2 words, 4.0 up to +5, 1.0 beyond.
+       Focuses contextual biasing on the near-horizon without over-boosting the
+       whole upcoming surah. */
+    const distance = i - ptr;
+    const boost = distance <= 2 ? 8.0 : distance <= 5 ? 4.0 : 1.0;
+    try { phrases.push(new PhraseCtor(clean, boost)); } catch (_) {}
   }
   if (!phrases.length) return false;
   try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; return true; }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
 
-function createSpeechRecognition(){
+function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
   if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
   if(speechRecognition){ try{ speechRecognition.abort(); }catch(_){} speechRecognition = null; }
@@ -6000,7 +6029,7 @@ function createSpeechRecognition(){
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
   rec.interimResults   = true;
-  const phrasesAttached = buildPhraseObjects(rec);
+  const phrasesAttached = forceNoPhrases ? false : buildPhraseObjects(rec);
   rec.__hasPhrases = phrasesAttached;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
@@ -6026,7 +6055,9 @@ function createSpeechRecognition(){
       setMicButton();
       setStatus('Microphone blocked', 'error');
       addFeedback('⚠️ Microphone access denied. Enable it in your browser settings and try again.', true);
-      micPermission = 'denied'; localStorage.setItem('micPermission','denied');
+      micPermission = 'denied'; try{ localStorage.setItem('micPermission','denied'); }catch(_){}
+      if(readerFullscreen) exitReaderFullscreen();
+      showPermissionHelp('Microphone access denied. Enable it in your browser settings and try again.');
       updateFsMicBtn(); syncFsButtons();
       return;
     }
@@ -6129,6 +6160,19 @@ function gradeFollowFast(tokens, startIdx){
       }
       noteFollowWrongToken();
       used++; continue;
+    }
+
+    /* N-best consensus fast path: multiple alternatives agreed on the target
+       word's form — bypass pendingHeard and the whole match cascade. */
+    if (followOnly && w && currentConsensusSet.size > 0 && currentConsensusSet.has(w.norm)){
+      if (heard === w.norm || lev(heard, w.norm) <= 1 ||
+          isMatchWord(heard, hPhon, hPhonLoose, w)){
+        commitCorrect(ptr, null);
+        advancePast(1);
+        noteFollowProgress();
+        pendingHeard.length = 0;
+        used++; continue;
+      }
     }
 
     const nextW        = words[ptr + 1];
@@ -6358,7 +6402,6 @@ async function gradeFull(tokens, startIdx){
       used++;
     }
 
-    /* Fix 6 — batch timing with ASR fallback when RMS is unavailable */
     const ctx = batchTimingCtx;
     if(ctx && ctx.startTime > 0 && ctx.wordCount > 1 && ctx.cumulativeRequired > 0 && ctx.contributions.length > 0){
       const now = performance.now();
@@ -6684,7 +6727,6 @@ volIcon.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === '
 window.addEventListener('resize', schedulePositionAudioOverlay);
 window.addEventListener('orientationchange', schedulePositionAudioOverlay);
 
-/* ── Fix 8: RMS-unavailable notice on stream open ──────────── */
 async function ensureMicStream(){
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
@@ -6720,11 +6762,34 @@ function releaseMicStream(){
   rmsAnalyser.stop();
   if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
 }
+
+/* ── CHANGE 3: watchdog retries once without phrases before warning ── */
 function startMicWatchdog(){
   clearTimeout(micWatchdogTimer); micAudioConfirmed = false;
   micWatchdogTimer = setTimeout(() => {
     if(!wantMic || micAudioConfirmed) return;
     if(micWarningShown) return;
+    if(followOnly && speechRecognition && speechRecognition.__hasPhrases && !_phrasesRetryDone){
+      _phrasesRetryDone = true;
+      try{ speechRecognition.abort(); }catch(_){}
+      speechRecognition = null;
+      try{
+        speechRecognition = createSpeechRecognition(true);
+        if(speechRecognition){
+          speechRecognition.maxAlternatives = 3;
+          speechRecognition.start();
+          micWarningShown = false;
+          lastResultAt = performance.now();
+          startMicWatchdog();
+          setStatus('Listening', 'listening', contextLabel() + ' (retry)');
+          addFeedback('🔄 Retrying microphone without phrase hints…', false, true);
+          return;
+        }
+      }catch(_){}
+      micWarningShown = true;
+      showBrokenMicWarning();
+      return;
+    }
     micWarningShown = true;
     if(followOnly){ showBrokenMicWarning(); }
     else { markTajweedMicFailed(); }
@@ -6771,7 +6836,9 @@ function applyMutexUI(){
   applyHideTextUI();
   updateTajweedStatusChip();
   syncRevealButtons();
+
 }
+
 function setRecitationMode(modeName){
   const newFollow = (modeName === 'follow');
   if(newFollow === followOnly && !updatingMutex) return;
@@ -6779,27 +6846,74 @@ function setRecitationMode(modeName){
   followOnly = newFollow; beepOn = !followOnly;
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
   pendingHeard.length = 0; consecutiveReds = 0;
+  currentConsensusSet = new Set();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
   followWrongTokens = 0; cancelFollowPinTimer();
+  /* Fresh recognizer may be created on the next startReciting() — let it
+     try phrase hints again after a mode switch. */
+  _phrasesRetryDone = false;
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
+    /* Follow mode never uses getUserMedia. Release the Tajweed-only
+       stream and RMS analyser so the "mic in use" indicator goes away
+       and battery/CPU stop being burned. The recognizer is untouched. */
+    releaseMicStream();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
     removeTajweedColorsFromCoach();
+    updateTajweedStatusChip();
   } else {
     addFeedback('🎵 <b>Tajweed</b> mode — strict, rule-aware. Tajweed colours are shown; mispronunciations and rule violations are marked red.', false, true);
     applyTajweedColorsToCoach();
     if(wantMic && !rmsAnalyser.isRunning()){
+      /* On iOS Safari, Samsung Internet, Huawei/Honor and older WebViews,
+         the speech recognizer may hold the mic exclusively. Stop it
+         briefly, acquire the stream, then restart — so both can run. */
+      const wasRunning = recRunning;
+      if(wasRunning){ try{ speechRecognition && speechRecognition.stop(); }catch(_){} }
+
+      const restartRecognizer = () => {
+        if(wasRunning && wantMic && !fsPaused && !micPaused){
+          try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
+          catch(_){ speechStarting = false; }
+        }
+      };
+
       ensureMicStream().then(s => {
-        if(!s) markTajweedMicFailed();
-        else { coachTajweedMicFailed = false; updateTajweedStatusChip(); }
-      }).catch(() => markTajweedMicFailed());
+        if(s){
+          coachTajweedMicFailed = false;
+          updateTajweedStatusChip();
+          if(!rmsAnalyser.isRunning() && !_rmsUnavailableNotified){
+            _rmsUnavailableNotified = true;
+            notifyRmsUnavailable();
+          }
+        } else {
+          /* Only a genuine mic refusal should raise the modal.
+             NotReadableError / TrackStartError means "mic is busy",
+             usually because the recognizer is holding it — not broken. */
+          const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
+          if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
+             nm === 'DevicesNotFoundError' || nm === 'SecurityError'){
+            markTajweedMicFailed();
+          } else {
+            coachTajweedMicFailed = false;
+            updateTajweedStatusChip();
+          }
+        }
+        restartRecognizer();
+      }).catch(() => {
+        coachTajweedMicFailed = false;
+        updateTajweedStatusChip();
+        restartRecognizer();
+      });
+    } else {
+      updateTajweedStatusChip();
     }
   }
-  updateTajweedStatusChip();
   updatingMutex = false;
 }
+
 if(modeFollowBtn){ modeFollowBtn.addEventListener('click', () => setRecitationMode('follow')); }
 if(modeTajweedBtn){ modeTajweedBtn.addEventListener('click', () => setRecitationMode('tajweed')); }
 if(chkHideText){ chkHideText.addEventListener('change', () => { hideText = chkHideText.checked; try{ localStorage.setItem('qc.hideText', hideText ? '1' : '0'); }catch(e){} if(hideTextChip) hideTextChip.classList.toggle('active', hideText); applyHideTextUI(); }); }
@@ -7039,7 +7153,6 @@ function jumpToCurrent(){
   scrollCurrentIntoView(true);
 }
 
-/* ── Fix 7: appendMistake carries severity class ───────────── */
 function appendMistake(m){
   if(followOnly) return;
   mistakesPanel.hidden = false;
@@ -7126,7 +7239,6 @@ function recordMistake(i, kind, heardRaw){
   mistakes.push(m); appendMistake(m); scheduleHUD();
 }
 
-/* ── Fix 5a: resetProgress clears _tajweedWarns + throttle ── */
 function resetProgress(fullReset){
   ptr=0; errors=0; finished=false; recReset();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
@@ -7146,7 +7258,6 @@ function resetProgress(fullReset){
   pageEl.scrollTop = 0;
 }
 
-/* ── Fix 5b: jumpToWordAndListen clears _tajweedWarns + throttle ── */
 function jumpToWordAndListen(idx){
   if(viewerOpen && viewerMode === 'audio') return;
   if(idx < 0 || idx >= words.length) return;
@@ -7234,7 +7345,7 @@ function setMicButton(){
   syncFsButtons();
 }
 
-/* ── Fix 9: startReciting guards RMS on device ─────────────── */
+/* ── CHANGE 5 + 6: Follow uses native SpeechRecognition only (no getUserMedia) ── */
 async function startReciting(){
   unlockAudio();
   if(!words.length){
@@ -7244,12 +7355,8 @@ async function startReciting(){
   if(!SPEECH_SUPPORTED){ addFeedback('⚠️ Browser speech recognition is not available here. Try <b>Chrome</b>, <b>Edge</b> or <b>Safari</b> on a device with internet.', true); setStatus('Speech not supported', 'error'); return; }
   if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
 
-  if(followOnly){
-    if(micPermission !== 'granted'){
-      const ok = await promptForMic();
-      if(!ok) return;
-      releaseMicStream();
-    }
+    if(followOnly){
+    releaseMicStream();
   } else {
     if(micPermission !== 'granted'){
       const ok = await promptForMic();
@@ -7264,7 +7371,18 @@ async function startReciting(){
     }
     const _tajStream = await ensureMicStream();
     if(!_tajStream){
-      markTajweedMicFailed();
+      /* Distinguish "mic busy with the recognizer" from "mic denied/absent".
+         Only the latter should tell the user something is broken. */
+      const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
+      if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
+         nm === 'DevicesNotFoundError' || nm === 'SecurityError'){
+        markTajweedMicFailed();
+      } else {
+        /* NotReadableError / TrackStartError / timeout → fall through to
+           transcript-only mode silently. */
+        coachTajweedMicFailed = false;
+        updateTajweedStatusChip();
+      }
     } else {
       coachTajweedMicFailed = false;
       updateTajweedStatusChip();
@@ -7274,9 +7392,11 @@ async function startReciting(){
       }
     }
   }
+  
 
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
+  _phrasesRetryDone = false;
   recReset(); pendingJumpTarget = -1;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
@@ -7301,13 +7421,17 @@ async function startReciting(){
     wantMic = false; releaseMicStream(); stopMicWatchdog(); setMicButton(); updateFsMicBtn(); syncFsButtons();
   }
 }
+
+/* ── CHANGE 7: reset phrases-retry flag on stop ── */
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false; micPaused = false;
   resetSpeechPipeline();
   disarmSpeechKeepalive(); pendingJumpTarget = -1;
   cancelFollowPinTimer();
+  _phrasesRetryDone = false;
   pendingHeard.length = 0;
+  currentConsensusSet = new Set();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
   prevWordAudio = null;
   setMicButton(); recRunning = false; speechStarting = false;
@@ -9822,7 +9946,6 @@ function openCopyrightModal(){
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('tj-fs-open')){ toggleTajweedFullscreen(); } });
 })();
 
-/* ── Fix 11: chip click handler reflects transcript-only mode ── */
 (function wireTajweedStatusChip(){
   const chip = document.getElementById('tajweedStatusChip');
   if(!chip) return;
@@ -9934,8 +10057,9 @@ function openCoachInfoModal(){
       '<li>Both modes use your browser\'s <b>built-in speech recognition</b> — no custom model download. An internet connection is required.</li>' +
       '<li>Hold any word for 3 seconds to start reciting from that point.</li>' +
       '<li><b>Tap any coloured word</b> to see the Tajweed rule name and a short explanation.</li>' +
-      '<li>On Android phones the coach stays <b>silent and vibration-free while listening</b> so the microphone never picks up its own tones.</li>' +
-    '</ul></div>' +
+     '<li>On Android phones the coach stays <b>silent and vibration-free while listening</b> so the microphone never picks up its own tones.</li>' +
+              '<li style="color:var(--warn);font-weight:600;margin-top:8px">💡 <b>Tip when reciting in Follow and Tajweed mode:</b> Add pauses in between each ayah.</li>' +
+            '</ul></div>' +Look
     '<div class="feature"><h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3><ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
       '<li>Follow uses a finite-state gate: <b>τ_plausible = 0.72</b> to advance, <b>τ_jump = 0.85</b> to skip 1–2 words forward, and <b>τ_exit = 0.85</b> to leave the current ayah. The pointer never jumps across an ayah boundary unless you fully complete the last word.</li>' +
@@ -10176,7 +10300,7 @@ document.addEventListener('keydown', e => {
     else if(e.key === 'ArrowLeft'){ if(!flipping) flipNav(-1); }
   }
 });
-// ── 45 Quranic Duahs for Daily Rotation ──
+
 const DAILY_DUAHS = [
   { arabic: "رَبَّنَا تَقَبَّلْ مِنَّا ۖ إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ", translation: "Our Lord, accept [this] from us. Indeed, You are the Hearing, the Knowing.", reference: "Surah Al-Baqarah 2:127" },
   { arabic: "رَبَّنَا وَاجْعَلْنَا مُسْلِمَيْنِ لَكَ وَمِن ذُرِّيَّتِنَا أُمَّةً مُّسْلِمَةً لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُبْ عَلَيْنَا ۖ إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", translation: "Our Lord, and make us Muslims [in submission] to You and from our descendants a Muslim nation [in submission] to You. And show us our rites and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful.", reference: "Surah Al-Baqarah 2:128" },
@@ -10214,103 +10338,57 @@ const DAILY_DUAHS = [
   { arabic: "رَبَّنَا أَخْرِجْنَا مِنْ هَٰذِهِ الْقَرْيَةِ الظَّالِمِ أَهْلُهَا وَاجْعَل لَّنَا مِن لَّدُنكَ وَلِيًّا وَاجْعَل لَّنَا مِن لَّدُنكَ نَصِيرًا", translation: "Our Lord, take us out of this city of oppressive people and appoint for us from Yourself a protector and appoint for us from Yourself a helper.", reference: "Surah An-Nisa 4:75" },
   { arabic: "رَبَّنَا إِنَّنَا نَخَافُ أَن يَفْرُطَ عَلَيْنَا أَوْ أَن يَطْغَىٰ", translation: "Our Lord, indeed we are afraid that he will hasten [punishment] against us or that he will transgress.", reference: "Surah Ta-Ha 20:45" },
   { arabic: "رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا", translation: "Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance.", reference: "Surah Al-Kahf 18:10" },
-  { arabic: "رَبِّ لَوْ شِئْتَ أَهْلَكْتَهُم مِّن قَبْلُ وَإِيَّايَ ۖ أَتُهْلِكُنَا بِمَا فَعَلَ السُّفَهَاءُ مِنَّا ۖ إِنْ هِيَ إِلَّا فِتْنَتُكَ تُضِلُّ بِهَا مَن تَشَاءُ وَتَهْدِي مَن تَشَاءُ ۖ أَنتَ وَلِيُّنَا فَاغْفِرْ لَنَا وَارْحَمْنَا ۖ وَأَنتَ خَيْرُ الْغَافِرِينَ", translation: "My Lord, if You had willed, You could have destroyed them before and me [as well]. Would You destroy us for what the foolish among us have done? This is not but Your trial by which You send astray whom You will and guide whom You will. You are our Protector, so forgive us and have mercy upon us, and You are the best of forgivers.", reference: "Surah Al-A'raf 7:155 (Dua of Musa)" },
-  { arabic: "رَبِّ اجْعَلْ هَٰذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ", translation: "My Lord, make this city [Makkah] secure and keep me and my sons away from worshipping idols.", reference: "Surah Ibrahim 14:35 (Dua of Ibrahim)" },
-  { arabic: "رَبَّنَا إِنَّكَ تَعْلَمُ مَا نُخْفِي وَمَا نُعْلِنُ ۗ وَمَا يَخْفَىٰ عَلَى اللَّهِ مِن شَيْءٍ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ", translation: "Our Lord, indeed You know what we conceal and what we declare, and nothing is hidden from Allah on the earth or in the heaven.", reference: "Surah Ibrahim 14:38" },
+  { arabic: "رَبَّنَا وَسِعْتَ كُلَّ شَيْءٍ رَّحْمَةً وَعِلْمًا فَاغْفِرْ لِلَّذِينَ تَابُوا وَاتَّبَعُوا سَبِيلَكَ وَقِهِمْ عَذَابَ الْجَحِيمِ", translation: "Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who have repented and followed Your way and protect them from the punishment of Hellfire.", reference: "Surah Ghafir 40:7" },
   { arabic: "رَبَّنَا لَا تَجْعَلْنَا مَعَ الْقَوْمِ الظَّالِمِينَ", translation: "Our Lord, do not place us with the wrongdoing people.", reference: "Surah Al-A'raf 7:47" },
   { arabic: "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ", translation: "Our Lord, decide between us and our people in truth, and You are the best of those who give decision.", reference: "Surah Al-A'raf 7:89" },
   { arabic: "رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ", translation: "Our Lord, pour upon us patience and let us die as Muslims [in submission to You].", reference: "Surah Al-A'raf 7:126" }
 ];
 
-// ── Short tafsir for each Quranic duah of the day ──
 const DUAH_TAFSIR = {
-  "Surah Al-Baqarah 2:127":
-    "When Ibrahim and Ismail raised the foundations of the Ka'bah, they asked Allah to accept their service. This teaches us that even the greatest deeds of worship require Allah's acceptance — the doer is never self-sufficient.",
-  "Surah Al-Baqarah 2:128":
-    "Ibrahim continues his supplication, asking to be made submissive to Allah and for his descendants to form a Muslim nation. He also asks to be shown the rites of worship and for his repentance to be accepted — a model for every parent who prays for righteous offspring.",
-  "Surah Al-Baqarah 2:201":
-    "This is the most balanced of all duas — seeking good in both this world and the Hereafter while being protected from the Fire. The Prophet ﷺ frequently recited this dua, as recorded in Sahih al-Bukhari.",
-  "Surah Al-Baqarah 2:250":
-    "Talut's believing army made this dua before facing Jalut's forces. They asked for patience, steadfast feet, and victory — demonstrating that triumph comes from Allah, not from numbers or strength.",
-  "Surah Al-Baqarah 2:286":
-    "This is the closing verse of Al-Baqarah, a sweeping dua covering forgiveness, mercy, and protection from burdens beyond our capacity. Allah responds directly in the following verse by affirming that He does not burden a soul beyond what it can bear.",
-  "Surah Ali 'Imran 3:8":
-    "A dua after the description of those with sound hearts. It asks Allah not to let the heart deviate after guidance — a reminder that steadfastness is a gift from Allah, not something earned alone.",
-  "Surah Ali 'Imran 3:16":
-    "The declaration of the people of understanding who affirm their faith and ask for forgiveness of sins. It shows that faith and seeking forgiveness are inseparable companions.",
-  "Surah Ali 'Imran 3:53":
-    "The disciples of Isa (Jesus) affirming belief in what Allah revealed and following the messenger. They asked to be recorded among the witnesses of truth — those who testify to the oneness of Allah.",
-  "Surah Ali 'Imran 3:147":
-    "The believers' dua after the Battle of Uhud, asking forgiveness for sins and excesses. Despite their wounds, they asked for steadfastness and victory over the disbelievers — a lesson in perseverance.",
-  "Surah Ali 'Imran 3:194":
-    "Asking Allah to fulfil what He promised through the messengers and to protect from disgrace on the Day of Judgment. It reflects both certainty in Allah's promise and fear of His reckoning.",
-  "Surah Al-A'raf 7:23 (Dua of Adam)":
-    "Adam and Hawwa's dua after eating from the forbidden tree. They admitted their wrong and sought Allah's forgiveness — establishing the model of repentance for all humanity: acknowledge, ask, and turn back.",
-  "Surah Hud 11:47 (Dua of Nuh)":
-    "Nuh's dua after asking Allah about his drowned son. He sought refuge from speaking without knowledge and asked for forgiveness and mercy — a reminder to be careful in our speech before Allah.",
-  "Surah Ibrahim 14:40 (Dua of Ibrahim)":
-    "Ibrahim's dua for himself and his descendants to establish prayer. He asked Allah to accept his supplication — a dua for continuity of worship across generations.",
-  "Surah Ibrahim 14:41":
-    "Ibrahim's dua for forgiveness for himself, his parents, and all believers on the Day of Reckoning. This was made before his father's death was confirmed as disbelief — an example of compassionate prayer.",
-  "Surah Al-Isra 17:80":
-    "A dua for a truthful entrance and a truthful exit, and for divine authority. The Prophet ﷺ recited this dua when entering and leaving Madinah — a supplication for protection and guidance in every transition.",
-  "Surah Ta-Ha 20:25-28 (Dua of Musa)":
-    "Musa's dua before facing Pharaoh. He asked for expansion of his breast, ease in his task, and eloquence of speech — showing complete dependence on Allah for difficult missions.",
-  "Surah Ta-Ha 20:114":
-    "A short but profound dua for increased knowledge. This is the only place in the Quran where the Prophet ﷺ was commanded to ask for more of something — highlighting the exalted status of knowledge.",
-  "Surah Al-Anbya 21:87 (Dua of Yunus)":
-    "Yunus's dua from the belly of the whale, containing tawheed, tasbih, and confession. The Prophet ﷺ said this dua brings relief to the distressed — a powerful prescription for hardship.",
-  "Surah Al-Anbya 21:83 (Dua of Ayyub)":
-    "Ayyub's brief dua after long illness. He did not complain but simply stated his condition and praised Allah as the Most Merciful — a lesson in patience and etiquette with Allah.",
-  "Surah Al-Anbya 21:89 (Dua of Zakariyya)":
-    "Zakariyya's dua for an heir. He feared no one would carry his legacy and asked Allah, the best of inheritors, not to leave him alone — a supplication for righteous continuity.",
-  "Surah An-Naml 27:19 (Dua of Sulayman)":
-    "Sulayman's dua upon hearing the ant. He asked for gratitude for Allah's favors and to do righteous deeds — connecting every blessing to thankfulness and right action.",
-  "Surah Al-Mu'minun 23:109":
-    "The believers' dua affirming faith and asking for forgiveness and mercy. This verse shows that humility in dua is a mark of the believers — they know their need for Allah.",
-  "Surah Al-Furqan 25:74":
-    "A dua for righteous spouses and children, and to be leaders of the righteous. It prioritizes family excellence in faith — the home is where spiritual leadership begins.",
-  "Surah Ash-Shu'ara 26:83-85 (Dua of Ibrahim)":
-    "Ibrahim's dua for wisdom, to join the righteous, for an honorable mention among later generations, and to be among the inheritors of Paradise.",
-  "Surah Al-Qasas 28:21 (Dua of Musa)":
-    "Musa's dua when fleeing Egypt. He asked Allah to save him from the wrongdoing people — a supplication for protection from oppression.",
-  "Surah Al-Qasas 28:16 (Dua of Musa)":
-    "Musa's dua after accidentally killing an Egyptian. He acknowledged his wrong and asked Allah to forgive him — showing the model of turning back to Allah after a mistake.",
-  "Surah Ghafir 40:7":
-    "The angels who carry the Throne ask forgiveness for the believers. This verse shows the honor of angels praying for us — a reason to be grateful for unseen intercession.",
-  "Surah Ad-Dukhan 44:12":
-    "The disbelievers' plea during punishment, promising faith in exchange for relief. It shows that dua at the wrong time may not be accepted — the time for faith is now.",
-  "Surah Al-Hashr 59:10":
-    "A dua for forgiveness of earlier believers and for no resentment toward them. This is a foundational dua for unity among Muslims — the heart must be free of grudges.",
-  "Surah Al-Mumtahanah 60:4":
-    "Ibrahim's declaration of reliance on Allah and return to Him. It is the essence of tawakkul (trust) and inabah (turning back) — the believer's twin anchors.",
-  "Surah At-Tahrim 66:8":
-    "A dua for perfect light and forgiveness. The Prophet ﷺ said this is a dua no one should forget on the Day of Judgment — light is what the believer will need most.",
-  "Surah Al-Mu'minun 23:97-98":
-    "A dua for refuge from the whispers of Shaytan and their presence. It shows we need Allah's protection from both inner whispers and outer harm.",
-  "Surah Al-Ma'idah 5:83":
-    "The believers' affirmation of faith and request to be recorded among the witnesses. This shows that sincere hearts are quick to testify to the truth.",
-  "Surah An-Nisa 4:75":
-    "A dua for deliverance from an oppressive city and for a protector and helper from Allah. It is the prayer of the weak against injustice.",
-  "Surah Ta-Ha 20:45":
-    "Musa and Harun's fear before Pharaoh. They expressed their human concern; Allah reassured them in the next verse — showing that fear is human, but trust in Allah is the cure.",
-  "Surah Al-Kahf 18:10":
-    "The youths of the cave's dua for mercy and right guidance. It was answered by Allah's protection and guidance — a supplication of the young who trust in Allah.",
-  "Surah Al-A'raf 7:155 (Dua of Musa)":
-    "Musa's dua after the golden calf incident. He expressed concern about collective punishment and appealed to Allah's mercy — a lesson in interceding with humility.",
-  "Surah Ibrahim 14:35 (Dua of Ibrahim)":
-    "Ibrahim's dua for the safety of Makkah and protection of his descendants from idol worship. A dua for security and pure monotheism.",
-  "Surah Ibrahim 14:38":
-    "Ibrahim's declaration that Allah knows all things. This verse is a reminder of Allah's complete knowledge — nothing is hidden from Him.",
-  "Surah Al-A'raf 7:47":
-    "A dua not to be placed with the wrongdoing people. It shows the importance of separating from evil and seeking safety in Allah.",
-  "Surah Al-A'raf 7:89":
-    "A dua for a just decision between the believers and their opponents. It reflects trust in Allah's justice — the believer is content with His verdict.",
-  "Surah Al-A'raf 7:126":
-    "The magicians' dua after believing in Musa. They asked for patience and to die as Muslims despite the threat of Pharaoh — showing that faith is a gift beyond all worldly terror."
+  "Surah Al-Baqarah 2:127": "When Ibrahim and Ismail raised the foundations of the Ka'bah, they asked Allah to accept their service. This teaches us that even the greatest deeds of worship require Allah's acceptance — the doer is never self-sufficient.",
+  "Surah Al-Baqarah 2:128": "Ibrahim continues his supplication, asking to be made submissive to Allah and for his descendants to form a Muslim nation.",
+  "Surah Al-Baqarah 2:201": "This is the most balanced of all duas — seeking good in both this world and the Hereafter while being protected from the Fire.",
+  "Surah Al-Baqarah 2:250": "Talut's believing army made this dua before facing Jalut's forces. They asked for patience, steadfast feet, and victory.",
+  "Surah Al-Baqarah 2:286": "This is the closing verse of Al-Baqarah, a sweeping dua covering forgiveness, mercy, and protection from burdens beyond our capacity.",
+  "Surah Ali 'Imran 3:8": "A dua after the description of those with sound hearts. It asks Allah not to let the heart deviate after guidance.",
+  "Surah Ali 'Imran 3:16": "The declaration of the people of understanding who affirm their faith and ask for forgiveness of sins.",
+  "Surah Ali 'Imran 3:53": "The disciples of Isa affirming belief in what Allah revealed and following the messenger.",
+  "Surah Ali 'Imran 3:147": "The believers' dua after the Battle of Uhud, asking forgiveness for sins and excesses despite their wounds.",
+  "Surah Ali 'Imran 3:194": "Asking Allah to fulfil what He promised through the messengers and to protect from disgrace on the Day of Judgment.",
+  "Surah Al-A'raf 7:23 (Dua of Adam)": "Adam and Hawwa's dua after eating from the forbidden tree — the model of repentance for all humanity.",
+  "Surah Hud 11:47 (Dua of Nuh)": "Nuh's dua after asking Allah about his drowned son — a reminder to be careful in our speech before Allah.",
+  "Surah Ibrahim 14:40 (Dua of Ibrahim)": "Ibrahim's dua for himself and his descendants to establish prayer — a dua for continuity of worship across generations.",
+  "Surah Ibrahim 14:41": "Ibrahim's dua for forgiveness for himself, his parents, and all believers on the Day of Reckoning.",
+  "Surah Al-Isra 17:80": "A dua for a truthful entrance and a truthful exit, and for divine authority.",
+  "Surah Ta-Ha 20:25-28 (Dua of Musa)": "Musa's dua before facing Pharaoh — asking for expansion of his breast, ease in his task, and eloquence.",
+  "Surah Ta-Ha 20:114": "A short but profound dua for increased knowledge — the only place the Prophet ﷺ was commanded to ask for more of something.",
+  "Surah Al-Anbya 21:87 (Dua of Yunus)": "Yunus's dua from the belly of the whale — a powerful prescription for hardship.",
+  "Surah Al-Anbya 21:83 (Dua of Ayyub)": "Ayyub's brief dua after long illness — a lesson in patience and etiquette with Allah.",
+  "Surah Al-Anbya 21:89 (Dua of Zakariyya)": "Zakariyya's dua for an heir — a supplication for righteous continuity.",
+  "Surah An-Naml 27:19 (Dua of Sulayman)": "Sulayman's dua upon hearing the ant — connecting every blessing to thankfulness and right action.",
+  "Surah Al-Mu'minun 23:109": "The believers' dua affirming faith and asking for forgiveness and mercy.",
+  "Surah Al-Furqan 25:74": "A dua for righteous spouses and children — the home is where spiritual leadership begins.",
+  "Surah Ash-Shu'ara 26:83-85 (Dua of Ibrahim)": "Ibrahim's dua for wisdom, to join the righteous, for an honorable mention, and to be among the inheritors of Paradise.",
+  "Surah Al-Qasas 28:21 (Dua of Musa)": "Musa's dua when fleeing Egypt — a supplication for protection from oppression.",
+  "Surah Al-Qasas 28:16 (Dua of Musa)": "Musa's dua after accidentally killing an Egyptian — showing the model of turning back to Allah after a mistake.",
+  "Surah Ghafir 40:7": "The angels who carry the Throne ask forgiveness for the believers.",
+  "Surah Ad-Dukhan 44:12": "The disbelievers' plea during punishment — the time for faith is now.",
+  "Surah Al-Hashr 59:10": "A foundational dua for unity among Muslims — the heart must be free of grudges.",
+  "Surah Al-Mumtahanah 60:4": "Ibrahim's declaration of reliance on Allah and return to Him — the believer's twin anchors.",
+  "Surah At-Tahrim 66:8": "A dua for perfect light and forgiveness — light is what the believer will need most.",
+  "Surah Al-Mu'minun 23:97-98": "A dua for refuge from the whispers of Shaytan and their presence.",
+  "Surah Al-Ma'idah 5:83": "The believers' affirmation of faith and request to be recorded among the witnesses.",
+  "Surah An-Nisa 4:75": "A dua for deliverance from an oppressive city and for a protector and helper from Allah.",
+  "Surah Ta-Ha 20:45": "Musa and Harun's fear before Pharaoh — showing that fear is human, but trust in Allah is the cure.",
+  "Surah Al-Kahf 18:10": "The youths of the cave's dua for mercy and right guidance.",
+  "Surah Al-A'raf 7:155 (Dua of Musa)": "Musa's dua after the golden calf incident — a lesson in interceding with humility.",
+  "Surah Ibrahim 14:35 (Dua of Ibrahim)": "Ibrahim's dua for the safety of Makkah and protection of his descendants from idol worship.",
+  "Surah Ibrahim 14:38": "Ibrahim's declaration that Allah knows all things — nothing is hidden from Him.",
+  "Surah Al-A'raf 7:47": "A dua not to be placed with the wrongdoing people — seeking safety in Allah.",
+  "Surah Al-A'raf 7:89": "A dua for a just decision between the believers and their opponents.",
+  "Surah Al-A'raf 7:126": "The magicians' dua after believing in Musa — showing that faith is a gift beyond all worldly terror."
 };
 
-// ── 25 Authentic Hadiths of the Day ──
 const DAILY_HADITHS = [
   { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907" },
   { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45" },
