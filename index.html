@@ -5785,9 +5785,14 @@ const FOLLOW_PIN_STOP_MS = 10000;
    Only multi-word ASR sequences (>=2 tokens) can trigger a jump,
    and every jumped-over reference word must be contiguous and
    within a strict similarity threshold.                        */
-const FOLLOW_SEQ_LOOKAHEAD  = 5;    // max reference words ahead
-const FOLLOW_SEQ_MIN_SIM    = 0.8;  // per-word similarity threshold
-const FOLLOW_SEQ_MAX_SPOKEN = 4;    // max spoken tokens per check
+
+const FOLLOW_SEQ_LOOKAHEAD  = 5;    // ← try 6 or 7 if jumps beyond 5 words fail
+const FOLLOW_SEQ_MIN_SIM    = 0.8;  // ← try 0.70 – 0.75 for lenient, 0.85+ for strict
+const FOLLOW_SEQ_MAX_SPOKEN = 4;    // ← try 5 if ASR returns long chunks
+
+const FOLLOW_SEQ_LOOKAHEAD  = 6;
+const FOLLOW_SEQ_MIN_SIM    = 0.72;
+const FOLLOW_SEQ_MAX_SPOKEN = 5;
 
 let followWrongTokens = 0;
 
