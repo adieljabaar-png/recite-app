@@ -3276,7 +3276,7 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   '\u062D':'\u0647',   // ح → ه
   '\u062E':'\u0647',   // خ → ه
   '\u063A':'\u0647',   // غ → ه
-  '\u0639':'\u0621',   // ع → ء
+  '\u0639':'\u0627',   // ع → ا  (join hamza/alif bucket so أ/إ/آ match too)
   '\u0637':'\u062A',   // ط ≡ ت
   '\u0638':'\u0632',   // ظ ≡ ذ
   '\u0630':'\u0632'
@@ -3512,9 +3512,12 @@ function lev(a, b){
   return r;
 }
 
-const TOL_TABLE = { strict: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2] };
+const TOL_TABLE = {
+  strict: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
+  follow: [0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]
+};
 function toleranceFor(L){
-  const t = TOL_TABLE.strict;
+  const t = followOnly ? TOL_TABLE.follow : TOL_TABLE.strict;
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 function confidenceFloor(){ return 0.35; }
@@ -3545,7 +3548,7 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
 
   if(la >= 4 && lb >= 4){
     const S = la < lb ? la : lb;
-    const prefixThreshold = followOnly ? 0.85 : 0.70;
+    const prefixThreshold = followOnly ? 0.72 : 0.85;
     if(S / L >= prefixThreshold){
       if(hNorm.startsWith(wNorm) || wNorm.startsWith(hNorm)) return true;
       if(hNorm.endsWith(wNorm)   || wNorm.endsWith(hNorm))   return true;
