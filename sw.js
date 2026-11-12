@@ -1,92 +1,49 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.0 — Forces SW reinstall + clean shell rebuild so
-   clients pick up the latest index.html which includes:
+   v2.4.1 — Minor version bump so installed clients pick up the
+   revised index.html which routes non-English translation audio
+   to the QuranEnc CDN.
 
-     • Multi-language Quran translations (NEW in v2.4.0)
-       — English (Yusuf Ali & Saheeh International), Türkçe
-       (Diyanet), Deutsch (Abu Rida), Français (Hamidullah),
-       and 中文 (Ma Jian). Selectable from:
-         - Surah index
-         - Juz index
-         - Play audio screen (text + spoken audio)
-       Choice applies to the reader (translation shown below
-       each ayah) and to audio playback. Three dropdowns
-       (Language / Audio Translation / Text Translation)
-       stay in sync so the same translation is used
-       everywhere.
+     • Translation audio now spans TWO hosts:
+         – everyayah.com       → Arabic Quran audio (all 20
+                                 reciters) + English translation
+                                 audio (Saheeh International).
+         – d.quranenc.com      → Spoken-translation audio for
+                                 Turkish  (turkish_rwwad),
+                                 German   (german_bubenheim),
+                                 French   (french_montada),
+                                 Mandarin (chinese_makin).
 
-       Spoken-translation audio folders (all on everyayah.com):
-         - English/Sahih_Intnl_Ibrahim_Walk_192kbps
-         - Turkish/Turkish_Kamili_128kbps
-         - German/German_Abu_Rida_128kbps
-         - French/French_Hamidullah_128kbps
-         - Chinese/Chinese_Ma_Jian_128kbps
+       Both hosts are served from the SAME persistent
+       'qc-audio' cache (they are differentiated only by host
+       and path, not by cache name). offline playback works
+       for any ayah that has been downloaded, regardless of
+       which language it belongs to.
 
-       Language-specific chapter names fetched from
-       api.quran.com/api/v4/chapters?language=xx.
-       Graceful fallback to English chapter names when a
-       language's metadata isn't available.
+       The fetch handler below therefore intercepts BOTH
+       hosts and hands them to audioFromDownloadCache().
 
-     • Share Card on Dashboard — daily prayer times, Duah of
-       the Day (45 in rotation), Hadith of the Day (25 in
-       rotation), AND a "Tafsir of the Duah" section that
-       explains the context and meaning of the current day's
-       Quranic duah. All three sections (duah, hadith, tafsir)
-       are included in the share outputs:
-         - canvas-rendered PNG (image share)
-         - plain text (WhatsApp / Telegram / Messages)
-       Shareable via native share sheet on mobile or a
-       copyable modal on desktop.
-     • Full Prayer Times screen with adhan alarms, per-prayer
-       offset adjusters, calculation methods, and a live Qibla
-       compass (DeviceOrientation).
-     • Hifz Test screen with three memorisation modes.
-     • Tajweed Colors screen (authoritative Hafs annotations).
-     • Dashboard with streaks and 10 achievements.
-     • Translation audio playback + offline download.
-     • Book-form mushaf reader with swipe page turning.
-     • Reader-fullscreen mode (fixed toolbar, Reveal-text tab).
-     • QR code screen ("Scan barcode") — pure-JS generator,
-       works fully offline, no network dependency.
+     • Every other feature carried over unchanged from v2.4.0
+       (Share Card, Prayer Times, Hifz Test, Tajweed Colors,
+       Dashboard, multi-language reader, book-form mushaf,
+       reader-fullscreen, QR code screen, microphone
+       reliability fixes).
 
-     • Microphone reliability (Coach screen):
-         - SpeechRecognition owns the microphone first,
-           exactly mirroring the Hifz test path.
-         - getUserMedia (for the acoustic Tajweed analyser) is
-           deferred 1.5 s and gated to Tajweed mode only, so
-           Follow mode never touches it.
-         - Watchdog: if the mic is silent after getUserMedia
-           opens, the app auto-disables acoustic checks and
-           retries text-only — no dead-mic hang on devices
-           where the two APIs are mutually exclusive.
-         - Recognizer is marked dead on every stop/finish/
-           pause, so a second Start always builds a fresh
-           instance.
-         - SpeechRecognitionPhrase path removed — it was
-           causing silent onstart-with-no-results stalls on
-           Chrome 128+.
-         - Fullscreen no longer races the mic: it enters only
-           after the first recognition result (4 s fallback).
-         - Follow ⇄ Tajweed mode switching opens/releases the
-           acoustic stream correctly mid-session.
-
-   Cache strategy is unchanged from v2.3.x — this is a
+   Cache strategy is unchanged from v2.4.0 — this is a
    version-only bump so the new index.html reaches installed
-   clients. The persistent 'qc-audio' cache continues to hold
-   every downloaded Arabic surah AND every downloaded
-   translation surah (including the 4 new language folders
-   added in v2.4.0), and is never deleted on activate.
+   clients, plus the addition of d.quranenc.com to the audio
+   intercept list. The persistent 'qc-audio' cache continues
+   to hold every downloaded Arabic surah AND every downloaded
+   translation surah in all five supported languages, and is
+   never deleted on activate.
 
-   TEXT_CACHE_MAX was raised 400 → 600 to accommodate the
-   additional translation payloads now cached when the user
-   switches between the five languages.
+   TEXT_CACHE_MAX remains 600 (enough for 5 languages).
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.0';
+const VERSION = '2.4.1';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -96,8 +53,9 @@ const RUNTIME_CACHE = `qc-runtime-${VERSION}`;
 const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
-   version. Downloaded Quran audio and downloaded translation audio
-   (Arabic, Turkish, German, French, Mandarin) all live here. */
+   version. Downloaded Quran audio (everyayah.com) and downloaded
+   translation audio (everyayah.com for English, d.quranenc.com
+   for Turkish / German / French / Mandarin) all live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
 
@@ -116,13 +74,12 @@ const SHELL_URLS = [
 const HOST_ALQURAN              = 'api.alquran.cloud';
 const HOST_QURAN_COM            = 'api.quran.com';
 const HOST_EVERYAYAH            = 'everyayah.com';
+const HOST_QURANENC             = 'd.quranenc.com';
 const HOST_GOOGLE_FONTS_CSS     = 'fonts.googleapis.com';
 const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 
-/* Bumped from 400 → 600 in v2.4.0 to accommodate the extra
-   translation payloads now cached when the user switches between
-   the five supported languages (surah translations + page
-   translations + verse translations per language). */
+/* 600 entries covers surah + page translations across all five
+   supported languages without thrashing. */
 const TEXT_CACHE_MAX = 600;
 const RUNTIME_MAX    = 120;
 const MANIFEST_TIMEOUT_MS = 2000;
@@ -185,8 +142,9 @@ self.addEventListener('install', event => {
      (a) it is whitelisted in PERSISTENT_CACHES, and
      (b) it does not start with any OWNED_PREFIX.
    Both checks mean downloaded Quran audio and downloaded
-   translation audio (in all five languages) survive every
-   version bump, forever.
+   translation audio (in all five languages, across both
+   everyayah.com and d.quranenc.com) survive every version
+   bump, forever.
    ============================================================ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
@@ -332,15 +290,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Audio from everyayah.com — served from the persistent download
-  // cache first (works fully offline), network second. Covers BOTH
-  // Arabic recitation audio AND every spoken translation audio
-  // folder the app supports (English, Turkish, German, French,
-  // Mandarin) — they share the same host, just different folder
-  // paths. Respects req.cache ('no-store' / 'reload') so the app's
-  // healing path can actually fetch fresh bytes, and answers Range
-  // requests with a proper 206 for iOS Safari.
-  if(url.hostname === HOST_EVERYAYAH){
+  // Audio — served from the persistent download cache first (works
+  // fully offline), network second. Covers BOTH:
+  //
+  //   • Arabic Quran audio           (everyayah.com, all 20 reciters)
+  //   • English translation audio    (everyayah.com / English folder)
+  //   • Turkish / German / French /
+  //     Mandarin translation audio   (d.quranenc.com)
+  //
+  // The host is only used to decide *which* CDN the bytes come from.
+  // Storage is identical: everything lands in the single persistent
+  // 'qc-audio' cache. This means a downloaded Turkish surah and a
+  // downloaded Arabic surah can be played back offline side-by-side
+  // from the same cache.
+  //
+  // Respects req.cache ('no-store' / 'reload') so the app's healing
+  // path can actually fetch fresh bytes, and answers Range requests
+  // with a proper 206 for iOS Safari.
+  if(url.hostname === HOST_EVERYAYAH || url.hostname === HOST_QURANENC){
     event.respondWith(audioFromDownloadCache(req));
     return;
   }
@@ -359,11 +326,11 @@ self.addEventListener('fetch', event => {
   //   • verse translations    (both hosts, all 5 languages)
   //   • Juz metadata
   //
-  // Multi-language note (v2.4.0): every translation request —
-  // in any of the five supported languages — lands here. The
-  // cache key is the full URL including the edition / language /
-  // translation-id query string, so each language caches
-  // independently and switching back and forth never re-fetches.
+  // Multi-language note: every translation request — in any of
+  // the five supported languages — lands here. The cache key is
+  // the full URL including the edition / language / translation-id
+  // query string, so each language caches independently and
+  // switching back and forth never re-fetches.
   if(url.hostname === HOST_QURAN_COM || url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
@@ -387,8 +354,9 @@ self.addEventListener('fetch', event => {
   // api.bigdatacloud.net / geocoding-api.open-meteo.com for the Prayer
   // Times screen, islamcan.com adhan fallback) is intentionally left
   // unhandled so it goes to the network normally. Download code in
-  // index.html stores fallback audio under the everyayah.com URL, so
-  // playback always hits qc-audio regardless of which source succeeded.
+  // index.html stores fallback audio under the primary URL (either
+  // everyayah.com or d.quranenc.com), so playback always hits qc-audio
+  // regardless of which source succeeded.
 });
 
 /* ============================================================
@@ -396,9 +364,10 @@ self.addEventListener('fetch', event => {
    ------------------------------------------------------------
    This function reads AND writes the persistent 'qc-audio'
    cache. It is the sole gateway to:
-     • downloaded Arabic Quran audio (all 20 reciters)
-     • downloaded spoken-translation audio (English, Turkish,
-       German, French, Mandarin)
+     • downloaded Arabic Quran audio  (everyayah.com)
+     • downloaded English translation audio (everyayah.com)
+     • downloaded Turkish / German / French / Mandarin
+       translation audio              (d.quranenc.com)
    The cache is not versioned and never deleted on activate —
    see PERSISTENT_CACHES.
    ============================================================ */

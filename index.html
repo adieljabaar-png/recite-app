@@ -3168,18 +3168,23 @@ const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 
 /* ── Translation options ──────────────────────────────────── */
+
 const TEXT_TRANSLATION_OPTIONS = [
-  // English
+  // English (unchanged — EveryAyah audio still works)
   { id: 'en.yusufali',   quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
   { id: 'en.sahih',      quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
-  // Türkçe
-  { id: 'tr.diyanet',    quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               shortLabel: 'Diyanet' },
-  // Deutsch
-  { id: 'de.aburida',    quranComId: 27,  lang: 'de', audioFolder: 'German/German_Abu_Rida_128kbps',           label: 'Deutsch — Abu Rida',             shortLabel: 'Abu Rida' },
-  // Français
-  { id: 'fr.hamidullah', quranComId: 31,  lang: 'fr', audioFolder: 'French/French_Hamidullah_128kbps',         label: 'Français — Hamidullah',          shortLabel: 'Hamidullah' },
-  // 中文 (Mandarin)
-  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps',         label: '中文 — Ma Jian',                  shortLabel: 'Ma Jian' }
+
+  // Türkçe — audio from QuranEnc (turkish_rwwad)
+  { id: 'tr.diyanet',    quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', quranEncKey: 'turkish_rwwad', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' },
+
+  // Deutsch — audio from QuranEnc (german_bubenheim)
+  { id: 'de.aburida',    quranComId: 27,  lang: 'de', audioFolder: 'German/German_Abu_Rida_128kbps', quranEncKey: 'german_bubenheim', label: 'Deutsch — Abu Rida', shortLabel: 'Abu Rida' },
+
+  // Français — audio from QuranEnc (french_montada)
+  { id: 'fr.hamidullah', quranComId: 31,  lang: 'fr', audioFolder: 'French/French_Hamidullah_128kbps', quranEncKey: 'french_montada', label: 'Français — Hamidullah', shortLabel: 'Hamidullah' },
+
+  // 中文 (Mandarin) — audio from QuranEnc (chinese_makin)
+  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps', quranEncKey: 'chinese_makin', label: '中文 — Ma Jian', shortLabel: 'Ma Jian' }
 ];
 
 const LANG_OPTIONS = [
@@ -3833,10 +3838,24 @@ function isStrongPartialPrefix(heard){
 
 function buildAyahUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
+
 }
+
 function buildTranslationAudioUrl(folder, surah, ayah){
-  let resolvedFolder = folder;
   const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
+
+  // ── Türkçe ────────────────────────────────────────────────────────────────
+  // EveryAyah's "Turkish/Turkish_Kamili_128kbps" folder is no longer served.
+  // Route Turkish requests to QuranEnc, which hosts per-ayah Turkish audio
+  // with predictable URL pattern: /data/audio/{key}/{sura_3}{aya_3}.mp3
+  if (opt && opt.lang === 'tr' && opt.quranEncKey) {
+    const s = String(surah).padStart(3, '0');
+    const a = String(ayah).padStart(3, '0');
+    return 'https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3';
+  }
+
+  // ── EveryAyah path (English / German / French / Chinese) ─────────────────
+  let resolvedFolder = folder;
   if (opt) resolvedFolder = opt.audioFolder;
   return AYAH_AUDIO_BASE + resolvedFolder + '/' +
          String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
