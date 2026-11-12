@@ -2210,6 +2210,43 @@ body.light-mode .toggles .progress-trigger {
   background: #eef2f8;
 }
 
+/* ── Translation language selector (Surah / Juz index) ─────────── */
+.lang-selector-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 12px;
+}
+.lang-selector-wrap .lang-label {
+  font-size: .78rem;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.lang-selector-wrap .lang-select {
+  flex: 1;
+  height: 44px;
+  padding: 0 36px 0 14px;
+  background-color: #0d1421;
+  color: var(--text);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238f9bb3' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+body.light-mode .lang-selector-wrap .lang-select {
+  background-color: #ffffff;
+}
+
 /* ── Duah of the Day Card (legacy, unused) ── */
 .daily-duah-card {
   background: linear-gradient(135deg, rgba(201,162,39,.10), rgba(20,28,46,.72));
@@ -2634,6 +2671,10 @@ body.light-mode .share-arabic{color:#1a2233;}
     <h1>Surah index</h1>
     <span class="sub-note">Tap to open</span>
   </div>
+  <div class="lang-selector-wrap">
+    <label class="lang-label" for="surahIndexLang">🌐 Translation</label>
+    <select class="lang-select" id="surahIndexLang" aria-label="Select translation language"></select>
+  </div>
   <div class="surah-list" id="surahIndexList"><div class="loading">Loading…</div></div>
 </div>
 
@@ -2642,6 +2683,10 @@ body.light-mode .share-arabic{color:#1a2233;}
     <button id="backFromJuz" class="back-pill" type="button" aria-label="Back to home">Back</button>
     <h1>Juz index</h1>
     <span class="sub-note">Tap to open</span>
+  </div>
+  <div class="lang-selector-wrap">
+    <label class="lang-label" for="juzIndexLang">🌐 Translation</label>
+    <select class="lang-select" id="juzIndexLang" aria-label="Select translation language"></select>
   </div>
   <div class="surah-list" id="juzIndexList"></div>
 </div>
@@ -3122,9 +3167,27 @@ const READER_EDITION = 'text_indopak';
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 
+/* ── Translation options ──────────────────────────────────── */
 const TEXT_TRANSLATION_OPTIONS = [
-  { id: 'en.yusufali', quranComId: 203, label: 'Abdullah Yusuf Ali',  shortLabel: 'Yusuf Ali' },
-  { id: 'en.sahih',    quranComId: 20,  label: 'Saheeh International', shortLabel: 'Saheeh Intl' }
+  // English
+  { id: 'en.yusufali',   quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
+  { id: 'en.sahih',      quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
+  // Türkçe
+  { id: 'tr.diyanet',    quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               shortLabel: 'Diyanet' },
+  // Deutsch
+  { id: 'de.aburida',    quranComId: 27,  lang: 'de', audioFolder: 'German/German_Abu_Rida_128kbps',           label: 'Deutsch — Abu Rida',             shortLabel: 'Abu Rida' },
+  // Français
+  { id: 'fr.hamidullah', quranComId: 31,  lang: 'fr', audioFolder: 'French/French_Hamidullah_128kbps',         label: 'Français — Hamidullah',          shortLabel: 'Hamidullah' },
+  // 中文 (Mandarin)
+  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps',         label: '中文 — Ma Jian',                  shortLabel: 'Ma Jian' }
+];
+
+const LANG_OPTIONS = [
+  { code: 'en', name: 'English',   defaultTranslationId: 'en.yusufali'   },
+  { code: 'tr', name: 'Türkçe',    defaultTranslationId: 'tr.diyanet'    },
+  { code: 'de', name: 'Deutsch',   defaultTranslationId: 'de.aburida'    },
+  { code: 'fr', name: 'Français',  defaultTranslationId: 'fr.hamidullah' },
+  { code: 'zh', name: '中文',      defaultTranslationId: 'zh.jian'       }
 ];
 
 let translationTextId = (function () {
@@ -3134,6 +3197,17 @@ let translationTextId = (function () {
   } catch (e) {}
   return 'en.yusufali';
 })();
+
+let surahIndexLang = (function () {
+  try {
+    const stored = localStorage.getItem('qc.surahIndexLang');
+    if (stored && LANG_OPTIONS.some(o => o.code === stored)) return stored;
+  } catch (e) {}
+  const cur = TEXT_TRANSLATION_OPTIONS.find(t => t.id === translationTextId);
+  return cur && cur.lang ? cur.lang : 'en';
+})();
+
+const chaptersLocalCache = {};
 
 function getTextTranslationById(id) { return TEXT_TRANSLATION_OPTIONS.find(t => t.id === id) || TEXT_TRANSLATION_OPTIONS[0]; }
 function currentTextTranslation()           { return getTextTranslationById(translationTextId); }
@@ -3289,7 +3363,7 @@ function cleanTranslation(s){
 const PHON = {
   '\u0621':'\u0627','\u0622':'\u0627','\u0623':'\u0627','\u0625':'\u0627','\u0671':'\u0627',
   '\u0624':'\u0648','\u0626':'\u064A','\u0629':'\u0647','\u0649':'\u064A',
-  '\u0637':'\u062A','\u0635':'\u0633','\u0636':'\u0632'===0?'\u0632':'\u0632','\u0638':'\u0632','\u0630':'\u0632',
+  '\u0637':'\u062A','\u0635':'\u0633','\u0636':'\u0632','\u0638':'\u0632','\u0630':'\u0632',
   '\u0642':'\u0643','\u062B':'\u0633','\u06CC':'\u064A','\u06D2':'\u064A',
   '\u06C0':'\u0647','\u06C1':'\u0647','\u06D5':'\u0647'
 };
@@ -3457,11 +3531,11 @@ const RECITER_ORDER = [
 ];
 
 const TRANSLATION_AUDIO_OPTIONS = [
-  {
-    id: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps',
-    label: 'English - Saheeh International',
-    textId: 'en.sahih'
-  }
+  { id: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', textId: 'en.sahih' },
+  { id: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               textId: 'tr.diyanet' },
+  { id: 'German/German_Abu_Rida_128kbps',           label: 'Deutsch — Abu Rida',             textId: 'de.aburida' },
+  { id: 'French/French_Hamidullah_128kbps',         label: 'Français — Hamidullah',          textId: 'fr.hamidullah' },
+  { id: 'Chinese/Chinese_Ma_Jian_128kbps',          label: '中文 — Ma Jian',                  textId: 'zh.jian' }
 ];
 
 const _levCache = new Map();
@@ -3761,7 +3835,11 @@ function buildAyahUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
 function buildTranslationAudioUrl(folder, surah, ayah){
-  return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
+  let resolvedFolder = folder;
+  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
+  if (opt) resolvedFolder = opt.audioFolder;
+  return AYAH_AUDIO_BASE + resolvedFolder + '/' +
+         String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
 
 const AUDIO_CACHE_NAME = 'qc-audio';
@@ -3902,7 +3980,6 @@ let lastResultAt = 0;
 let sessionHadResult = false;
 let speechServiceNotified = false;
 let speechKeepaliveTimer = null;
-/* ── CHANGE 4: module-level retry flag for phrase-free recognizer ── */
 let _phrasesRetryDone = false;
 const SPEECH_KEEPALIVE_MS = 40000;
 
@@ -4070,6 +4147,51 @@ async function ensureChapters(){
   if(json.code !== 200 || !Array.isArray(json.data)) throw new Error('Bad response');
   chaptersCache = json.data;
   return chaptersCache;
+}
+
+async function ensureChaptersLocalized(lang) {
+  lang = lang || 'en';
+  if (chaptersLocalCache[lang]) return chaptersLocalCache[lang];
+
+  const chapters = await ensureChapters();
+
+  const english = chapters.map(c => ({
+    number: c.number,
+    name: c.name,
+    englishName: c.englishName,
+    translatedName: c.englishNameTranslation || '',
+    revelationType: c.revelationType,
+    numberOfAyahs: c.numberOfAyahs
+  }));
+
+  if (lang === 'en') {
+    chaptersLocalCache.en = english;
+    return english;
+  }
+
+  try {
+    const res = await fetchWithTimeout(
+      QURAN_API_V4 + '/chapters?language=' + encodeURIComponent(lang),
+      FETCH_TIMEOUT_MS
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const nameMap = {};
+    if (json && Array.isArray(json.chapters)) {
+      json.chapters.forEach(c => {
+        nameMap[c.id] = (c.translated_name && c.translated_name.name) || '';
+      });
+    }
+    chaptersLocalCache[lang] = english.map(c => ({
+      ...c,
+      translatedName: nameMap[c.number] || c.translatedName
+    }));
+  } catch (e) {
+    console.warn('[Chapters] Localized chapter names unavailable for', lang, e);
+    chaptersLocalCache[lang] = english;
+  }
+
+  return chaptersLocalCache[lang];
 }
 
 const rmsAnalyser = (function(){
@@ -5016,8 +5138,6 @@ function markTajweedMicFailed(){
   const now = performance.now();
   coachTajweedMicFailed = true;
   updateTajweedStatusChip();
-  /* Suppress the modal for 60 s so rapid Follow ↔ Tajweed toggling
-     cannot flood the user with the same "mic is broken" dialog. */
   if(now - _lastTajweedMicFailedAt > 60000){
     _lastTajweedMicFailedAt = now;
     showTajweedMicFailedModal();
@@ -5924,8 +6044,6 @@ async function runSpeechResultProcessing(snap) {
     const toks = bestTranscript.split(/\s+/).filter(Boolean);
     if (!toks.length) continue;
 
-    /* N-best consensus (Follow mode only) — feeds both the interim tail-unlock
-       and the followOnly fast path in gradeFollowFast. */
     if (followOnly) buildConsensusSet(alternatives);
     else currentConsensusSet = new Set();
 
@@ -6009,9 +6127,6 @@ function buildPhraseObjects(rec) {
     const clean = String(words[i].raw || '').normalize('NFKC').replace(TASHKEEL, '').replace(/[^\u0621-\u064A\s]/g, '').trim();
     if (!clean || seen.has(clean)) continue;
     seen.add(clean);
-    /* Phrase-boost decay — 8.0 for the next ~2 words, 4.0 up to +5, 1.0 beyond.
-       Focuses contextual biasing on the near-horizon without over-boosting the
-       whole upcoming surah. */
     const distance = i - ptr;
     const boost = distance <= 2 ? 8.0 : distance <= 5 ? 4.0 : 1.0;
     try { phrases.push(new PhraseCtor(clean, boost)); } catch (_) {}
@@ -6162,8 +6277,6 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    /* N-best consensus fast path: multiple alternatives agreed on the target
-       word's form — bypass pendingHeard and the whole match cascade. */
     if (followOnly && w && currentConsensusSet.size > 0 && currentConsensusSet.has(w.norm)){
       if (heard === w.norm || lev(heard, w.norm) <= 1 ||
           isMatchWord(heard, hPhon, hPhonLoose, w)){
@@ -6763,7 +6876,6 @@ function releaseMicStream(){
   if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
 }
 
-/* ── CHANGE 3: watchdog retries once without phrases before warning ── */
 function startMicWatchdog(){
   clearTimeout(micWatchdogTimer); micAudioConfirmed = false;
   micWatchdogTimer = setTimeout(() => {
@@ -6850,14 +6962,9 @@ function setRecitationMode(modeName){
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
   followWrongTokens = 0; cancelFollowPinTimer();
-  /* Fresh recognizer may be created on the next startReciting() — let it
-     try phrase hints again after a mode switch. */
   _phrasesRetryDone = false;
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
-    /* Follow mode never uses getUserMedia. Release the Tajweed-only
-       stream and RMS analyser so the "mic in use" indicator goes away
-       and battery/CPU stop being burned. The recognizer is untouched. */
     releaseMicStream();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -6867,9 +6974,6 @@ function setRecitationMode(modeName){
     addFeedback('🎵 <b>Tajweed</b> mode — strict, rule-aware. Tajweed colours are shown; mispronunciations and rule violations are marked red.', false, true);
     applyTajweedColorsToCoach();
     if(wantMic && !rmsAnalyser.isRunning()){
-      /* On iOS Safari, Samsung Internet, Huawei/Honor and older WebViews,
-         the speech recognizer may hold the mic exclusively. Stop it
-         briefly, acquire the stream, then restart — so both can run. */
       const wasRunning = recRunning;
       if(wasRunning){ try{ speechRecognition && speechRecognition.stop(); }catch(_){} }
 
@@ -6889,9 +6993,6 @@ function setRecitationMode(modeName){
             notifyRmsUnavailable();
           }
         } else {
-          /* Only a genuine mic refusal should raise the modal.
-             NotReadableError / TrackStartError means "mic is busy",
-             usually because the recognizer is holding it — not broken. */
           const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
           if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
              nm === 'DevicesNotFoundError' || nm === 'SecurityError'){
@@ -7345,7 +7446,6 @@ function setMicButton(){
   syncFsButtons();
 }
 
-/* ── CHANGE 5 + 6: Follow uses native SpeechRecognition only (no getUserMedia) ── */
 async function startReciting(){
   unlockAudio();
   if(!words.length){
@@ -7371,15 +7471,11 @@ async function startReciting(){
     }
     const _tajStream = await ensureMicStream();
     if(!_tajStream){
-      /* Distinguish "mic busy with the recognizer" from "mic denied/absent".
-         Only the latter should tell the user something is broken. */
       const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
       if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
          nm === 'DevicesNotFoundError' || nm === 'SecurityError'){
         markTajweedMicFailed();
       } else {
-        /* NotReadableError / TrackStartError / timeout → fall through to
-           transcript-only mode silently. */
         coachTajweedMicFailed = false;
         updateTajweedStatusChip();
       }
@@ -7422,7 +7518,6 @@ async function startReciting(){
   }
 }
 
-/* ── CHANGE 7: reset phrases-retry flag on stop ── */
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
   wantMic=false; micPaused = false;
@@ -7802,21 +7897,27 @@ function askForInternet(label){
 }
 
 async function renderSurahIndex(){
-  if(surahIndexRendered) return;
   surahIndexList.innerHTML = '<div class="loading">Loading…</div>';
   try{
-    const chapters = await ensureChapters();
+    const chapters = await ensureChaptersLocalized(surahIndexLang);
     surahIndexList.innerHTML = '';
     chapters.forEach(s => {
       const row = document.createElement('button');
       row.className = 'surah-row'; row.type = 'button';
-      row.innerHTML = '<span class="num">' + String(s.number).padStart(3,'0') + '</span>' +
-        '<span class="meta"><span class="en">' + escapeHtml(s.englishName) + '</span><span class="sub">' + s.numberOfAyahs + ' ayahs · ' + escapeHtml(s.revelationType) + '</span></span>' +
+      const subParts = [];
+      if (s.translatedName) subParts.push(escapeHtml(s.translatedName));
+      subParts.push(s.numberOfAyahs + ' ayahs');
+      subParts.push(escapeHtml(s.revelationType));
+      row.innerHTML =
+        '<span class="num">' + String(s.number).padStart(3,'0') + '</span>' +
+        '<span class="meta">' +
+          '<span class="en">' + escapeHtml(s.englishName) + '</span>' +
+          '<span class="sub">' + subParts.join(' · ') + '</span>' +
+        '</span>' +
         '<span class="ar">' + escapeHtml(s.name) + '</span>';
       row.addEventListener('click', () => openSurahInReader(s.number));
       surahIndexList.appendChild(row);
     });
-    surahIndexRendered = true;
   }catch(e){
     surahIndexList.innerHTML = '<div class="loading"><span class="err">⚠️ Could not load the surah list.</span>Check your connection and try again.</div>';
   }
@@ -7825,19 +7926,66 @@ const JUZ_NAMES = ['Alif Lam Meem','Sayaqul','Tilkal Rusul','Lan Tanaloo','Wal M
 const JUZ_NAMES_AR = ['الم','سيقول','تلك الرسل','لن تنالوا','والمحصنات','لا يحب الله','وإذا سمعوا','ولو أننا','قال الملأ','واعلموا','يعتذرون','وما من دابة','وما أبرئ','ربما','سبحان الذي','قال ألم','اقترب','قد أفلح','وقال الذين','أمن خلق','اتل ما أوحي','ومن يقنت','وما لي','فمن أظلم','إليه يرد','حم','قال فما خطبكم','قد سمع الله','تبارك الذي','عم يتساءلون'];
 const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
 function renderJuzIndex(){
-  if(juzIndexRendered) return;
   juzIndexList.innerHTML = '';
+  const label = { en: 'Juz', tr: 'Cüz', de: 'Dschuz', fr: 'Juz', zh: '卷' }[surahIndexLang] || 'Juz';
   for(let i = 1; i <= 30; i++){
     const row = document.createElement('button');
     row.type = 'button'; row.className = 'surah-row';
     const startPage = JUZ_START_PAGES_FALLBACK[i - 1];
-    row.innerHTML = '<span class="num">' + i + '</span>' +
-      '<span class="meta"><span class="en">' + escapeHtml(JUZ_NAMES[i - 1] || ('Juz ' + i)) + '</span><span class="sub">Page ' + startPage + ' · Juz ' + i + ' of 30</span></span>' +
+    row.innerHTML =
+      '<span class="num">' + i + '</span>' +
+      '<span class="meta">' +
+        '<span class="en">' + escapeHtml(JUZ_NAMES[i - 1] || ('Juz ' + i)) + '</span>' +
+        '<span class="sub">Page ' + startPage + ' · ' + label + ' ' + i + ' / 30</span>' +
+      '</span>' +
       '<span class="ar">الجزء ' + toAr(i) + '</span>';
     row.addEventListener('click', () => openJuzInReader(i));
     juzIndexList.appendChild(row);
   }
-  juzIndexRendered = true;
+}
+function populateLangSelectors() {
+  const ids = ['surahIndexLang', 'juzIndexLang'];
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = LANG_OPTIONS.map(o =>
+      '<option value="' + o.code + '"' + (o.code === surahIndexLang ? ' selected' : '') + '>' +
+        escapeHtml(o.name) +
+      '</option>'
+    ).join('');
+  });
+}
+function handleLangChange(newLang) {
+  if (!LANG_OPTIONS.some(o => o.code === newLang)) return;
+  surahIndexLang = newLang;
+  try { localStorage.setItem('qc.surahIndexLang', newLang); } catch (e) {}
+  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === newLang);
+  if (opt && opt.id !== translationTextId) {
+    translationTextId = opt.id;
+    try { localStorage.setItem('qc.translationText', translationTextId); } catch (e) {}
+    try { readerState.pages.clear(); } catch (e) {}
+    updateTextTranslationTrigger();
+    try {
+      if (textTranslationMenu) {
+        textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => {
+          const on = it.dataset.textTrans === translationTextId;
+          it.classList.toggle('active', on);
+          it.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+      }
+    } catch (e) {}
+    try { viewerAudio.translations = []; } catch (e) {}
+    try {
+      const audioOpt = TRANSLATION_AUDIO_OPTIONS.find(t => t.textId === translationTextId);
+      if (audioOpt && viewerAudio.translationId !== audioOpt.id) {
+        viewerAudio.translationId = audioOpt.id;
+        try { localStorage.setItem('qc.translationAudioId', audioOpt.id); } catch (e) {}
+        updateTranslationTrigger();
+      }
+    } catch (e) {}
+  }
+  if (currentScreenName === 'index') renderSurahIndex();
+  if (currentScreenName === 'juz')   renderJuzIndex();
 }
 function loadBookmarks(){
   try{
@@ -7977,7 +8125,7 @@ function renderTranslationSelect(){
 function updateTranslationTrigger(){
   if(translationValue){
     const t = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === viewerAudio.translationId);
-    translationValue.textContent = t ? t.label : 'English - Saheeh International';
+    translationValue.textContent = t ? t.label : 'English — Saheeh International';
   }
 }
 function openTranslationMenu(){
@@ -7995,6 +8143,17 @@ function toggleTranslationMenu(){ if(!translationMenu) return; if(translationMen
 function changeTranslation(id){
   viewerAudio.translationId = id;
   localStorage.setItem('qc.translationAudioId', id);
+  try {
+    const opt = TRANSLATION_AUDIO_OPTIONS.find(t => t.id === id);
+    if (opt && opt.textId) {
+      const textOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.id === opt.textId);
+      if (textOpt && textOpt.lang && textOpt.lang !== surahIndexLang) {
+        surahIndexLang = textOpt.lang;
+        try { localStorage.setItem('qc.surahIndexLang', surahIndexLang); } catch (e) {}
+        populateLangSelectors();
+      }
+    }
+  } catch (e) {}
   updateTranslationTrigger();
   if(translationMenu){ translationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.translation === id; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); }); }
   const label = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === id);
@@ -8034,6 +8193,29 @@ function toggleTextTranslationMenu(){ if(!textTranslationMenu) return; if(textTr
 function changeTextTranslation(id){
   translationTextId = id;
   try{ localStorage.setItem('qc.translationText', id); }catch(e){}
+  try {
+    const opt = getTextTranslationById(id);
+    if (opt && opt.lang && opt.lang !== surahIndexLang) {
+      surahIndexLang = opt.lang;
+      localStorage.setItem('qc.surahIndexLang', surahIndexLang);
+      populateLangSelectors();
+    }
+  } catch (e) {}
+  try {
+    const audioOpt = TRANSLATION_AUDIO_OPTIONS.find(t => t.textId === id);
+    if (audioOpt && viewerAudio.translationId !== audioOpt.id) {
+      viewerAudio.translationId = audioOpt.id;
+      localStorage.setItem('qc.translationAudioId', audioOpt.id);
+      updateTranslationTrigger();
+      if(translationMenu){
+        translationMenu.querySelectorAll('.reciter-item').forEach(it => {
+          const on = it.dataset.translation === audioOpt.id;
+          it.classList.toggle('active', on);
+          it.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+      }
+    }
+  } catch (e) {}
   updateTextTranslationTrigger();
   if(textTranslationMenu){ textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.textTrans === id; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); }); }
   showToast('📖 Text translation: <b>' + escapeHtml(currentTextTranslationLabel()) + '</b>');
@@ -8677,8 +8859,8 @@ const viewerAudio = {
 };
 let viewerAudioErrorStreak = 0;
 function getActiveTextTranslationId(){
-  try{ if(viewerOpen && viewerMode === 'audio' && viewerAudio.playTranslation){ const audioOpt = TRANSLATION_AUDIO_OPTIONS.find(x => x.id === viewerAudio.translationId); if(audioOpt && audioOpt.textId) return audioOpt.textId; } }catch(e){}
-  return translationTextId;
+  const langOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
+  return langOpt ? langOpt.id : translationTextId;
 }
 async function reloadViewerTranslation(){
   if(!viewerAudio.active || !viewerAudio.surah) return;
@@ -8956,8 +9138,9 @@ async function loadViewerAudioSurah(surahNumber){
   }
   viewerAudioErrorStreak = 0;
   if(viewerAudio.playTranslation){
-    const transId = viewerAudio.translationId;
-    const transUrl = buildTranslationAudioUrl(transId, surahNumber, 1);
+    const transOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
+    const transFolder = transOpt ? transOpt.audioFolder : 'English/Sahih_Intnl_Ibrahim_Walk_192kbps';
+    const transUrl = buildTranslationAudioUrl(transFolder, surahNumber, 1);
     if(transUrl){ await playTranslationWithHealing(transUrl); if(myToken !== viewerAudio.token) return; if(!viewerAudio.active || viewerAudio.paused) return; }
   }
   const el1 = findViewerAyahEl(surahNumber, 1);
@@ -9068,8 +9251,9 @@ async function playCurrentViewerAyah(){
   }
   viewerAudioErrorStreak = 0;
   if (viewerAudio.playTranslation) {
-    const transId = viewerAudio.translationId;
-    const transUrl = buildTranslationAudioUrl(transId, sNum, aNum);
+    const transOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
+    const transFolder = transOpt ? transOpt.audioFolder : 'English/Sahih_Intnl_Ibrahim_Walk_192kbps';
+    const transUrl = buildTranslationAudioUrl(transFolder, sNum, aNum);
     if (transUrl) {
       const trResult = await playTranslationWithHealing(transUrl);
       if(myToken !== viewerAudio.token) return;
@@ -10099,7 +10283,7 @@ function openInfoModal(){
     '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>Today\'s <b>Hijri date</b> is computed from the same arithmetic algorithm used by the calendar.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">4</span> 📖 Two English translations</h3><ul><li>Yusuf Ali &amp; Saheeh International.</li></ul></div>' +
+    '<div class="feature"><h3><span class="fnum">4</span> 📖 Multi-language translations</h3><ul><li>English (Yusuf Ali &amp; Saheeh International), Türkçe (Diyanet), Deutsch (Abu Rida), Français (Hamidullah), and 中文 (Ma Jian). Choose the language on the <b>Surah index</b>, <b>Juz index</b>, or <b>Play audio</b> screen — the choice applies to the reader and to audio playback.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li><b>Default:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
     '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> to bookmark it.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>⬇</b> to download a surah for offline.</li></ul></div>' +
@@ -10908,6 +11092,11 @@ function showTextShareModal(text){
   updateInstallMenuItem(); maybeShowInstallPrompt();
   updateStreakUI(); renderStreakBadges();
   loadShareCard();
+  populateLangSelectors();
+  ['surahIndexLang', 'juzIndexLang'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.addEventListener('change', e => handleLangChange(e.target.value));
+  });
   const hifzSel = document.getElementById('hifzSurahSelect');
   if(hifzSel){
     const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);
