@@ -8420,6 +8420,7 @@ async function fetchAudioForOffline(url, parentSignal){
     return null;
   } finally { bridge.release(); }
 }
+
 async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, signal, isTranslation){
   try{
     const hit = await cache.match(primaryUrl, { ignoreSearch: true, ignoreVary: true });
@@ -8449,6 +8450,14 @@ async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, sign
     const res = await fetchAudioForOffline(sources[i], signal);
     if(!res) continue;
     try{
+      // ── NEW FIX ──
+      // If the server doesn't allow CORS (like QuranEnc), the response is "opaque".
+      // We cannot read its body, but we CAN save it directly to the cache.
+      if (res.type === 'opaque') {
+        await cache.put(primaryUrl, res);
+        return 'ok';
+      }
+      
       const blob = await res.clone().blob();
       if (blob.size < 1000) { continue; } // Skip empty/error HTML pages
       await cache.put(primaryUrl, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
@@ -8457,6 +8466,7 @@ async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, sign
   }
   return 'fail';
 }
+
 async function downloadSurahAudio(surahNumber){
   const reciterId = reciter;
   const key = downloadKeyFor(reciterId, surahNumber);

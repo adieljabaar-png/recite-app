@@ -1,43 +1,37 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.2 — Version bump to force clients to update to the latest
-   index.html, which fixes translation audio playback and downloads.
+   v2.4.3 — Version bump to force clients to update to the latest
+   index.html, which fixes translation audio downloads from
+   d.quranenc.com (Turkish, German, French, Mandarin).
 
-     • Translation audio now correctly routes to TWO hosts:
-         – everyayah.com       → Arabic Quran audio (all 20
-                                 reciters) + English translation
-                                 audio (Saheeh International).
-         – d.quranenc.com      → Spoken-translation audio for
-                                 Turkish  (turkish_rwwad),
-                                 German   (german_bubenheim),
-                                 French   (french_montada),
-                                 Mandarin (chinese_suliman).
+     • FIX: The app now properly handles "opaque" (no-CORS) 
+       responses from QuranEnc. When downloading translation audio 
+       from d.quranenc.com, the fetch request succeeds but the 
+       browser cannot read the response body. The updated 
+       index.html now saves these opaque responses directly to 
+       the 'qc-audio' cache instead of trying to read their blobs.
 
-       Both hosts are served from the SAME persistent
-       'qc-audio' cache (they are differentiated only by host
-       and path, not by cache name). Offline playback works
-       for any ayah that has been downloaded, regardless of
-       which language it belongs to.
+     • SW UPDATE: Added an early-return in serveRangeFromCached 
+       for opaque responses. Because opaque responses cannot be 
+       sliced or measured, the SW now immediately returns the full 
+       cached response instead of throwing an error when the media 
+       player requests a Range header.
 
-       The fetch handler below intercepts BOTH hosts and hands
-       them to audioFromDownloadCache().
-
-     • Every other feature carried over unchanged from v2.4.1
-       (Share Card, Prayer Times, Hifz Test, Tajweed Colors,
-       Dashboard, multi-language reader, book-form mushaf,
+     • Every other feature carried over unchanged from v2.4.2
+       (Share Card, Prayer Times, Hifz Test, Tajweed Colors, 
+       Dashboard, multi-language reader, book-form mushaf, 
        reader-fullscreen, QR code screen).
 
-   Cache strategy is unchanged — this is a version-only bump so
-   the new index.html reaches installed clients. The persistent
-   'qc-audio' cache continues to hold every downloaded Arabic
-   surah AND every downloaded translation surah in all five
-   supported languages, and is never deleted on activate.
+   Cache strategy is unchanged — the persistent 'qc-audio' cache 
+   continues to hold every downloaded Arabic surah AND every 
+   downloaded translation surah in all five supported languages, 
+   and is never deleted on activate.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.2';
+const VERSION = '2.4.3';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -97,10 +91,6 @@ const NOTIFICATION_ICON = "data:image/svg+xml," + encodeURIComponent(
    ============================================================ */
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    // 1. Shell — awaited (mandatory for offline open). The
-    //    `cache:'reload'` marker guarantees the worker stores the
-    //    exact index.html currently deployed, never a stale copy
-    //    from the browser HTTP cache. Icons are cached here too.
     try{
       const cache = await caches.open(SHELL_CACHE);
       await Promise.all(SHELL_URLS.map(async url => {
@@ -112,8 +102,6 @@ self.addEventListener('install', event => {
       }));
     }catch(_){}
 
-    // 2. Google Fonts — best-effort, bounded to 20 s so install
-    //    can never hang if the network is slow or the CDN is down.
     try{
       await Promise.race([
         prefetchFonts().catch(() => {}),
@@ -121,24 +109,12 @@ self.addEventListener('install', event => {
       ]);
     }catch(_){}
 
-    // 3. Activate immediately
     try{ await self.skipWaiting(); }catch(_){}
   })());
 });
 
 /* ============================================================
    ACTIVATE — drop stale versioned caches, claim clients
-   ------------------------------------------------------------
-   This is the ONLY place the SW deletes anything. It deletes
-   exclusively caches whose names start with an OWNED_PREFIX
-   AND are not in the current VERSIONED_CACHES list. The
-   persistent 'qc-audio' cache is never in that set because:
-     (a) it is whitelisted in PERSISTENT_CACHES, and
-     (b) it does not start with any OWNED_PREFIX.
-   Both checks mean downloaded Quran audio and downloaded
-   translation audio (in all five languages, across both
-   everyayah.com and d.quranenc.com) survive every version
-   bump, forever.
    ============================================================ */
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
@@ -243,16 +219,12 @@ self.addEventListener('notificationclick', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Only intercept GET. POST / PUT / DELETE — including Vercel Analytics
-  // view events, /api/feedback and /api/subscribe — must go straight to
-  // the network untouched.
   if(req.method !== 'GET') return;
 
   let url;
   try{ url = new URL(req.url); }catch(_){ return; }
   if(url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Same-origin paths that must NEVER be intercepted by the SW.
   if(url.origin === self.location.origin){
     if(url.pathname.startsWith('/my-analytics/')) return;
     if(url.pathname.startsWith('/_vercel/'))       return;
@@ -261,33 +233,26 @@ self.addEventListener('fetch', event => {
     if(url.pathname === '/robots.txt')             return;
   }
 
-  // Tajweed annotation requests — always try the network first
   if(url.hostname === HOST_QURAN_COM && url.search.includes('text_uthmani_tajweed')){
     event.respondWith(networkFresh(req));
     return;
   }
 
-  // Audio — served from the persistent download cache first (works
-  // fully offline), network second. Covers BOTH everyayah.com and
-  // d.quranenc.com.
   if(url.hostname === HOST_EVERYAYAH || url.hostname === HOST_QURANENC){
     event.respondWith(audioFromDownloadCache(req));
     return;
   }
 
-  // Google Fonts — cache-first, pre-populated at install.
   if(url.hostname === HOST_GOOGLE_FONTS_CSS || url.hostname === HOST_GOOGLE_FONTS_STATIC){
     event.respondWith(cacheFirst(req, FONTS_CACHE));
     return;
   }
 
-  // Quran text APIs — network-first with cache fallback.
   if(url.hostname === HOST_QURAN_COM || url.hostname === HOST_ALQURAN){
     event.respondWith(networkFirst(req, TEXT_CACHE, TEXT_CACHE_MAX));
     return;
   }
 
-  // Same-origin
   if(url.origin === self.location.origin){
     if(url.pathname.endsWith('/manifest.json')){
       event.respondWith(manifestFresh(req));
@@ -335,6 +300,12 @@ async function audioFromDownloadCache(req){
 }
 
 async function serveRangeFromCached(response, rangeHeader){
+  // If the cached response is opaque (e.g., from QuranEnc without CORS),
+  // we cannot read its size or slice it. Return the whole thing.
+  if (response.type === 'opaque') {
+    return response;
+  }
+
   let blob;
   try{ blob = await response.blob(); }
   catch(_){ return response; }
