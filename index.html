@@ -3197,6 +3197,7 @@ const TEXT_TRANSLATION_OPTIONS = [
     ],
     // Last-resort CORS CDN. SW already caches these as opaque responses.
     quranEncKey: 'turkish_rwwad',
+    islamicNetworkKey: 'tr.vakfi-audio', // <-- ADDED THIS LINE
     label: 'Türkçe — Diyanet', shortLabel: 'Diyanet'
   }
 ];
@@ -3850,6 +3851,7 @@ function buildAyahUrl(folder, surah, ayah){
 }
   // Returns the full ordered list of candidate URLs for a translation.
 // Candidate 0 is the "primary" URL and is used as the cache key for downloads.
+
 function buildTranslationAudioUrls(folder, surah, ayah){
   const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
   const s = String(surah).padStart(3, '0');
@@ -3857,10 +3859,10 @@ function buildTranslationAudioUrls(folder, surah, ayah){
   const primaryFolder = (opt && opt.audioFolder) ? opt.audioFolder : folder;
   const urls = [];
 
-  // Primary EveryAyah translation URL
+  // 1. Primary EveryAyah translation URL
   urls.push('https://everyayah.com/data/translations/' + primaryFolder + '/' + s + a + '.mp3');
 
-  // Alternate EveryAyah folder names
+  // 2. Alternate EveryAyah folder names
   if (opt && Array.isArray(opt.fallbackAudioFolders)) {
     for (const fb of opt.fallbackAudioFolders) {
       if (!fb || fb === primaryFolder) continue;
@@ -3869,7 +3871,13 @@ function buildTranslationAudioUrls(folder, surah, ayah){
     }
   }
 
-  // Final fallback: QuranEnc (CORS-less CDN, served as opaque)
+  // 3. Islamic Network CDN (Highly reliable)
+  if (opt && opt.islamicNetworkKey) {
+    const globalAyah = globalAyahNumber(surah, ayah);
+    urls.push('https://cdn.islamic.network/quran/audio/128/' + opt.islamicNetworkKey + '/' + globalAyah + '.mp3');
+  }
+
+  // 4. Final fallback: QuranEnc (CORS-less CDN, served as opaque)
   if (opt && opt.quranEncKey) {
     urls.push('https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3');
   }
