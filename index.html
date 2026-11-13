@@ -570,10 +570,23 @@ body.light-mode .surah-row .dlbtn.done{background:rgba(31,154,90,.14);border-col
   color:var(--text);font-family:inherit;font-weight:600;
   text-align:left;cursor:pointer;-webkit-appearance:none;
   box-shadow:0 6px 18px rgba(0,0,0,.24);
-  transition:border-color .2s,transform .12s,box-shadow .2s;
+  transition:border-color .2s,transform .12s,box-shadow .2s,opacity .2s,filter .2s;
 }
 .reciter-trigger:hover{border-color:rgba(79,140,255,.45)}
 .reciter-trigger:active{transform:scale(.993)}
+.reciter-trigger:disabled,
+.reciter-dropdown.disabled .reciter-trigger{
+  opacity:.42;
+  cursor:not-allowed;
+  filter:grayscale(.5);
+  transform:none;
+}
+.reciter-trigger:disabled:hover,
+.reciter-dropdown.disabled .reciter-trigger:hover{border-color:var(--gold)}
+.reciter-trigger:disabled:active,
+.reciter-dropdown.disabled .reciter-trigger:active{transform:none}
+.reciter-trigger:disabled .rt-chev,
+.reciter-dropdown.disabled .reciter-trigger .rt-chev{opacity:.25}
 .reciter-dropdown.open .reciter-trigger{border-color:rgba(79,140,255,.70);box-shadow:0 8px 22px rgba(79,140,255,.20);}
 .rt-icon{
   font-size:1.1rem;width:40px;height:40px;border-radius:11px;
@@ -3170,29 +3183,14 @@ const EDITION_COACH = 'quran-uthmani';
 /* ── Translation options ──────────────────────────────────── */
 
 const TEXT_TRANSLATION_OPTIONS = [
-  // English (unchanged — EveryAyah audio still works)
-  { id: 'en.yusufali',   quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
-  { id: 'en.sahih',      quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
-
-  // Türkçe — audio from QuranEnc (turkish_rwwad)
-  { id: 'tr.diyanet',    quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', quranEncKey: 'turkish_rwwad', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' },
-
-  // Deutsch — audio from QuranEnc (german_bubenheim)
-  { id: 'de.aburida',    quranComId: 27,  lang: 'de', audioFolder: 'German/German_Abu_Rida_128kbps', quranEncKey: 'german_bubenheim', label: 'Deutsch — Abu Rida', shortLabel: 'Abu Rida' },
-
-  // Français — audio from QuranEnc (french_montada)
-  { id: 'fr.hamidullah', quranComId: 31,  lang: 'fr', audioFolder: 'French/French_Hamidullah_128kbps', quranEncKey: 'french_montada', label: 'Français — Hamidullah', shortLabel: 'Hamidullah' },
-
-  // 中文 (Mandarin) — audio from QuranEnc (chinese_suliman)
-  { id: 'zh.jian',       quranComId: 56,  lang: 'zh', audioFolder: 'Chinese/Chinese_Ma_Jian_128kbps', quranEncKey: 'chinese_suliman', label: '中文 — Ma Jian', shortLabel: 'Ma Jian' }
+  { id: 'en.yusufali', quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
+  { id: 'en.sahih',    quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
+  { id: 'tr.diyanet',  quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', quranEncKey: 'turkish_rwwad', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' }
 ];
 
 const LANG_OPTIONS = [
-  { code: 'en', name: 'English',   defaultTranslationId: 'en.yusufali'   },
-  { code: 'tr', name: 'Türkçe',    defaultTranslationId: 'tr.diyanet'    },
-  { code: 'de', name: 'Deutsch',   defaultTranslationId: 'de.aburida'    },
-  { code: 'fr', name: 'Français',  defaultTranslationId: 'fr.hamidullah' },
-  { code: 'zh', name: '中文',      defaultTranslationId: 'zh.jian'       }
+  { code: 'en', name: 'English', defaultTranslationId: 'en.yusufali' },
+  { code: 'tr', name: 'Türkçe',  defaultTranslationId: 'tr.diyanet'  }
 ];
 
 let translationTextId = (function () {
@@ -3537,10 +3535,7 @@ const RECITER_ORDER = [
 
 const TRANSLATION_AUDIO_OPTIONS = [
   { id: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', textId: 'en.sahih' },
-  { id: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               textId: 'tr.diyanet' },
-  { id: 'German/German_Abu_Rida_128kbps',           label: 'Deutsch — Abu Rida',             textId: 'de.aburida' },
-  { id: 'French/French_Hamidullah_128kbps',         label: 'Français — Hamidullah',          textId: 'fr.hamidullah' },
-  { id: 'Chinese/Chinese_Ma_Jian_128kbps',          label: '中文 — Ma Jian',                  textId: 'zh.jian' }
+  { id: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               textId: 'tr.diyanet' }
 ];
 
 const _levCache = new Map();
@@ -7943,7 +7938,7 @@ const JUZ_NAMES_AR = ['الم','سيقول','تلك الرسل','لن تنالو
 const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
 function renderJuzIndex(){
   juzIndexList.innerHTML = '';
-  const label = { en: 'Juz', tr: 'Cüz', de: 'Dschuz', fr: 'Juz', zh: '卷' }[surahIndexLang] || 'Juz';
+  const label = { en: 'Juz', tr: 'Cüz' }[surahIndexLang] || 'Juz';
   for(let i = 1; i <= 30; i++){
     const row = document.createElement('button');
     row.type = 'button'; row.className = 'surah-row';
@@ -8168,6 +8163,20 @@ function changeTranslation(id){
         try { localStorage.setItem('qc.surahIndexLang', surahIndexLang); } catch (e) {}
         populateLangSelectors();
       }
+      // Keep text translation in lockstep when Play translation audio is on
+      if (viewerAudio.playTranslation && translationTextId !== opt.textId) {
+        translationTextId = opt.textId;
+        try { localStorage.setItem('qc.translationText', translationTextId); } catch (e) {}
+        try { readerState.pages.clear(); } catch (e) {}
+        updateTextTranslationTrigger();
+        if (textTranslationMenu) {
+          textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => {
+            const on = it.dataset.textTrans === translationTextId;
+            it.classList.toggle('active', on);
+            it.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+        }
+      }
     }
   } catch (e) {}
   updateTranslationTrigger();
@@ -8195,6 +8204,7 @@ function renderTextTranslationSelect(){
 }
 function updateTextTranslationTrigger(){ if(textTranslationValue) textTranslationValue.textContent = currentTextTranslationLabel(); }
 function openTextTranslationMenu(){
+  if(viewerAudio.playTranslation){ showToast('🔒 Text translation is locked to the audio translation while "Play translation audio" is on.'); return; }
   if(!textTranslationMenu || !textTranslationTrigger || !textTranslationDropdown) return;
   textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => { const on = it.dataset.textTrans === translationTextId; it.classList.toggle('active', on); it.setAttribute('aria-selected', on ? 'true' : 'false'); });
   textTranslationDropdown.classList.add('open'); textTranslationMenu.hidden = false; textTranslationTrigger.setAttribute('aria-expanded', 'true');
@@ -8206,7 +8216,53 @@ function closeTextTranslationMenu(){
   textTranslationDropdown.classList.remove('open'); textTranslationMenu.hidden = true; textTranslationTrigger.setAttribute('aria-expanded', 'false');
 }
 function toggleTextTranslationMenu(){ if(!textTranslationMenu) return; if(textTranslationMenu.hidden) openTextTranslationMenu(); else closeTextTranslationMenu(); }
+function setPlayTranslationState(enabled){
+  if(enabled){
+    // 1. Force the text translation to match the current audio translation
+    const audioOpt = TRANSLATION_AUDIO_OPTIONS.find(t => t.id === viewerAudio.translationId);
+    if(audioOpt && audioOpt.textId){
+      const textOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.id === audioOpt.textId);
+      if(textOpt && textOpt.lang && textOpt.lang !== surahIndexLang){
+        surahIndexLang = textOpt.lang;
+        try{ localStorage.setItem('qc.surahIndexLang', surahIndexLang); }catch(_){}
+        populateLangSelectors();
+      }
+      if(translationTextId !== audioOpt.textId){
+        translationTextId = audioOpt.textId;
+        try{ localStorage.setItem('qc.translationText', translationTextId); }catch(_){}
+        try{ readerState.pages.clear(); }catch(_){}
+        updateTextTranslationTrigger();
+        if(textTranslationMenu){
+          textTranslationMenu.querySelectorAll('.reciter-item').forEach(it => {
+            const on = it.dataset.textTrans === translationTextId;
+            it.classList.toggle('active', on);
+            it.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+        }
+      }
+    }
+    // 2. Close any open menu, then disable the trigger
+    closeTextTranslationMenu();
+    if(textTranslationDropdown) textTranslationDropdown.classList.add('disabled');
+    if(textTranslationTrigger){
+      textTranslationTrigger.disabled = true;
+      textTranslationTrigger.setAttribute('aria-disabled', 'true');
+      textTranslationTrigger.title = 'Locked to the audio translation';
+    }
+  } else {
+    if(textTranslationDropdown) textTranslationDropdown.classList.remove('disabled');
+    if(textTranslationTrigger){
+      textTranslationTrigger.disabled = false;
+      textTranslationTrigger.removeAttribute('aria-disabled');
+      textTranslationTrigger.removeAttribute('title');
+    }
+  }
+}
 function changeTextTranslation(id){
+  if(viewerAudio.playTranslation){
+    showToast('🔒 Text translation is locked to the audio translation while "Play translation audio" is enabled.');
+    return;
+  }
   translationTextId = id;
   try{ localStorage.setItem('qc.translationText', id); }catch(e){}
   try {
@@ -8887,8 +8943,7 @@ const viewerAudio = {
 };
 let viewerAudioErrorStreak = 0;
 function getActiveTextTranslationId(){
-  const langOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
-  return langOpt ? langOpt.id : translationTextId;
+  return translationTextId;
 }
 async function reloadViewerTranslation(){
   if(!viewerAudio.active || !viewerAudio.surah) return;
@@ -10025,6 +10080,12 @@ tilePlayAudio.addEventListener('click', () => {
   renderTranslationSelect(); closeTranslationMenu();
   renderTextTranslationSelect(); closeTextTranslationMenu();
   renderAudioSurahList();
+  // Restore the locked state if the user left it enabled
+  if(chkTranslateAudio && chkTranslateAudio.checked){
+    setPlayTranslationState(true);
+  } else {
+    setPlayTranslationState(false);
+  }
 });
 tileBookmarks.addEventListener('click', () => { showScreen('bookmarks'); renderBookmarksScreen(); });
 if(tileDashboard) tileDashboard.addEventListener('click', () => { showScreen('dashboard'); });
@@ -10096,13 +10157,18 @@ function openCopyrightModal(){
   if(chkTranslateAudio){
     chkTranslateAudio.addEventListener('change', (e) => {
       viewerAudio.playTranslation = e.target.checked;
+      setPlayTranslationState(e.target.checked);
       if(viewerAudio.active && viewerAudio.surah && viewerAudio.metaLoaded){ reloadViewerTranslation(); }
     });
   }
 })();
 (function wireTextTranslationDropdown(){
   if(!textTranslationTrigger || !textTranslationMenu || !textTranslationDropdown) return;
-  textTranslationTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleTextTranslationMenu(); });
+  textTranslationTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if(viewerAudio.playTranslation){ showToast('🔒 Text translation is locked to the audio translation while "Play translation audio" is on.'); return; }
+    toggleTextTranslationMenu();
+  });
   document.addEventListener('click', (e) => { if(textTranslationMenu.hidden) return; if(textTranslationDropdown.contains(e.target)) return; closeTextTranslationMenu(); });
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !textTranslationMenu.hidden){ closeTextTranslationMenu(); } });
 })();
@@ -10311,7 +10377,7 @@ function openInfoModal(){
     '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>Today\'s <b>Hijri date</b> is computed from the same arithmetic algorithm used by the calendar.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">4</span> 📖 Multi-language translations</h3><ul><li>English (Yusuf Ali &amp; Saheeh International), Türkçe (Diyanet), Deutsch (Abu Rida), Français (Hamidullah), and 中文 (Ma Jian). Choose the language on the <b>Surah index</b>, <b>Juz index</b>, or <b>Play audio</b> screen — the choice applies to the reader and to audio playback.</li></ul></div>' +
+    '<div class="feature"><h3><span class="fnum">4</span> 📖 Multi-language translations</h3><ul><li>English (Yusuf Ali &amp; Saheeh International) and Türkçe (Diyanet). Choose the language on the <b>Surah index</b>, <b>Juz index</b>, or <b>Play audio</b> screen — the choice applies to the reader and to audio playback.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li><b>Default:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
     '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> to bookmark it.</li></ul></div>' +
     '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>⬇</b> to download a surah for offline.</li></ul></div>' +
