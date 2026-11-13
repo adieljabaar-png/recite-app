@@ -1,37 +1,26 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.3 — Version bump to force clients to update to the latest
-   index.html, which fixes translation audio downloads from
-   d.quranenc.com (Turkish, German, French, Mandarin).
+   v2.4.4 — Version bump to force clients to update to the latest
+   index.html, which fixes translation audio playback and downloads.
 
-     • FIX: The app now properly handles "opaque" (no-CORS) 
-       responses from QuranEnc. When downloading translation audio 
-       from d.quranenc.com, the fetch request succeeds but the 
-       browser cannot read the response body. The updated 
-       index.html now saves these opaque responses directly to 
-       the 'qc-audio' cache instead of trying to read their blobs.
+     • FIX: The app now properly handles the new translation 
+       audio source (EveryAyah for Turkish). The SW ensures 
+       cache invalidation so old broken downloads are dropped.
 
-     • SW UPDATE: Added an early-return in serveRangeFromCached 
-       for opaque responses. Because opaque responses cannot be 
-       sliced or measured, the SW now immediately returns the full 
-       cached response instead of throwing an error when the media 
-       player requests a Range header.
+     • SW UPDATE: Retained the early-return in serveRangeFromCached 
+       for opaque responses just in case any future translation 
+       sources require no-CORS fetching. Opaque responses cannot 
+       be sliced or measured, so the SW immediately returns the 
+       full cached response instead of throwing an error when the 
+       media player requests a Range header.
 
-     • Every other feature carried over unchanged from v2.4.2
-       (Share Card, Prayer Times, Hifz Test, Tajweed Colors, 
-       Dashboard, multi-language reader, book-form mushaf, 
-       reader-fullscreen, QR code screen).
-
-   Cache strategy is unchanged — the persistent 'qc-audio' cache 
-   continues to hold every downloaded Arabic surah AND every 
-   downloaded translation surah in all five supported languages, 
-   and is never deleted on activate.
+     • Every other feature carried over unchanged from v2.4.3.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.3';
+const VERSION = '2.4.4';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -42,8 +31,8 @@ const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
    version. Downloaded Quran audio (everyayah.com) and downloaded
-   translation audio (everyayah.com for English, d.quranenc.com
-   for Turkish / German / French / Mandarin) all live here. */
+   translation audio (everyayah.com for English and Turkish) 
+   all live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
 

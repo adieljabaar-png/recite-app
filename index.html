@@ -3185,7 +3185,7 @@ const EDITION_COACH = 'quran-uthmani';
 const TEXT_TRANSLATION_OPTIONS = [
   { id: 'en.yusufali', quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
   { id: 'en.sahih',    quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
-  { id: 'tr.diyanet',  quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', quranEncKey: 'turkish_rwwad', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' }
+  { id: 'tr.diyanet',  quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' }
 ];
 
 const LANG_OPTIONS = [
@@ -3535,7 +3535,7 @@ const RECITER_ORDER = [
 
 const TRANSLATION_AUDIO_OPTIONS = [
   { id: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', textId: 'en.sahih' },
-  { id: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Diyanet',               textId: 'tr.diyanet' }
+  { id: 'Turkish/Turkish_Kamili_128kbps',           label: 'Türkçe — Kamili',                textId: 'tr.diyanet' }
 ];
 
 const _levCache = new Map();
@@ -3846,10 +3846,10 @@ function buildTranslationAudioUrl(folder, surah, ayah){
     return 'https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3';
   }
 
-  // Fallback for English (EveryAyah)
+  // Fallback for EveryAyah translations (includes English and Turkish)
   let resolvedFolder = folder;
   if (opt) resolvedFolder = opt.audioFolder;
-  return AYAH_AUDIO_BASE + resolvedFolder + '/' +
+  return 'https://everyayah.com/data/translations/' + resolvedFolder + '/' +
          String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 }
 
@@ -8420,7 +8420,6 @@ async function fetchAudioForOffline(url, parentSignal){
     return null;
   } finally { bridge.release(); }
 }
-
 async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, signal, isTranslation){
   try{
     const hit = await cache.match(primaryUrl, { ignoreSearch: true, ignoreVary: true });
@@ -8466,7 +8465,6 @@ async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, sign
   }
   return 'fail';
 }
-
 async function downloadSurahAudio(surahNumber){
   const reciterId = reciter;
   const key = downloadKeyFor(reciterId, surahNumber);
