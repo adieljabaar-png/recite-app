@@ -3844,11 +3844,6 @@ function buildAyahUrl(folder, surah, ayah){
 function buildTranslationAudioUrl(folder, surah, ayah){
   const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
 
-  // ── Türkçe ────────────────────────────────────────────────────────────────
-
-  function buildTranslationAudioUrl(folder, surah, ayah){
-  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
-
   // Route ANY translation that has a QuranEnc key to the QuranEnc CDN
   if (opt && opt.quranEncKey) {
     const s = String(surah).padStart(3, '0');
@@ -3857,13 +3852,6 @@ function buildTranslationAudioUrl(folder, surah, ayah){
   }
 
   // Fallback for English (EveryAyah)
-  let resolvedFolder = folder;
-  if (opt) resolvedFolder = opt.audioFolder;
-  return AYAH_AUDIO_BASE + resolvedFolder + '/' +
-         String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
-}
-
-  // ── EveryAyah path (English / German / French / Chinese) ─────────────────
   let resolvedFolder = folder;
   if (opt) resolvedFolder = opt.audioFolder;
   return AYAH_AUDIO_BASE + resolvedFolder + '/' +
@@ -8364,15 +8352,15 @@ async function fetchAudioForOffline(url, parentSignal){
   try{
     try{
       const res = await fetch(url, { mode: 'cors', cache: 'no-store', signal: bridge.signal });
-      if(res){
-        if(!res.ok) return null;
-        const ct = (res.headers.get('content-type') || '').toLowerCase();
-        if(!ct || /audio|mpeg|mp3|octet-stream|ogg|wav|x-m4a|mp4|aac|flac|webm/.test(ct)) return res;
-        return null;
+      if(res && res.ok) {
+        return res;
       }
     }catch(_){}
     if(bridge.signal.aborted) return null;
-    try{ const res = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: bridge.signal }); if(res && (res.type === 'opaque' || res.ok)) return res; }catch(_){}
+    try{ 
+      const res = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: bridge.signal }); 
+      if(res) return res; 
+    }catch(_){}
     return null;
   } finally { bridge.release(); }
 }
@@ -8381,21 +8369,33 @@ async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, sign
     const hit = await cache.match(primaryUrl, { ignoreSearch: true, ignoreVary: true });
     if(hit) return 'cached';
   }catch(_){}
-  const sources = [primaryUrl];
+  
+  let sources = [primaryUrl];
+  
   if(!isTranslation){
     islamicNetworkUrls(reciterId, surah, ayah).forEach(u => sources.push(u));
     if(reciterId !== FALLBACK_RECITER){
       sources.push(buildAyahUrl(FALLBACK_RECITER, surah, ayah));
       islamicNetworkUrls(FALLBACK_RECITER, surah, ayah).forEach(u => sources.push(u));
     }
+  } else {
+    // Fallback to EveryAyah translation folder
+    const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === reciterId);
+    if (opt && opt.audioFolder) {
+      const s = String(surah).padStart(3, '0');
+      const a = String(ayah).padStart(3, '0');
+      sources.push('https://everyayah.com/data/translations/' + opt.audioFolder + '/' + s + a + '.mp3');
+    }
   }
+
   for(let i = 0; i < sources.length; i++){
     if(signal.aborted) return 'aborted';
     const res = await fetchAudioForOffline(sources[i], signal);
     if(!res) continue;
     try{
-      await cache.put(primaryUrl, res.clone());
-      try{ if(res.body) res.body.cancel(); }catch(_){}
+      const blob = await res.clone().blob();
+      if (blob.size < 1000) { continue; } // Skip empty/error HTML pages
+      await cache.put(primaryUrl, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
       return 'ok';
     }catch(err){ if(err && err.name === 'QuotaExceededError') return 'quota'; }
   }
@@ -8471,9 +8471,14 @@ async function downloadTranslationSurahAudio(surahNumber) {
       if(r === 'ok' || r === 'cached') state.done++;
       else state.failed.push(ayah);
       refreshBtn();
+      // Delay to prevent rate-limiting
+      await new Promise(res => setTimeout(res, 300));
     }
   }
-  try{ const workers = []; for(let w = 0; w < DOWNLOAD_CONCURRENCY; w++) workers.push(worker()); await Promise.all(workers); }catch(err){ console.warn('[Download] failed:', err); }
+  try{ 
+    // Use 1 worker for translations to avoid rate limits
+    await worker(); 
+  }catch(err){ console.warn('[Download] failed:', err); }
   const wasAborted = controller.signal.aborted;
   dlState.delete(key);
   if(quotaHit){ showToast('⚠️ Storage is full. Free up space, then tap ⬇ to resume.', 4600); }
@@ -8552,8 +8557,7 @@ async function handleAudioDownloadTap(surahNumber, type){
   if(downloads[key]){ const yes = await confirmRemoveDownload(surahNumber, type); if(yes) await removeSurahDownload(surahNumber, type); return; }
   if(!navigator.onLine){ showToast('📶 Connect to the internet to download audio.', 3800); return; }
   if(!('caches' in window)){ showToast('⚠️ This browser cannot store audio offline.', 4200); return; }
-
- // Probe removed — download function handles CORS safely.
+  // Probe removed — download function handles CORS safely.
   const yes = await confirmSurahDownload(surahNumber, type);
   if(!yes) return;
   if(type === 'ar') downloadSurahAudio(surahNumber);
