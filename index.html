@@ -2650,7 +2650,14 @@ body.light-mode .share-arabic{color:#1a2233;}
 
       <div class="share-divider" role="separator"></div>
 
-<div class="share-block">
+      <div class="share-block">
+        <div class="share-block-title">📚 Tafsir of the Duah</div>
+        <p class="share-tafsir" id="shareTafsirText"></p>
+      </div>
+
+      <div class="share-divider" role="separator"></div>
+
+      <div class="share-block">
         <div class="share-block-title">📜 Hadith of the Day</div>
         <p class="share-arabic" id="shareHadithArabic" dir="rtl"></p>
         <p class="share-translation" id="shareHadithTranslation"></p>
@@ -2660,8 +2667,8 @@ body.light-mode .share-arabic{color:#1a2233;}
       <div class="share-divider" role="separator"></div>
 
       <div class="share-block">
-        <div class="share-block-title">📚 Tafsir of the Duah</div>
-        <p class="share-tafsir" id="shareTafsirText"></p>
+        <div class="share-block-title">💡 Explanation of the Hadith</div>
+        <p class="share-tafsir" id="shareHadithExplanationText"></p>
       </div>
 
       <div class="share-footer">
@@ -10774,31 +10781,56 @@ const DUAH_TAFSIR = {
 };
 
 const DAILY_HADITHS = [
-  { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907" },
-  { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45" },
-  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
-  { arabic: "إِنَّ أَحْسَنَكُمْ أَخْلَاقًا أَحَاسِنُكُمْ إِيمَانًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162" },
-  { arabic: "إِنَّ اللَّهَ لاَ يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ", translation: "Allah does not look at your appearance or your wealth, but He looks at your hearts and your deeds.", reference: "Sahih Muslim 2564" },
-  { arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ", translation: "The most beloved of deeds to Allah are those that are most consistent, even if they are small.", reference: "Sahih al-Bukhari 6464 · Sahih Muslim 783" },
-  { arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ", translation: "A Muslim is the one from whose tongue and hands the Muslims are safe.", reference: "Sahih al-Bukhari 10 · Sahih Muslim 40" },
-  { arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ", translation: "The strong man is not the one who can overpower others, but the one who controls himself when angry.", reference: "Sahih al-Bukhari 6114 · Sahih Muslim 2609" },
-  { arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ", translation: "Fear Allah wherever you are, follow a bad deed with a good one and it will wipe it out, and treat people with good character.", reference: "Sunan at-Tirmidhi 1987" },
-  { arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ", translation: "Cleanliness is half of faith.", reference: "Sahih Muslim 223" },
-  { arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", translation: "The best of you are those who learn the Quran and teach it.", reference: "Sahih al-Bukhari 5027" },
-  { arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا", translation: "Make things easy and do not make them difficult, give glad tidings and do not repel people.", reference: "Sahih al-Bukhari 69 · Sahih Muslim 1734" },
-  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ", translation: "Whoever believes in Allah and the Last Day, let him honour his guest.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47" },
-  { arabic: "لاَ تَحْقِرَنَّ مِنَ الْمَعْرُوفِ شَيْئًا، وَلَوْ أَنْ تَلْقَى أَخَاكَ بِوَجْهٍ طَلْقٍ", translation: "Do not belittle any good deed, even meeting your brother with a cheerful face.", reference: "Sahih Muslim 2626" },
-  { arabic: "لاَ يَشْكُرُ اللَّهَ مَنْ لاَ يَشْكُرُ النَّاسَ", translation: "The one who is not grateful to people is not grateful to Allah.", reference: "Sunan Abi Dawud 4811" },
-  { arabic: "ادْعُوا اللَّهَ وَأَنْتُمْ مُوقِنُونَ بِالإِجَابَةِ", translation: "Make supplication to Allah while you are certain of a response.", reference: "Sunan at-Tirmidhi 2949" },
-  { arabic: "وَالْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ", translation: "A kind word is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009" },
-  { arabic: "وَأَمَاطَتُكَ الأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ", translation: "Removing a harmful thing from the path is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009" },
-  { arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَرْحَمْ صَغِيرَنَا وَيَعْرِفْ شَرَفَ كَبِيرِنَا", translation: "He who does not show mercy to our young or respect our elders is not from us.", reference: "Sunan at-Tirmidhi 1919" },
-  { arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162" },
-  { arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ", translation: "Your smile in the face of your brother is charity.", reference: "Sunan at-Tirmidhi 1956" },
-  { arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ، وَأَنَا خَيْرُكُمْ لأَهْلِي", translation: "The best of you are those who are best to their families, and I am the best of you to my family.", reference: "Sunan at-Tirmidhi 3895" },
-  { arabic: "وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ", translation: "Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.", reference: "Sahih Muslim 2699" },
-  { arabic: "الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ", translation: "The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.", reference: "Sunan at-Tirmidhi 2507" },
-  { arabic: "مَنْ لاَ يَرْحَمُ لاَ يُرْحَمُ", translation: "Whoever does not show mercy will not be shown mercy.", reference: "Sahih al-Bukhari 7376 · Sahih Muslim 2319" }
+  { arabic: "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى", translation: "Actions are but by intentions, and every person will have only what he intended.", reference: "Sahih al-Bukhari 1 · Sahih Muslim 1907",
+    explanation: "The Prophet ﷺ opens the entire corpus of hadith with this foundational principle: every action is judged by the intention behind it. A person may perform a seemingly small deed with a pure intention and receive immense reward, while another may perform a grand deed for show and receive nothing. This hadith teaches that the inner state matters as much as the outer act — a believer should renew their intention before every act of worship, and remember that even daily routines can become acts of worship when done with the right intention. It is a reminder that Allah ﷻ looks at the heart before He looks at the deed." },
+  { arabic: "لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ", translation: "None of you truly believes until he loves for his brother what he loves for himself.", reference: "Sahih al-Bukhari 13 · Sahih Muslim 45",
+    explanation: "This hadith defines the social dimension of faith. It is not enough to worship Allah in isolation; true belief requires wanting good for others as you want for yourself. Envy, greed and selfishness are diseases of the heart that contradict faith. When a believer truly loves for their brother what they love for themselves, they will not cheat, oppress or wish harm — they will instead help, support and celebrate others' success. The Prophet ﷺ made this a measure of sincerity: whoever does not wish good for others has not yet tasted the sweetness of faith." },
+  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ", translation: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47",
+    explanation: "The Prophet ﷺ links faith in Allah and the Last Day to the simple act of controlling one's tongue. Speech is a tremendous trust — a few careless words can destroy relationships, spread rumours or cause lasting harm. This hadith teaches that a believer should either speak good (truth, kindness, benefit) or remain silent. Silence is not weakness; it is a form of worship that protects the believer from sin. The Prophet ﷺ also said: 'Whoever guards his tongue, Allah will conceal his faults.'" },
+  { arabic: "إِنَّ أَحْسَنَكُمْ أَخْلَاقًا أَحَاسِنُكُمْ إِيمَانًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162",
+    explanation: "This hadith establishes that good character is not separate from faith — it is the very measure of it. The most complete believer is the one with the best manners. The Prophet ﷺ himself was known as al-Amin (the trustworthy) and as-Sadiq (the truthful) before prophethood, and his wife Aisha (RA) described his character as being the Quran itself. This hadith calls every believer to embody gentleness, honesty, patience and generosity in all dealings, because faith without character is hollow." },
+  { arabic: "إِنَّ اللَّهَ لاَ يَنْظُرُ إِلَى صُوَرِكُمْ وَأَمْوَالِكُمْ، وَلَكِنْ يَنْظُرُ إِلَى قُلُوبِكُمْ وَأَعْمَالِكُمْ", translation: "Allah does not look at your appearance or your wealth, but He looks at your hearts and your deeds.", reference: "Sahih Muslim 2564",
+    explanation: "This hadith dismantles all worldly standards of superiority. Allah does not judge based on appearance, wealth, race or social status — He looks at the heart and the deeds. This levels all human beings before their Creator and reminds the believer to purify their intentions and focus on what is eternal. It also forbids arrogance, racism and superficial judgment of others. The Prophet ﷺ taught that taqwa (God-consciousness) is in the heart, and Allah will not look at your bodies or your wealth on the Day of Judgment." },
+  { arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ أَدْوَمُهَا وَإِنْ قَلَّ", translation: "The most beloved of deeds to Allah are those that are most consistent, even if they are small.", reference: "Sahih al-Bukhari 6464 · Sahih Muslim 783",
+    explanation: "The Prophet ﷺ teaches a profound lesson about consistency. A small deed done regularly is more beloved to Allah than a large deed done occasionally or once. This is because consistency builds a relationship with Allah, strengthens the soul and leads to lasting change. This hadith encourages the believer to start with small acts of worship and maintain them, rather than burning out with intense practice and then stopping. The Prophet ﷺ also said that the most beloved religion to Allah is the moderate, consistent one." },
+  { arabic: "الْمُسْلِمُ مَنْ سَلِمَ الْمُسْلِمُونَ مِنْ لِسَانِهِ وَيَدِهِ", translation: "A Muslim is the one from whose tongue and hands the Muslims are safe.", reference: "Sahih al-Bukhari 10 · Sahih Muslim 40",
+    explanation: "This hadith defines a Muslim not by what they claim, but by how others experience them. If a person's tongue and hands cause harm to other Muslims — through gossip, slander, mockery, violence or cheating — their claim to Islam is weakened. True Islam is safety: others should feel secure around a Muslim, knowing they will not be harmed by them. The Prophet ﷺ also warned that a Muslim is not one who harms their neighbours or companions." },
+  { arabic: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ", translation: "The strong man is not the one who can overpower others, but the one who controls himself when angry.", reference: "Sahih al-Bukhari 6114 · Sahih Muslim 2609",
+    explanation: "The Prophet ﷺ redefines strength. Most people think a strong person is one who can overpower others, but true strength is self-mastery — especially controlling one's anger. Anger is natural, but unchecked anger leads to harm, regret and broken ties. This hadith teaches that a believer should pause, breathe, seek refuge in Allah, and respond with patience rather than lashing out. The Prophet ﷺ advised: 'If you get angry, sit down; if you are standing, sit; if you are sitting, lie down.'" },
+  { arabic: "اتَّقِ اللَّهَ حَيْثُمَا كُنْتَ، وَأَتْبِعِ السَّيِّئَةَ الْحَسَنَةَ تَمْحُهَا، وَخَالِقِ النَّاسَ بِخُلُقٍ حَسَنٍ", translation: "Fear Allah wherever you are, follow a bad deed with a good one and it will wipe it out, and treat people with good character.", reference: "Sunan at-Tirmidhi 1987",
+    explanation: "This hadith provides a complete ethical framework in one sentence. First, fear Allah at all times and in all places — there is no private space where He is absent. Second, after a mistake, follow it immediately with a good deed so the good wipes out the bad — this is the path of repentance. Third, treat people with good character — kindness, honesty and compassion in all dealings. The Prophet ﷺ described this as a summary of all prophetic teachings." },
+  { arabic: "الطُّهُورُ شَطْرُ الإِيمَانِ", translation: "Cleanliness is half of faith.", reference: "Sahih Muslim 223",
+    explanation: "The Prophet ﷺ says cleanliness is half of faith. Physical purity (wudu, ghusl, brushing, cleanliness of clothing and surroundings) is not just a hygiene practice — it is a spiritual act. The believer cannot stand before Allah in prayer without being pure. This hadith teaches that Islam does not separate the sacred from the mundane; every act of cleanliness can be a form of worship. The Prophet ﷺ also said that Allah is Tayyib (Pure) and loves purity." },
+  { arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", translation: "The best of you are those who learn the Quran and teach it.", reference: "Sahih al-Bukhari 5027",
+    explanation: "The Prophet ﷺ elevates the service of the Quran to the highest level. The best people are those who learn the Quran and teach it. Learning is the first step, but teaching is the mark of true engagement — it preserves the knowledge, benefits others and keeps the message alive. This hadith encourages every believer to study the Quran and share what they learn, whether by formal teaching or by good example. The Prophet ﷺ was himself the best teacher of the Quran." },
+  { arabic: "يَسِّرُوا وَلَا تُعَسِّرُوا، وَبَشِّرُوا وَلَا تُنَفِّرُوا", translation: "Make things easy and do not make them difficult, give glad tidings and do not repel people.", reference: "Sahih al-Bukhari 69 · Sahih Muslim 1734",
+    explanation: "This hadith is a directive for how to call people to faith: with ease, not hardship. The Prophet ﷺ sent his companions on missions with these words — do not make religion difficult, do not repel people, and give glad tidings. This teaches that harshness in religion is a fault, not a virtue. The believer should be gentle, encouraging and patient in inviting others to good. The Prophet ﷺ was known for his gentleness and used to give glad tidings rather than warnings in most situations." },
+  { arabic: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ", translation: "Whoever believes in Allah and the Last Day, let him honour his guest.", reference: "Sahih al-Bukhari 6018 · Sahih Muslim 47",
+    explanation: "This hadith links honouring guests to belief in Allah and the Last Day. In Islam, hospitality is not merely cultural politeness — it is an act of faith. The guest brings blessings to the home, and serving them is a form of worship. This hadith also teaches generosity, patience with the needs of others, and the importance of treating visitors with warmth and respect. The Prophet ﷺ said: 'Whoever believes in Allah and the Last Day, let him honour his guest.' Hospitality is a hallmark of the Muslim community." },
+  { arabic: "لاَ تَحْقِرَنَّ مِنَ الْمَعْرُوفِ شَيْئًا، وَلَوْ أَنْ تَلْقَى أَخَاكَ بِوَجْهٍ طَلْقٍ", translation: "Do not belittle any good deed, even meeting your brother with a cheerful face.", reference: "Sahih Muslim 2626",
+    explanation: "The Prophet ﷺ teaches that no good deed is too small to matter. Even a simple smile when greeting a brother is recorded as a good deed. This hadith combats the notion that 'small' deeds are meaningless, and encourages the believer to fill their day with small acts of kindness — a smile, a kind word, a helping hand — because they all accumulate into a massive reward. The Prophet ﷺ said: 'Your smile in the face of your brother is charity.'" },
+  { arabic: "لاَ يَشْكُرُ اللَّهَ مَنْ لاَ يَشْكُرُ النَّاسَ", translation: "The one who is not grateful to people is not grateful to Allah.", reference: "Sunan Abi Dawud 4811",
+    explanation: "This hadith establishes a direct link between gratitude to people and gratitude to Allah. A person who does not thank others for their help cannot truly thank Allah for His blessings. The Prophet ﷺ teaches that showing appreciation to people — saying 'thank you', acknowledging kindness — is part of a believer's duty. It is a sign of humility and a guard against arrogance. The Prophet ﷺ also said: 'He who does not thank people does not thank Allah.'" },
+  { arabic: "ادْعُوا اللَّهَ وَأَنْتُمْ مُوقِنُونَ بِالإِجَابَةِ", translation: "Make supplication to Allah while you are certain of a response.", reference: "Sunan at-Tirmidhi 2949",
+    explanation: "This hadith teaches the proper etiquette of du'a: ask Allah while being certain of a response. Doubt, insincerity or praying while distracted weaken the du'a. The believer should call upon Allah with confidence, urgency and trust, knowing that He hears and answers. This hadith also reminds us that du'a is not a ritual but a living conversation with the Creator. The Prophet ﷺ said: 'Call upon Allah while you are certain of a response, and know that Allah does not respond to a prayer from a heedless heart.'" },
+  { arabic: "وَالْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ", translation: "A kind word is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009",
+    explanation: "The Prophet ﷺ expands the definition of charity far beyond money. A kind word, a smile, helping someone, removing harm from a path — all of these are sadaqah (charity). This hadith teaches that giving is not only for the wealthy; every believer can give through their words, actions and character. It also reminds us that our small acts of kindness are recorded and rewarded. The Prophet ﷺ said: 'Every act of kindness is charity.'" },
+  { arabic: "وَأَمَاطَتُكَ الأَذَى عَنِ الطَّرِيقِ صَدَقَةٌ", translation: "Removing a harmful thing from the path is charity.", reference: "Sahih al-Bukhari 2989 · Sahih Muslim 1009",
+    explanation: "This hadith continues the theme of small acts of charity. Removing something harmful from the path — a stone, a branch, a piece of glass — is a charitable act. This hadith teaches the believer to think beyond themselves and consider the wellbeing of others, even in the smallest ways. It shows that Islam is a religion of service and care. The Prophet ﷺ said: 'Faith has sixty-odd branches, and modesty is a branch of faith.' Removing harm from a path is one of the branches of faith." },
+  { arabic: "لَيْسَ مِنَّا مَنْ لَمْ يَرْحَمْ صَغِيرَنَا وَيَعْرِفْ شَرَفَ كَبِيرِنَا", translation: "He who does not show mercy to our young or respect our elders is not from us.", reference: "Sunan at-Tirmidhi 1919",
+    explanation: "The Prophet ﷺ defines the character of a believer through how they treat the young and the elderly. Showing mercy to children — being gentle, playful and patient with them — and respecting elders — listening to them, honouring them and caring for them — is essential. This hadith builds a community where generations are connected through mutual love and respect. The Prophet ﷺ himself was known for his gentleness with children and his honour for the elderly." },
+  { arabic: "أَكْمَلُ الْمُؤْمِنِينَ إِيمَانًا أَحْسَنُهُمْ خُلُقًا", translation: "The most complete of believers in faith are those with the best character.", reference: "Sunan at-Tirmidhi 1162",
+    explanation: "The Prophet ﷺ measures faith not only by worship, but by character. A person can pray, fast and give charity, yet if their character is harsh, they have not attained the completeness of faith. This hadith calls the believer to refine their manners — to speak gently, control anger, forgive and treat others with dignity. Good character is the visible fruit of a healthy soul. The Prophet ﷺ also said: 'I have been sent to perfect good character.'" },
+  { arabic: "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ", translation: "Your smile in the face of your brother is charity.", reference: "Sunan at-Tirmidhi 1956",
+    explanation: "The Prophet ﷺ teaches that even a smile is an act of charity. In a world full of stress and sorrow, a genuine smile is a gift. It costs nothing, yet it can lift a heart, heal a relationship and spread joy. This hadith encourages the believer to be a source of light in everyday interactions — not only through grand deeds, but through simple warmth and kindness. The Prophet ﷺ himself smiled often and was known for his gentle, welcoming expression." },
+  { arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ، وَأَنَا خَيْرُكُمْ لأَهْلِي", translation: "The best of you are those who are best to their families, and I am the best of you to my family.", reference: "Sunan at-Tirmidhi 3895",
+    explanation: "The Prophet ﷺ defines the best person by how they treat their family. This is powerful because family life is where character is most tested. Many people are kind to strangers but harsh at home. The Prophet ﷺ reverses this — saying the best person is the one who is best to their family, and he himself was the best to his family. This hadith calls the believer to bring their best self to those closest to them. The Prophet ﷺ was known to help his wives with household chores, play with children and show affection." },
+  { arabic: "وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ", translation: "Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.", reference: "Sahih Muslim 2699",
+    explanation: "The Prophet ﷺ teaches the virtue of protecting others' dignity. When you see a fault in someone, you conceal it rather than expose it. This is not about approving of sin — it is about not humiliating others. In return, Allah will conceal your faults on the Day of Judgment. This hadith encourages a culture of mercy, privacy and non-judgmental support among believers. The Prophet ﷺ said: 'Whoever conceals the faults of a Muslim, Allah will conceal his faults in this world and the Hereafter.'" },
+  { arabic: "الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ", translation: "The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.", reference: "Sunan at-Tirmidhi 2507",
+    explanation: "The Prophet ﷺ identifies the believer who engages with society as having greater reward than one who isolates. Mixing with people is difficult — it requires patience with their faults, forgiveness and self-control. But this is the path of the Prophet ﷺ, who lived among people, endured their harm and continued to call them to good. This hadith encourages the believer not to abandon society but to engage with it patiently. The Prophet ﷺ said: 'The strong believer is better and more beloved to Allah than the weak believer.'" },
+  { arabic: "مَنْ لاَ يَرْحَمُ لاَ يُرْحَمُ", translation: "Whoever does not show mercy will not be shown mercy.", reference: "Sahih al-Bukhari 7376 · Sahih Muslim 2319",
+    explanation: "The Prophet ﷺ gives a simple but profound principle: whoever does not show mercy will not be shown mercy. This is not a threat but a natural consequence — a heart hardened to others' suffering becomes closed to Allah's mercy. The hadith calls the believer to be merciful — to the weak, the poor, the sick, the young, the elderly and even to animals. Mercy is the currency of divine reward. The Prophet ﷺ said: 'Allah will not show mercy to the one who does not show mercy to people.'" }
 ];
 
 function dayOfYearIndex(len){
@@ -10862,10 +10894,11 @@ function loadShareCard(){
   setText('shareDuahArabic',      d.duah.arabic);
   setText('shareDuahTranslation', d.duah.translation);
   setText('shareDuahRef',         d.duah.reference);
+  setText('shareTafsirText',      DUAH_TAFSIR[d.duah.reference] || '');
   setText('shareHadithArabic',      d.hadith.arabic);
   setText('shareHadithTranslation', d.hadith.translation);
   setText('shareHadithRef',         d.hadith.reference);
-  setText('shareTafsirText', DUAH_TAFSIR[d.duah.reference] || '');
+  setText('shareHadithExplanationText', d.hadith.explanation || '');
 }
 
 function _cvRoundRect(ctx, x, y, w, h, r){
@@ -10950,6 +10983,8 @@ async function shareCardAsImage(){
       return _cvWrapText(mc, text, INNER - 40);
     };
     const tafsirLines = measureTafsir(tafsirText);
+    const hadithExplText   = d.hadith.explanation || '';
+    const hadithExplLines  = measureTafsir(hadithExplText);
 
     let H = PAD;
     H += 50 + 14;
@@ -10963,19 +10998,23 @@ async function shareCardAsImage(){
     H += duahTr.length * LH_TR;
     H += 12;
     H += 28 + 24;
-    H += 30;
-    H += 32 + 8;
+    H += 30;                      // divider
+    H += 32 + 8;                  // Tafsir title
+    H += tafsirLines.length * LH_TAFSIR;
+    H += 12;
+    H += 30;                      // divider
+    H += 32 + 8;                  // Hadith title
     H += hadithAr.length * LH_AR;
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;
-    H += 30;
-    H += 32 + 8;
-    H += tafsirLines.length * LH_TAFSIR;
+    H += 28 + 24;                 // Hadith ref
+    H += 30;                      // divider
+    H += 32 + 8;                  // Hadith explanation title
+    H += hadithExplLines.length * LH_TAFSIR;
     H += 12;
-    H += 30;
-    H += 30 + 30;
+    H += 30;                      // divider
+    H += 30 + 30;                 // Footer
     H += PAD;
     H = Math.round(H);
 
@@ -11086,6 +11125,20 @@ async function shareCardAsImage(){
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
+    ctx.fillText('TAFSIR OF THE DUAH', PAD + 8, y + 16);
+    y += 32 + 8;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8f9bb3';
+    ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
+    for (const line of tafsirLines){ ctx.fillText(line, W / 2, y + LH_TAFSIR / 2); y += LH_TAFSIR; }
+    y += 12;
+
+    _cvDrawDivider(ctx, W, PAD, y);
+    y += 30;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e3bd45';
+    ctx.font = '800 22px ' + UI_FONT;
     ctx.fillText('HADITH OF THE DAY', PAD + 8, y + 16);
     y += 32 + 8;
 
@@ -11107,20 +11160,16 @@ async function shareCardAsImage(){
 
     _cvDrawDivider(ctx, W, PAD, y);
     y += 30;
-
     ctx.textAlign = 'left';
     ctx.fillStyle = '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
-    ctx.fillText('TAFSIR OF THE DUAH', PAD + 8, y + 16);
+    ctx.fillText('EXPLANATION OF THE HADITH', PAD + 8, y + 16);
     y += 32 + 8;
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#8f9bb3';
     ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
-    for (const line of tafsirLines) {
-      ctx.fillText(line, W / 2, y + LH_TAFSIR / 2);
-      y += LH_TAFSIR;
-    }
+    for (const line of hadithExplLines){ ctx.fillText(line, W / 2, y + LH_TAFSIR / 2); y += LH_TAFSIR; }
     y += 12;
 
     _cvDrawDivider(ctx, W, PAD, y);
@@ -11184,6 +11233,12 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
+  lines.push('*Tafsir of the Duah*');
+  lines.push('');
+  lines.push(DUAH_TAFSIR[d.duah.reference] || '');
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━');
+  lines.push('');
   lines.push('*Hadith of the Day*');
   lines.push('');
   lines.push(d.hadith.arabic);
@@ -11194,9 +11249,9 @@ function buildShareCardText(){
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
-  lines.push('*Tafsir of the Duah*');
+  lines.push('*Explanation of the Hadith*');
   lines.push('');
-  lines.push(DUAH_TAFSIR[d.duah.reference] || '');
+  lines.push(d.hadith.explanation || '');
   lines.push('');
   lines.push('━━━━━━━━━━━━━━━━━');
   lines.push('');
