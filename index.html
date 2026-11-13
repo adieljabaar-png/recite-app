@@ -3185,20 +3185,7 @@ const EDITION_COACH = 'quran-uthmani';
 const TEXT_TRANSLATION_OPTIONS = [
   { id: 'en.yusufali', quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
   { id: 'en.sahih',    quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
-  {
-    id: 'tr.diyanet', quranComId: 77, lang: 'tr',
-    audioFolder: 'Turkish/Turkish_Kamili_128kbps',
-    // Alternate spellings / mirrors tried in order if the primary 404s.
-    fallbackAudioFolders: [
-      'Turkish/Kamili_128kbps',
-      'Turkish/Kamili',
-      'Turkish/Ali_Kaya_128kbps',
-      'Turkish/Mustafa_Ismail_128kbps'
-    ],
-    // Last-resort CORS CDN. SW already caches these as opaque responses.
-    quranEncKey: 'turkish_rwwad',
-    label: 'Türkçe — Diyanet', shortLabel: 'Diyanet'
-  }
+  { id: 'tr.diyanet',  quranComId: 77,  lang: 'tr', audioFolder: 'Turkish/Turkish_Kamili_128kbps', label: 'Türkçe — Diyanet', shortLabel: 'Diyanet' }
 ];
 
 const LANG_OPTIONS = [
@@ -3848,41 +3835,16 @@ function buildAyahUrl(folder, surah, ayah){
   return AYAH_AUDIO_BASE + folder + '/' + String(surah).padStart(3,'0') + String(ayah).padStart(3,'0') + '.mp3';
 
 }
-  // Returns the full ordered list of candidate URLs for a translation.
-// Candidate 0 is the "primary" URL and is used as the cache key for downloads.
-function buildTranslationAudioUrls(folder, surah, ayah){
-  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
-  const s = String(surah).padStart(3, '0');
-  const a = String(ayah).padStart(3, '0');
-  const primaryFolder = (opt && opt.audioFolder) ? opt.audioFolder : folder;
-  const urls = [];
 
-  // Primary EveryAyah translation URL
-  urls.push('https://everyayah.com/data/translations/' + primaryFolder + '/' + s + a + '.mp3');
-
-  // Alternate EveryAyah folder names
-  if (opt && Array.isArray(opt.fallbackAudioFolders)) {
-    for (const fb of opt.fallbackAudioFolders) {
-      if (!fb || fb === primaryFolder) continue;
-      const u = 'https://everyayah.com/data/translations/' + fb + '/' + s + a + '.mp3';
-      if (urls.indexOf(u) === -1) urls.push(u);
-    }
-  }
-
-  // Final fallback: QuranEnc (CORS-less CDN, served as opaque)
-  if (opt && opt.quranEncKey) {
-    urls.push('https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3');
-  }
-
-  return urls;
-}
-
-// Back-compat: existing call sites (download cache key, removeSurahDownload)
-// only need the primary URL.
 function buildTranslationAudioUrl(folder, surah, ayah){
-  const urls = buildTranslationAudioUrls(folder, surah, ayah);
-  return urls.length ? urls[0] : '';
-}
+  const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === folder);
+
+  // Route ANY translation that has a QuranEnc key to the QuranEnc CDN
+  if (opt && opt.quranEncKey) {
+    const s = String(surah).padStart(3, '0');
+    const a = String(ayah).padStart(3, '0');
+    return 'https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3';
+  }
 
   // Fallback for EveryAyah translations (includes English and Turkish)
   let resolvedFolder = folder;
@@ -8472,14 +8434,13 @@ async function fetchAndStoreAyah(cache, reciterId, surah, ayah, primaryUrl, sign
       sources.push(buildAyahUrl(FALLBACK_RECITER, surah, ayah));
       islamicNetworkUrls(FALLBACK_RECITER, surah, ayah).forEach(u => sources.push(u));
     }
-
-} else {
-    // Add every translation candidate except the primary (already in `sources`).
-    // This lets a download succeed even if the primary folder name is wrong.
-    const allUrls = buildTranslationAudioUrls(reciterId, surah, ayah);
-    for (let i = 0; i < allUrls.length; i++) {
-      const u = allUrls[i];
-      if (u && u !== primaryUrl && sources.indexOf(u) === -1) sources.push(u);
+  } else {
+    // Fallback to EveryAyah translation folder
+    const opt = TEXT_TRANSLATION_OPTIONS.find(t => t.audioFolder === reciterId);
+    if (opt && opt.audioFolder) {
+      const s = String(surah).padStart(3, '0');
+      const a = String(ayah).padStart(3, '0');
+      sources.push('https://everyayah.com/data/translations/' + opt.audioFolder + '/' + s + a + '.mp3');
     }
   }
 
@@ -9267,22 +9228,11 @@ async function loadViewerAudioSurah(surahNumber){
     viewerAudio.ayahIdx = 1; playCurrentViewerAyah(); return;
   }
   viewerAudioErrorStreak = 0;
-
   if(viewerAudio.playTranslation){
     const transOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
     const transFolder = transOpt ? transOpt.audioFolder : 'English/Sahih_Intnl_Ibrahim_Walk_192kbps';
-    const transUrls = buildTranslationAudioUrls(transFolder, surahNumber, 1);
-    if(transUrls.length){
-      const trResult = await playTranslationWithHealing(transUrls);
-      if(myToken !== viewerAudio.token) return;
-      if(!viewerAudio.active || viewerAudio.paused) return;
-      if(trResult && trResult.ok === false &&
-         trResult.reason !== 'superseded' &&
-         trResult.reason !== 'stopped' &&
-         trResult.reason !== 'autoplay-blocked'){
-        showToast('⚠️ Translation audio for ' + surahNumber + ':1 could not be loaded.', 3600);
-      }
-    }
+    const transUrl = buildTranslationAudioUrl(transFolder, surahNumber, 1);
+    if(transUrl){ await playTranslationWithHealing(transUrl); if(myToken !== viewerAudio.token) return; if(!viewerAudio.active || viewerAudio.paused) return; }
   }
   const el1 = findViewerAyahEl(surahNumber, 1);
   if(el1){ el1.classList.remove('playing'); el1.classList.add('done'); }
@@ -9337,57 +9287,23 @@ function updateTranslationCheckboxState() {
   translateAudioChip.style.opacity = '1';
   translateAudioChip.style.pointerEvents = 'auto';
 }
-
-async function playTranslationWithHealing(urls){
-  // Accepts either a single URL (string) or an array of candidates.
-  const candidates = Array.isArray(urls) ? urls.filter(Boolean) : (urls ? [urls] : []);
-  if (!candidates.length) return { ok: false, reason: 'no-url' };
-
-  let last = null;
-  for (let i = 0; i < candidates.length; i++) {
-    const url = candidates[i];
-    const result = await playUrl(url);
-
-    if (result && result.ok !== false) return result;
-    // Don't fan out for these — they mean "user/player state", not "URL broken"
-    if (result && (result.reason === 'superseded' ||
-                   result.reason === 'stopped' ||
-                   result.reason === 'autoplay-blocked')) {
-      return result;
-    }
-    last = result;
-    if (!navigator.onLine) return result;
-
-    // Try a cache-heal on this specific candidate before moving on
-    if (result && (result.reason === 'load-error' || result.reason === 'timeout')) {
-      try {
-        const healUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + '_heal=' + Date.now();
-        const res = await fetch(healUrl, { cache: 'no-store' });
-        if (res.ok) {
-          const blob = await res.blob();
-          if (blob.size && blob.size >= 200) {
-            try {
-              const cache = await caches.open(AUDIO_CACHE_NAME);
-              await cache.put(url, new Response(blob, {
-                status: 200, statusText: 'OK',
-                headers: { 'Content-Type': blob.type || 'audio/mpeg' }
-              }));
-            } catch (_) {}
-            const blobUrl = URL.createObjectURL(blob);
-            try {
-              const healRes = await playUrl(blobUrl);
-              if (healRes && healRes.ok !== false) return healRes;
-            } finally {
-              setTimeout(() => { try { URL.revokeObjectURL(blobUrl); } catch (_) {} }, 120000);
-            }
-          }
-        }
-      } catch (_) {}
-    }
-  }
-  return last || { ok: false, reason: 'load-error' };
+async function playTranslationWithHealing(url){
+  let result = await playUrl(url);
+  if(!result || result.ok !== false) return result;
+  if(result.reason !== 'load-error' && result.reason !== 'timeout') return result;
+  if(!navigator.onLine) return result;
+  try{
+    const healUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + '_heal=' + Date.now();
+    const res = await fetch(healUrl, { cache: 'no-store' });
+    if(!res.ok) return result;
+    const blob = await res.blob();
+    if(!blob.size || blob.size < 200) return result;
+    try{ const cache = await caches.open(AUDIO_CACHE_NAME); await cache.put(url, new Response(blob, { status: 200, statusText: 'OK', headers: { 'Content-Type': blob.type || 'audio/mpeg' } })); }catch(_){}
+    const blobUrl = URL.createObjectURL(blob);
+    try{ return await playUrl(blobUrl); }
+    finally{ setTimeout(() => { try{ URL.revokeObjectURL(blobUrl); }catch(_){} }, 120000); }
+  }catch(_){ return result; }
 }
-
 async function playCurrentViewerAyah(){
   if(!viewerAudio.active) return;
   if(!viewerOpen) return;
@@ -9425,28 +9341,16 @@ async function playCurrentViewerAyah(){
     viewerAudio.ayahIdx++; playCurrentViewerAyah(); return;
   }
   viewerAudioErrorStreak = 0;
-
-if (viewerAudio.playTranslation) {
+  if (viewerAudio.playTranslation) {
     const transOpt = TEXT_TRANSLATION_OPTIONS.find(t => t.lang === surahIndexLang);
     const transFolder = transOpt ? transOpt.audioFolder : 'English/Sahih_Intnl_Ibrahim_Walk_192kbps';
-    const transUrls = buildTranslationAudioUrls(transFolder, sNum, aNum);
-    if (transUrls.length) {
-      const trResult = await playTranslationWithHealing(transUrls);
+    const transUrl = buildTranslationAudioUrl(transFolder, sNum, aNum);
+    if (transUrl) {
+      const trResult = await playTranslationWithHealing(transUrl);
       if(myToken !== viewerAudio.token) return;
       if(!viewerAudio.active || viewerAudio.paused) return;
-      if (trResult && trResult.ok === false &&
-          trResult.reason !== 'superseded' &&
-          trResult.reason !== 'stopped' &&
-          trResult.reason !== 'autoplay-blocked') {
-        // Warn once per session so a full surah doesn't spam the toast
-        if (!viewerAudio.playTranslationWarned) {
-          viewerAudio.playTranslationWarned = true;
-          showToast('⚠️ Translation audio is unavailable right now. Arabic continues to play.', 4200);
-        }
-      }
     }
   }
-
   if(line){ line.classList.remove('playing'); line.classList.add('done'); }
   viewerAudio.ayahIdx++;
   playCurrentViewerAyah();
