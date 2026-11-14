@@ -5498,20 +5498,37 @@ function strict1GhunnahOk(w, heard){
   if (!STRICT_FEATURES.ghunnah()) return true;
   const N = '\u0646', M = '\u0645';
   const gType = w.tjRules.ghunnahType || 'ghunnah';
+
+  // idghaam_ghunnah fully assimilates the nasal letter into the following
+  // letter, so the original ن/م will NOT appear in the transcript when the
+  // rule is performed correctly. A text-based nasal check would false-
+  // positive on correct recitation. The only reliable verification for
+  // this rule type is the nasal formant band in the spectrum.
+  const textCheckApplicable = (gType !== 'idghaam_ghunnah');
+
   let textOk = true;
-  if (w.tjRules.ghunnahLetters.length){
-    const required = w.tjRules.ghunnahLetters.join('');
-    for (let i = 0; i < required.length; i++){
-      const ch = required[i];
-      if ((ch === N || ch === M) && heard.indexOf(ch) === -1){ textOk = false; break; }
+  if (textCheckApplicable){
+    if (w.tjRules.ghunnahLetters.length){
+      const required = w.tjRules.ghunnahLetters.join('');
+      for (let i = 0; i < required.length; i++){
+        const ch = required[i];
+        if ((ch === N || ch === M) && heard.indexOf(ch) === -1){ textOk = false; break; }
+      }
+    } else if (gType === 'iqlab'){
+      textOk = heard.indexOf(M) !== -1;
+    } else if (gType === 'ikhfa'){
+      const hasN = w.norm.indexOf(N) !== -1;
+      const hasM = w.norm.indexOf(M) !== -1;
+      if (!hasN && !hasM) textOk = true;
+      else textOk = (hasN && heard.indexOf(N) !== -1) || (hasM && heard.indexOf(M) !== -1);
+    } else if (gType === 'ghunnah'){
+      // Defensive fallback: a standalone ghunnah whose span was not captured
+      // into ghunnahLetters. Check the word's ن/م against the transcript.
+      const hasN = w.norm.indexOf(N) !== -1;
+      const hasM = w.norm.indexOf(M) !== -1;
+      if (!hasN && !hasM) textOk = true;
+      else textOk = (hasN && heard.indexOf(N) !== -1) || (hasM && heard.indexOf(M) !== -1);
     }
-  } else if (gType === 'iqlab'){
-    textOk = heard.indexOf(M) !== -1;
-  } else if (gType === 'ikhfa'){
-    const hasN = w.norm.indexOf(N) !== -1;
-    const hasM = w.norm.indexOf(M) !== -1;
-    if (!hasN && !hasM) textOk = true;
-    else textOk = (hasN && heard.indexOf(N) !== -1) || (hasM && heard.indexOf(M) !== -1);
   }
 
   const rmsAvail = !!(w.audio && rmsAnalyser.isRunning());
@@ -5521,6 +5538,19 @@ function strict1GhunnahOk(w, heard){
     spectralOk = nasalPresent(smp);
   }
 
+  // For idghaam_ghunnah: spectrum-only verification.
+  // Requires a segment long enough to analyse (≥120 ms ≈ ≥4 samples),
+  // so short windows cannot cause a false positive.
+  if (!textCheckApplicable){
+    if (rmsAvail && w.audio && w.audio.durationMs >= 120 && !spectralOk){
+      markStrict1Error(w, 'ghunnah-' + gType,
+        'nasal murmur absent (spectrum-only check)');
+      return false;
+    }
+    return true;
+  }
+
+  // Text-checkable rules (ghunnah, ikhfa, iqlab): existing logic.
   if (!textOk){
     if (rmsAvail && !spectralOk){
       markStrict1Error(w, 'ghunnah-' + gType,
