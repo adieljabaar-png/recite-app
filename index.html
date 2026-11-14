@@ -3192,22 +3192,56 @@ const EDITION_COACH = 'quran-uthmani';
 /* ── Translation options ──────────────────────────────────── */
 
 const TEXT_TRANSLATION_OPTIONS = [
-  { id: 'en.yusufali', quranComId: 203, lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Abdullah Yusuf Ali',   shortLabel: 'Yusuf Ali' },
-  { id: 'en.sahih',    quranComId: 20,  lang: 'en', audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', label: 'English — Saheeh International', shortLabel: 'Saheeh Intl' },
+  { 
+    id: 'en.yusufali', 
+    quranComId: 203, 
+    lang: 'en', 
+    // KEEPING THIS EXACT FOLDER NAME ensures existing downloads remain valid
+    audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', 
+    label: 'English — Abdullah Yusuf Ali', 
+    shortLabel: 'Yusuf Ali',
+    // Alternate EveryAyah folder names (tried if primary is down)
+    fallbackAudioFolders: [
+      'English/Sahih_Intnl_Ibrahim_Walk_64kbps',
+      'English/Saheeh_International',
+      'English/Sahih_International',
+      'English/Sahih_Intnl_Ibrahim_Walk'
+    ],
+    // Independent CDN fallbacks
+    quranEncKey: 'english_saheeh',
+    islamicNetworkKey: 'en.walk'
+  },
+  { 
+    id: 'en.sahih',    
+    quranComId: 20,  
+    lang: 'en', 
+    audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', 
+    label: 'English — Saheeh International', 
+    shortLabel: 'Saheeh Intl',
+    fallbackAudioFolders: [
+      'English/Sahih_Intnl_Ibrahim_Walk_64kbps',
+      'English/Saheeh_International',
+      'English/Sahih_International',
+      'English/Sahih_Intnl_Ibrahim_Walk'
+    ],
+    quranEncKey: 'english_saheeh',
+    islamicNetworkKey: 'en.walk'
+  },
   {
-    id: 'tr.diyanet', quranComId: 77, lang: 'tr',
+    id: 'tr.diyanet', 
+    quranComId: 77, 
+    lang: 'tr',
     audioFolder: 'Turkish/Turkish_Kamili_128kbps',
-    // Alternate spellings / mirrors tried in order if the primary 404s.
     fallbackAudioFolders: [
       'Turkish/Kamili_128kbps',
       'Turkish/Kamili',
       'Turkish/Ali_Kaya_128kbps',
       'Turkish/Mustafa_Ismail_128kbps'
     ],
-    // Last-resort CORS CDN. SW already caches these as opaque responses.
     quranEncKey: 'turkish_rwwad',
-    islamicNetworkKey: 'tr.vakfi-audio', // <-- ADDED THIS LINE
-    label: 'Türkçe — Diyanet', shortLabel: 'Diyanet'
+    islamicNetworkKey: 'tr.vakfi-audio',
+    label: 'Türkçe — Diyanet', 
+    shortLabel: 'Diyanet'
   }
 ];
 

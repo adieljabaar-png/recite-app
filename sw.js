@@ -1,12 +1,13 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.9 — Version bump to force clients to update to the latest
+   v2.4.10 — Version bump to force clients to update to the latest
    index.html, which fixes translation audio playback and downloads.
 
      • FIX: The app now properly handles the new translation 
-       audio source (EveryAyah for Turkish). The SW ensures 
-       cache invalidation so old broken downloads are dropped.
+       audio source (EveryAyah, Islamic Network, QuranEnc for 
+       both English and Turkish). The SW ensures cache invalidation 
+       so old broken downloads are dropped.
 
      • SW UPDATE: Retained the early-return in serveRangeFromCached 
        for opaque responses just in case any future translation 
@@ -20,7 +21,7 @@
 
 'use strict';
 
-const VERSION = '2.4.4';
+const VERSION = '2.4.10';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -31,7 +32,7 @@ const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
    version. Downloaded Quran audio (everyayah.com) and downloaded
-   translation audio (everyayah.com for English and Turkish) 
+   translation audio (everyayah.com, Islamic Network, QuranEnc) 
    all live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
@@ -52,6 +53,7 @@ const HOST_ALQURAN              = 'api.alquran.cloud';
 const HOST_QURAN_COM            = 'api.quran.com';
 const HOST_EVERYAYAH            = 'everyayah.com';
 const HOST_QURANENC             = 'd.quranenc.com';
+const HOST_ISLAMIC_NETWORK      = 'cdn.islamic.network';
 const HOST_GOOGLE_FONTS_CSS     = 'fonts.googleapis.com';
 const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
 
@@ -227,7 +229,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if(url.hostname === HOST_EVERYAYAH || url.hostname === HOST_QURANENC){
+  if(url.hostname === HOST_EVERYAYAH || url.hostname === HOST_QURANENC || url.hostname === HOST_ISLAMIC_NETWORK){
     event.respondWith(audioFromDownloadCache(req));
     return;
   }
