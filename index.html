@@ -3902,8 +3902,15 @@ function buildTranslationAudioUrls(folder, surah, ayah){
   const primaryFolder = (opt && opt.audioFolder) ? opt.audioFolder : folder;
   const urls = [];
 
+  // EveryAyah hosts the English Ibrahim Walk set directly under
+  // data/English/… (verified working), while Turkish and other
+  // translation sets live under data/translations/…
+  const eaBase = (opt && opt.lang === 'en')
+    ? 'https://everyayah.com/data/'
+    : 'https://everyayah.com/data/translations/';
+
   // 1. Primary EveryAyah translation URL
-  urls.push('https://everyayah.com/data/translations/' + primaryFolder + '/' + s + a + '.mp3');
+  urls.push(eaBase + primaryFolder + '/' + s + a + '.mp3');
 
   // 2. Alternate EveryAyah folder names
   if (opt && Array.isArray(opt.fallbackAudioFolders)) {
@@ -3914,15 +3921,21 @@ function buildTranslationAudioUrls(folder, surah, ayah){
     }
   }
 
-  // 3. Islamic Network CDN (Highly reliable)
+  // 3. Islamic Network CDN (highly reliable)
   if (opt && opt.islamicNetworkKey) {
     const globalAyah = globalAyahNumber(surah, ayah);
-    urls.push('https://cdn.islamic.network/quran/audio/128/' + opt.islamicNetworkKey + '/' + globalAyah + '.mp3');
+    urls.push(
+      'https://cdn.islamic.network/quran/audio/128/' +
+      opt.islamicNetworkKey + '/' + globalAyah + '.mp3'
+    );
   }
 
   // 4. Final fallback: QuranEnc (CORS-less CDN, served as opaque)
   if (opt && opt.quranEncKey) {
-    urls.push('https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3');
+    urls.push(
+      'https://d.quranenc.com/data/audio/' +
+      opt.quranEncKey + '/' + s + a + '.mp3'
+    );
   }
 
   return urls;
