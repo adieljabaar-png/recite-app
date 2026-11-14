@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.10 — Version bump to force clients to update to the latest
+   v2.4.11 — Version bump to force clients to update to the latest
    index.html, which fixes translation audio playback and downloads.
 
      • FIX: The app now properly handles the new translation 
