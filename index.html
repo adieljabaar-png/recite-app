@@ -3207,9 +3207,10 @@ const TEXT_TRANSLATION_OPTIONS = [
       'English/Sahih_International',
       'English/Sahih_Intnl_Ibrahim_Walk'
     ],
-    // Independent CDN fallbacks
-    quranEncKey: 'english_saheeh',
-    islamicNetworkKey: 'en.walk'
+    // Corrected QuranEnc key for English audio
+    quranEncKey: 'english_sahih',
+    // Islamic Network does not host translation audio
+    islamicNetworkKey: null
   },
   { 
     id: 'en.sahih',    
@@ -3224,8 +3225,8 @@ const TEXT_TRANSLATION_OPTIONS = [
       'English/Sahih_International',
       'English/Sahih_Intnl_Ibrahim_Walk'
     ],
-    quranEncKey: 'english_saheeh',
-    islamicNetworkKey: 'en.walk'
+    quranEncKey: 'english_sahih',
+    islamicNetworkKey: null
   },
   {
     id: 'tr.diyanet', 
@@ -3239,7 +3240,7 @@ const TEXT_TRANSLATION_OPTIONS = [
       'Turkish/Mustafa_Ismail_128kbps'
     ],
     quranEncKey: 'turkish_rwwad',
-    islamicNetworkKey: 'tr.vakfi-audio',
+    islamicNetworkKey: null,
     label: 'Türkçe — Diyanet', 
     shortLabel: 'Diyanet'
   }
@@ -3914,13 +3915,7 @@ function buildTranslationAudioUrls(folder, surah, ayah){
     }
   }
 
-  // 3. Islamic Network CDN (Highly reliable)
-  if (opt && opt.islamicNetworkKey) {
-    const globalAyah = globalAyahNumber(surah, ayah);
-    urls.push('https://cdn.islamic.network/quran/audio/128/' + opt.islamicNetworkKey + '/' + globalAyah + '.mp3');
-  }
-
-  // 4. Final fallback: QuranEnc (CORS-less CDN, served as opaque)
+  // 3. QuranEnc CDN (CORS-less, but plays fine as HTML audio)
   if (opt && opt.quranEncKey) {
     urls.push('https://d.quranenc.com/data/audio/' + opt.quranEncKey + '/' + s + a + '.mp3');
   }
