@@ -1,14 +1,13 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.11 — Version bump to force clients to update to the latest
-   index.html, which fixes translation audio playback (corrected
-   QuranEnc keys and removed invalid Islamic Network fallbacks).
+   v2.4.10 — Version bump to force clients to update to the latest
+   index.html, which fixes translation audio playback and downloads.
 
      • FIX: The app now properly handles the new translation 
-       audio source (EveryAyah and QuranEnc for both English and 
-       Turkish). The SW ensures cache invalidation so old broken 
-       downloads are dropped while preserving existing audio.
+       audio source (EveryAyah, Islamic Network, QuranEnc for 
+       both English and Turkish). The SW ensures cache invalidation 
+       so old broken downloads are dropped.
 
      • SW UPDATE: Retained the early-return in serveRangeFromCached 
        for opaque responses just in case any future translation 
@@ -22,7 +21,7 @@
 
 'use strict';
 
-const VERSION = '2.4.11';
+const VERSION = '2.4.10';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -33,7 +32,8 @@ const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
    version. Downloaded Quran audio (everyayah.com) and downloaded
-   translation audio (everyayah.com, QuranEnc) all live here. */
+   translation audio (everyayah.com, Islamic Network, QuranEnc) 
+   all live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
 
