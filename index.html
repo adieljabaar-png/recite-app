@@ -10929,11 +10929,13 @@ function _cvWrapText(ctx, text, maxW){
   if(line) lines.push(line);
   return lines.length ? lines : [''];
 }
-function _cvDrawDivider(ctx, W, PAD, y){
+
+function _cvDrawDivider(ctx, W, PAD, y, isLight = false){
+  const goldRgb = isLight ? '166,124,0' : '201,162,39';
   const grad = ctx.createLinearGradient(PAD, 0, W - PAD, 0);
-  grad.addColorStop(0,   'rgba(201,162,39,0)');
-  grad.addColorStop(0.5, 'rgba(201,162,39,0.65)');
-  grad.addColorStop(1,   'rgba(201,162,39,0)');
+  grad.addColorStop(0,   'rgba(' + goldRgb + ',0)');
+  grad.addColorStop(0.5, 'rgba(' + goldRgb + ',0.65)');
+  grad.addColorStop(1,   'rgba(' + goldRgb + ',0)');
   ctx.strokeStyle = grad;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -10943,7 +10945,7 @@ function _cvDrawDivider(ctx, W, PAD, y){
   ctx.save();
   ctx.translate(W / 2, y);
   ctx.rotate(Math.PI / 4);
-  ctx.fillStyle = '#c9a227';
+  ctx.fillStyle = isLight ? '#a67c00' : '#c9a227';
   ctx.fillRect(-4, -4, 8, 8);
   ctx.restore();
 }
@@ -10956,6 +10958,7 @@ async function shareCardAsImage(){
     try{ await document.fonts.load('48px Amiri', 'بسم الله'); }catch(_){}
     try{ await document.fonts.load('700 48px Amiri', 'بسم الله'); }catch(_){}
 
+    const isLight = (theme === 'light');
     const d = getShareCardData();
     const SCALE = 2;
     const W = 1080;
@@ -11000,23 +11003,23 @@ async function shareCardAsImage(){
     H += duahTr.length * LH_TR;
     H += 12;
     H += 28 + 24;
-    H += 30;                      // divider
-    H += 32 + 8;                  // Tafsir title
+    H += 30;                      
+    H += 32 + 8;                  
     H += tafsirLines.length * LH_TAFSIR;
     H += 12;
-    H += 30;                      // divider
-    H += 32 + 8;                  // Hadith title
+    H += 30;                      
+    H += 32 + 8;                  
     H += hadithAr.length * LH_AR;
     H += 12;
     H += hadithTr.length * LH_TR;
     H += 12;
-    H += 28 + 24;                 // Hadith ref
-    H += 30;                      // divider
-    H += 32 + 8;                  // Hadith explanation title
+    H += 28 + 24;                 
+    H += 30;                      
+    H += 32 + 8;                  
     H += hadithExplLines.length * LH_TAFSIR;
     H += 12;
-    H += 30;                      // divider
-    H += 30 + 30;                 // Footer
+    H += 30;                      
+    H += 30 + 30;                 
     H += PAD;
     H = Math.round(H);
 
@@ -11028,48 +11031,55 @@ async function shareCardAsImage(){
     ctx.textBaseline = 'middle';
 
     const bg = ctx.createRadialGradient(W / 2, -200, 100, W / 2, 0, H);
-    bg.addColorStop(0,    '#1a2540');
-    bg.addColorStop(0.55, '#0d1119');
-    bg.addColorStop(1,    '#0d1119');
+    if (isLight) {
+      bg.addColorStop(0,    '#fdfbf7');
+      bg.addColorStop(0.55, '#f5f7fb');
+      bg.addColorStop(1,    '#ffffff');
+    } else {
+      bg.addColorStop(0,    '#1a2540');
+      bg.addColorStop(0.55, '#0d1119');
+      bg.addColorStop(1,    '#0d1119');
+    }
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
     const bg2 = ctx.createRadialGradient(W / 2, H + 60, 100, W / 2, H, H / 2);
-    bg2.addColorStop(0, 'rgba(79,140,255,0.08)');
+    bg2.addColorStop(0, isLight ? 'rgba(42,111,224,0.05)' : 'rgba(79,140,255,0.08)');
     bg2.addColorStop(1, 'rgba(79,140,255,0)');
     ctx.fillStyle = bg2;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = '#c9a227';
+    ctx.strokeStyle = isLight ? '#d4af37' : '#c9a227';
     ctx.lineWidth = 4;
     _cvRoundRect(ctx, 24, 24, W - 48, H - 48, 36);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(201,162,39,0.35)';
+    
+    ctx.strokeStyle = isLight ? 'rgba(212,175,55,0.35)' : 'rgba(201,162,39,0.35)';
     ctx.lineWidth = 1.5;
     _cvRoundRect(ctx, 36, 36, W - 72, H - 72, 30);
     ctx.stroke();
 
     let y = PAD;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#e3bd45';
+    ctx.fillStyle = isLight ? '#c9a227' : '#e3bd45';
     ctx.font = '800 44px ' + UI_FONT;
     ctx.fillText('Recite', PAD, y + 25);
-    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.fillStyle = isLight ? 'rgba(201,162,39,0.55)' : 'rgba(201,162,39,0.55)';
     ctx.fillRect(PAD, y + 46, 86, 2);
 
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = '700 18px ' + UI_FONT;
     ctx.fillText('QURAN RECITATION COACH', W - PAD, y + 25);
     y += 50 + 14;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#e8edf7';
+    ctx.fillStyle = isLight ? '#1a2233' : '#e8edf7';
     ctx.font = '800 48px ' + UI_FONT;
     ctx.fillText(d.city, W / 2, y + 28);
     y += 56 + 4;
 
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = '600 22px ' + UI_FONT;
     ctx.fillText(d.hijriStr + '   ·   ' + d.gregStr, W / 2, y + 15);
     y += 30 + 30;
@@ -11079,108 +11089,118 @@ async function shareCardAsImage(){
     PRAYERS.forEach((p, i) => {
       const cx = PAD + i * (cellW + cellGap);
       const isSunrise = p.key === 'sunrise';
-      ctx.fillStyle = isSunrise ? 'rgba(255,176,32,0.10)' : 'rgba(79,140,255,0.10)';
+      
+      ctx.fillStyle = isSunrise 
+        ? (isLight ? 'rgba(198,138,0,0.10)' : 'rgba(255,176,32,0.10)') 
+        : (isLight ? 'rgba(42,111,224,0.08)' : 'rgba(79,140,255,0.10)');
       _cvRoundRect(ctx, cx, y, cellW, 100, 14);
       ctx.fill();
-      ctx.strokeStyle = isSunrise ? 'rgba(255,176,32,0.45)' : 'rgba(79,140,255,0.35)';
+      
+      ctx.strokeStyle = isSunrise 
+        ? (isLight ? 'rgba(198,138,0,0.45)' : 'rgba(255,176,32,0.45)') 
+        : (isLight ? 'rgba(42,111,224,0.25)' : 'rgba(79,140,255,0.35)');
       ctx.lineWidth = 1.5;
       _cvRoundRect(ctx, cx, y, cellW, 100, 14);
       ctx.stroke();
 
-      ctx.fillStyle = isSunrise ? '#ffb020' : '#8f9bb3';
+      ctx.fillStyle = isSunrise 
+        ? (isLight ? '#c68a00' : '#ffb020') 
+        : (isLight ? '#5a6884' : '#8f9bb3');
       ctx.font = '800 16px ' + UI_FONT;
       ctx.textAlign = 'center';
       ctx.fillText(p.label.toUpperCase(), cx + cellW / 2, y + 32);
 
-      ctx.fillStyle = isSunrise ? '#ffb020' : '#e8edf7';
+      ctx.fillStyle = isSunrise 
+        ? (isLight ? '#c68a00' : '#ffb020') 
+        : (isLight ? '#1a2233' : '#e8edf7');
       ctx.font = '800 28px ' + UI_FONT;
       ctx.fillText(d.times[p.key] || '--:--', cx + cellW / 2, y + 70);
     });
     y += 100 + 24;
 
-    _cvDrawDivider(ctx, W, PAD, y);
+    _cvDrawDivider(ctx, W, PAD, y, isLight);
     y += 30;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#e3bd45';
+    ctx.fillStyle = isLight ? '#c9a227' : '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
     ctx.fillText('DUAH OF THE DAY', PAD + 8, y + 16);
     y += 32 + 8;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#f5e6b8';
+    ctx.fillStyle = isLight ? '#1a2233' : '#f5e6b8';
     ctx.font = AR_SIZE + 'px ' + AR_FONT;
     for(const line of duahAr){ ctx.fillText(line, W / 2, y + LH_AR / 2); y += LH_AR; }
     y += 12;
 
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT;
     for(const line of duahTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
     y += 12;
 
-    ctx.fillStyle = '#c9a227';
+    ctx.fillStyle = isLight ? '#c9a227' : '#c9a227';
     ctx.font = '800 18px ' + UI_FONT;
     ctx.fillText(d.duah.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    _cvDrawDivider(ctx, W, PAD, y);
+    _cvDrawDivider(ctx, W, PAD, y, isLight);
     y += 30;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#e3bd45';
+    ctx.fillStyle = isLight ? '#c9a227' : '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
     ctx.fillText('TAFSIR OF THE DUAH', PAD + 8, y + 16);
     y += 32 + 8;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
     for (const line of tafsirLines){ ctx.fillText(line, W / 2, y + LH_TAFSIR / 2); y += LH_TAFSIR; }
     y += 12;
 
-    _cvDrawDivider(ctx, W, PAD, y);
+    _cvDrawDivider(ctx, W, PAD, y, isLight);
     y += 30;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#e3bd45';
+    ctx.fillStyle = isLight ? '#c9a227' : '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
     ctx.fillText('HADITH OF THE DAY', PAD + 8, y + 16);
     y += 32 + 8;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#f5e6b8';
+    ctx.fillStyle = isLight ? '#1a2233' : '#f5e6b8';
     ctx.font = AR_SIZE + 'px ' + AR_FONT;
     for(const line of hadithAr){ ctx.fillText(line, W / 2, y + LH_AR / 2); y += LH_AR; }
     y += 12;
 
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = 'italic ' + TR_SIZE + 'px ' + UI_FONT;
     for(const line of hadithTr){ ctx.fillText(line, W / 2, y + LH_TR / 2); y += LH_TR; }
     y += 12;
 
-    ctx.fillStyle = '#c9a227';
+    ctx.fillStyle = isLight ? '#c9a227' : '#c9a227';
     ctx.font = '800 18px ' + UI_FONT;
     ctx.fillText(d.hadith.reference.toUpperCase(), W / 2, y + 14);
     y += 28 + 24;
 
-    _cvDrawDivider(ctx, W, PAD, y);
+    _cvDrawDivider(ctx, W, PAD, y, isLight);
     y += 30;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#e3bd45';
+    ctx.fillStyle = isLight ? '#c9a227' : '#e3bd45';
     ctx.font = '800 22px ' + UI_FONT;
     ctx.fillText('EXPLANATION OF THE HADITH', PAD + 8, y + 16);
     y += 32 + 8;
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = TAFSIR_SIZE + 'px ' + UI_FONT;
     for (const line of hadithExplLines){ ctx.fillText(line, W / 2, y + LH_TAFSIR / 2); y += LH_TAFSIR; }
     y += 12;
 
-    _cvDrawDivider(ctx, W, PAD, y);
+    _cvDrawDivider(ctx, W, PAD, y, isLight);
     y += 30;
-    ctx.fillStyle = '#8f9bb3';
+    ctx.fillStyle = isLight ? '#5a6884' : '#8f9bb3';
     ctx.font = '600 20px ' + UI_FONT;
     ctx.fillText('from Recite,', W / 2, y + 15);
     y += 30;
-    ctx.fillStyle = '#4f8cff';
+    ctx.fillStyle = isLight ? '#2a6fe0' : '#4f8cff';
     ctx.font = '700 22px ' + UI_FONT;
     ctx.fillText('https://recite-hazel.vercel.app/', W / 2, y + 15);
 
