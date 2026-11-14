@@ -1,27 +1,41 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.11 — Version bump to force clients to update to the latest
-   index.html, which fixes translation audio playback and downloads.
+   v2.4.12 — Version bump to force clients to update to the latest
+   index.html. This deployment bundles two changes that never
+   actually reached clients because the v2.4.11 VERSION constant
+   was never bumped in code (only the header comment was updated).
 
-     • FIX: The app now properly handles the new translation 
-       audio source (EveryAyah, Islamic Network, QuranEnc for 
-       both English and Turkish). The SW ensures cache invalidation 
-       so old broken downloads are dropped.
+     • NEW (index.html, this release): Comprehensive microphone
+       diagnostic system. Detects four failure modes — track health
+       (mute / ended), RMS silence detection, ASR death when audio
+       is proven present, and a 12 s fallback — and shows targeted
+       step-by-step guidance for each. Once the mic is verified
+       working (first ASR result), the diagnostic stops for the
+       remainder of the page session and is not re-run on every
+       Start Reciting, so no extra getUserMedia calls are made.
+       Adds a "Test microphone" menu item with a live RMS level bar,
+       live transcript and a Copy-diagnostic button.
 
-     • SW UPDATE: Retained the early-return in serveRangeFromCached 
-       for opaque responses just in case any future translation 
-       sources require no-CORS fetching. Opaque responses cannot 
-       be sliced or measured, so the SW immediately returns the 
-       full cached response instead of throwing an error when the 
-       media player requests a Range header.
+     • FIXES FROM v2.4.11 (previously intended but not deployed):
+       The app now properly handles the new translation audio
+       sources (EveryAyah, Islamic Network, QuranEnc for both
+       English and Turkish). The version bump forces stale broken
+       translation downloads to be dropped from versioned caches.
+
+     • Retained the early-return in serveRangeFromCached for opaque
+       responses just in case any future translation sources require
+       no-CORS fetching. Opaque responses cannot be sliced or
+       measured, so the SW immediately returns the full cached
+       response instead of throwing an error when the media player
+       requests a Range header.
 
      • Every other feature carried over unchanged from v2.4.3.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.10';
+const VERSION = '2.4.12';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -134,7 +148,10 @@ self.addEventListener('activate', event => {
    ============================================================ */
 self.addEventListener('message', event => {
   const data = event.data || {};
-  if(data.type === 'SKIP_WAITING'){ self.skipWaiting(); return; }
+  if(data.type === 'SKIP_WAITING'){
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   if(data.type === 'CLEAR_CACHES'){
     event.waitUntil((async () => {
       const keys = await caches.keys();

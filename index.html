@@ -2517,6 +2517,9 @@ body.light-mode .share-arabic{color:#1a2233;}
         <button class="home-menu-item" id="homeMenuNotify" type="button" role="menuitem">
           <span class="hmi-ico">🔔</span><span>Enable notifications</span>
         </button>
+        <button class="home-menu-item" id="homeMenuMicTest" type="button" role="menuitem">
+          <span class="hmi-ico">🎤</span><span>Test microphone</span>
+        </button>
         <button class="home-menu-item" id="homeMenuAbout" type="button" role="menuitem">
           <span class="hmi-ico">ℹ️</span><span>About app</span>
         </button>
@@ -3196,18 +3199,15 @@ const TEXT_TRANSLATION_OPTIONS = [
     id: 'en.yusufali', 
     quranComId: 203, 
     lang: 'en', 
-    // KEEPING THIS EXACT FOLDER NAME ensures existing downloads remain valid
     audioFolder: 'English/Sahih_Intnl_Ibrahim_Walk_192kbps', 
     label: 'English — Abdullah Yusuf Ali', 
     shortLabel: 'Yusuf Ali',
-    // Alternate EveryAyah folder names (tried if primary is down)
     fallbackAudioFolders: [
       'English/Sahih_Intnl_Ibrahim_Walk_64kbps',
       'English/Saheeh_International',
       'English/Sahih_International',
       'English/Sahih_Intnl_Ibrahim_Walk'
     ],
-    // Independent CDN fallbacks
     quranEncKey: 'english_saheeh',
     islamicNetworkKey: 'en.walk'
   },
@@ -4061,9 +4061,6 @@ let fsControlsTimer = null;
 let fsPaused = false;
 let micPaused = false;
 let longPressTriggered = false;
-let micWatchdogTimer = null;
-let micAudioConfirmed = false;
-let micWarningShown = false;
 let hudPending = false;
 
 let advanceTimes = [];
@@ -4092,6 +4089,32 @@ const SPEECH_KEEPALIVE_MS = 40000;
 
 let micStream = null;
 let lastMicError = null;
+
+/* ── Microphone diagnostic state ─────────────────────────────
+   micDiagnosedWorking = true once the mic has been verified
+   working in this page session. Once true, startMicDiagnostic()
+   bails out — we never re-run the full diagnostic on every
+   Start Reciting. Only on a page reload does it reset to false,
+   or on an unexpected stream disconnect (handleMicTrackIssue). */
+let micDiagnosedWorking = false;
+let micDiagTimer = null;
+let micDiagSoftToastShown = false;
+let micTrackMutedTimer = null;
+let micTrackListeners = [];
+const MIC_DIAG_TICK_MS = 500;
+const MIC_DIAG_SOFT_MS = 4000;
+const MIC_DIAG_HARD_MS = 8000;
+const MIC_DIAG_FALLBACK_MS = 12000;
+const MIC_DIAG = {
+  startedAt: 0,
+  rmsSupported: false,
+  rmsPeak: 0,
+  rmsVoiceWindows: 0,
+  asrResultCount: 0,
+  lastAsrResultAt: 0,
+  hardCheckDone: false,
+  fallbackCheckDone: false
+};
 
 let currentScreenName = 'home';
 let coachLoading = false;
@@ -6123,7 +6146,9 @@ async function runSpeechResultProcessing(snap) {
   if (!snap || fsPaused || micPaused || !wantMic) return;
   lastResultAt = performance.now();
   sessionHadResult = true;
-  confirmMicAudio();
+  MIC_DIAG.asrResultCount++;
+  MIC_DIAG.lastAsrResultAt = performance.now();
+  if (!micDiagnosedWorking) markMicVerified();
   resetSilenceTimer(true);
   currentBatchId++;
   for (let ri = 0; ri < snap.results.length; ri++) {
@@ -6265,14 +6290,14 @@ function createSpeechRecognition(forceNoPhrases){
     console.warn('[Speech] error:', err);
     if(err === 'no-speech' || err === 'aborted') return;
     if(err === 'service-not-allowed'){
-      releaseMicStream(); stopMicWatchdog();
+      releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton(); updateFsMicBtn(); syncFsButtons();
       notifySpeechServiceUnreachable();
       return;
     }
     if(err === 'not-allowed'){
-      releaseMicStream(); stopMicWatchdog();
+      releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton();
       setStatus('Microphone blocked', 'error');
@@ -6284,7 +6309,7 @@ function createSpeechRecognition(forceNoPhrases){
       return;
     }
     if(err === 'audio-capture'){
-      releaseMicStream(); stopMicWatchdog();
+      releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
       setMicButton(); setStatus('No microphone', 'error');
       addFeedback('⚠️ No microphone was found on this device.', true);
@@ -6969,6 +6994,7 @@ async function ensureMicStream(){
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true }
     });
     micStream = s;
+    attachMicTrackListeners(s);
     const rmsOk = rmsAnalyser.start(s);
     if(!rmsOk && !_rmsUnavailableNotified){
       _rmsUnavailableNotified = true;
@@ -6979,52 +7005,480 @@ async function ensureMicStream(){
 }
 function muteMicStream(){ if(micStream){ try{ micStream.getAudioTracks().forEach(t => { t.enabled = false; }); }catch(e){} } rmsAnalyser.stop(); }
 function releaseMicStream(){
+  detachMicTrackListeners();
+  if(micTrackMutedTimer){ clearTimeout(micTrackMutedTimer); micTrackMutedTimer = null; }
   rmsAnalyser.stop();
   if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
 }
 
-function startMicWatchdog(){
-  clearTimeout(micWatchdogTimer); micAudioConfirmed = false;
-  micWatchdogTimer = setTimeout(() => {
-    if(!wantMic || micAudioConfirmed) return;
-    if(micWarningShown) return;
-    if(followOnly && speechRecognition && speechRecognition.__hasPhrases && !_phrasesRetryDone){
-      _phrasesRetryDone = true;
-      try{ speechRecognition.abort(); }catch(_){}
-      speechRecognition = null;
-      try{
-        speechRecognition = createSpeechRecognition(true);
-        if(speechRecognition){
-          speechRecognition.maxAlternatives = 3;
-          speechRecognition.start();
-          micWarningShown = false;
-          lastResultAt = performance.now();
-          startMicWatchdog();
-          setStatus('Listening', 'listening', contextLabel() + ' (retry)');
-          addFeedback('🔄 Retrying microphone without phrase hints…', false, true);
-          return;
-        }
-      }catch(_){}
-      micWarningShown = true;
-      showBrokenMicWarning();
-      return;
-    }
-    micWarningShown = true;
-    if(followOnly){ showBrokenMicWarning(); }
-    else { markTajweedMicFailed(); }
-  }, 10000);
+/* ── Microphone diagnostic ───────────────────────────────────
+   4-layer detection:
+     Layer 1 — track health (500 ms polling + onmute/onended events)
+     Layer 2 — RMS silence detection (4 s soft toast, 8 s hard modal)
+     Layer 3 — ASR death detection (8 s, when RMS shows speech)
+     Layer 4 — 12 s fallback (only if nothing earlier fired)
+
+   In Follow mode, `releaseMicStream()` runs in startReciting, so
+   micStream is null and rmsAnalyser isn't running — therefore
+   Layers 1 & 2 are silently skipped. Layers 3 & 4 still fire.
+
+   Once an ASR result is received, `markMicVerified()` sets
+   micDiagnosedWorking = true and stops the diagnostic for the
+   remainder of the page session. Subsequent Start Reciting calls
+   bail out of startMicDiagnostic immediately — no more
+   getUserMedia re-calls on every mic start. */
+
+function resetMicDiagState(){
+  MIC_DIAG.startedAt = 0;
+  MIC_DIAG.rmsPeak = 0;
+  MIC_DIAG.rmsVoiceWindows = 0;
+  MIC_DIAG.asrResultCount = 0;
+  MIC_DIAG.lastAsrResultAt = 0;
+  MIC_DIAG.hardCheckDone = false;
+  MIC_DIAG.fallbackCheckDone = false;
+  micDiagSoftToastShown = false;
 }
-function stopMicWatchdog(){ clearTimeout(micWatchdogTimer); micWatchdogTimer = null; }
-function confirmMicAudio(){ micAudioConfirmed = true; clearTimeout(micWatchdogTimer); micWatchdogTimer = null; }
-function showBrokenMicWarning(){
+
+function attachMicTrackListeners(stream){
+  detachMicTrackListeners();
+  if(!stream) return;
+  try{
+    const tracks = stream.getAudioTracks();
+    for(const t of tracks){
+      const onMute   = () => handleMicTrackIssue('muted');
+      const onUnmute = () => { if(micTrackMutedTimer){ clearTimeout(micTrackMutedTimer); micTrackMutedTimer = null; } };
+      const onEnded  = () => handleMicTrackIssue('ended');
+      t.addEventListener('mute', onMute);
+      t.addEventListener('unmute', onUnmute);
+      t.addEventListener('ended', onEnded);
+      micTrackListeners.push({ track: t, onMute, onUnmute, onEnded });
+    }
+  }catch(_){}
+}
+
+function detachMicTrackListeners(){
+  for(const l of micTrackListeners){
+    try{ l.track.removeEventListener('mute', l.onMute); }catch(_){}
+    try{ l.track.removeEventListener('unmute', l.onUnmute); }catch(_){}
+    try{ l.track.removeEventListener('ended', l.onEnded); }catch(_){}
+  }
+  micTrackListeners = [];
+}
+
+function handleMicTrackIssue(kind){
+  if(!wantMic) return;
+  if(kind === 'muted'){
+    if(micTrackMutedTimer) clearTimeout(micTrackMutedTimer);
+    micTrackMutedTimer = setTimeout(() => {
+      micTrackMutedTimer = null;
+      if(!wantMic) return;
+      const t = micStream && micStream.getAudioTracks()[0];
+      if(t && t.muted) reportMicProblem('track-muted');
+    }, 1500);
+    return;
+  }
+  if(kind === 'ended'){
+    (async () => {
+      const s = await ensureMicStream().catch(() => null);
+      if(!wantMic) return;
+      if(s){
+        showToast('🔄 Microphone reconnected.', 2600);
+        micDiagnosedWorking = false;
+        startMicDiagnostic();
+        if(!recRunning && !speechStarting && speechRecognition){
+          try{ speechStarting = true; speechRecognition.start(); }
+          catch(e){ speechStarting = false; }
+        }
+      } else {
+        reportMicProblem('reacquire-failed');
+      }
+    })();
+    return;
+  }
+}
+
+function checkMicTrackHealth(){
+  if(!micStream) return;
+  const tracks = micStream.getAudioTracks();
+  if(!tracks.length) return;
+  const t = tracks[0];
+  if(t.muted){ handleMicTrackIssue('muted'); return; }
+  if(t.readyState !== 'live'){ handleMicTrackIssue('ended'); return; }
+  if(!t.enabled){ try{ t.enabled = true; }catch(_){} }
+}
+
+function retrySpeechWithoutPhrases(){
+  if(!speechRecognition || !speechRecognition.__hasPhrases) return false;
+  try{ speechRecognition.abort(); }catch(_){}
+  speechRecognition = null;
+  try{
+    speechRecognition = createSpeechRecognition(true);
+    if(!speechRecognition) return false;
+    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
+    try{ speechRecognition.start(); }catch(_){ return false; }
+    recRunning = true;
+    lastResultAt = performance.now();
+    setStatus('Listening', 'listening', contextLabel() + ' (retry)');
+    addFeedback('🔄 Retrying microphone without phrase hints…', false, true);
+    armSpeechKeepalive();
+    return true;
+  }catch(e){ return false; }
+}
+
+function startMicDiagnostic(){
+  if(micDiagnosedWorking) return;   // already verified — never re-run
+  stopMicDiagnostic();
+  resetMicDiagState();
+  MIC_DIAG.startedAt = performance.now();
+  MIC_DIAG.rmsSupported = !followOnly && rmsAnalyser.isRunning();
+  micDiagTimer = setInterval(micDiagTick, MIC_DIAG_TICK_MS);
+}
+
+function stopMicDiagnostic(){
+  if(micDiagTimer){ clearInterval(micDiagTimer); micDiagTimer = null; }
+}
+
+function markMicVerified(){
+  if(micDiagnosedWorking) return;
+  micDiagnosedWorking = true;
+  stopMicDiagnostic();
+  // Clear the soft "not hearing" toast if it's currently showing
+  if(toastEl && toastEl._timer && /Not hearing|not hearing/i.test(toastEl.textContent || '')){
+    clearTimeout(toastEl._timer);
+    toastEl._timer = null;
+    toastEl.classList.remove('visible');
+  }
+}
+
+function micDiagTick(){
+  if(micDiagnosedWorking){ stopMicDiagnostic(); return; }
+  if(!wantMic || fsPaused || micPaused) return;
+  const now = performance.now();
+  const elapsed = now - MIC_DIAG.startedAt;
+
+  // ── Layer 1 (Tajweed only): track health ──
+  if(!followOnly) checkMicTrackHealth();
+
+  // ── Layer 2 (Tajweed only): RMS silence detection ──
+  if(!followOnly && MIC_DIAG.rmsSupported){
+    const samples = rmsAnalyser.samplesIn(MIC_DIAG.startedAt, now);
+    if(samples.length){
+      let peak = 0, voiceCount = 0;
+      const minRms = rmsAnalyser.minRms();
+      for(const s of samples){
+        if(s.rms > peak) peak = s.rms;
+        if(s.rms >= minRms) voiceCount++;
+      }
+      if(peak > MIC_DIAG.rmsPeak) MIC_DIAG.rmsPeak = peak;
+      if(voiceCount > MIC_DIAG.rmsVoiceWindows) MIC_DIAG.rmsVoiceWindows = voiceCount;
+    }
+    if(!micDiagSoftToastShown && elapsed >= MIC_DIAG_SOFT_MS &&
+       MIC_DIAG.rmsVoiceWindows === 0 && MIC_DIAG.asrResultCount === 0){
+      micDiagSoftToastShown = true;
+      showToast('🎤 Not hearing anything yet — check your mic isn\'t muted or covered.', 4200);
+    }
+  }
+
+  // ── Layer 3: hard check at 8 s ──
+  if(!MIC_DIAG.hardCheckDone && elapsed >= MIC_DIAG_HARD_MS && MIC_DIAG.asrResultCount === 0){
+    MIC_DIAG.hardCheckDone = true;
+
+    // One-shot phrases-free retry before showing any modal
+    if(!_phrasesRetryDone && speechRecognition && speechRecognition.__hasPhrases){
+      _phrasesRetryDone = true;
+      if(retrySpeechWithoutPhrases()){
+        MIC_DIAG.startedAt = performance.now();
+        MIC_DIAG.hardCheckDone = false;
+        MIC_DIAG.fallbackCheckDone = false;
+        return;
+      }
+    }
+
+    if(followOnly){
+      // Follow mode can't verify RMS — treat as ASR-dead with combined guidance
+      reportMicProblem('asr-dead');
+    } else if(MIC_DIAG.rmsVoiceWindows >= 3){
+      reportMicProblem('asr-dead');
+    } else {
+      reportMicProblem('mic-silent');
+    }
+    return;
+  }
+
+  // ── Layer 4: 12 s fallback ──
+  if(!MIC_DIAG.fallbackCheckDone && elapsed >= MIC_DIAG_FALLBACK_MS && MIC_DIAG.asrResultCount === 0){
+    MIC_DIAG.fallbackCheckDone = true;
+    if(!MIC_DIAG.hardCheckDone){
+      reportMicProblem('generic');
+    }
+  }
+}
+
+function getMicProblemConfig(kind){
+  const configs = {
+    'track-muted': {
+      icon: '🔇',
+      title: 'The microphone is muted',
+      body: 'Your device or browser has muted the microphone. The app cannot hear you.',
+      steps: '1. Check for a <b>physical mute switch</b> on your phone (some models have one on the side).<br>2. Swipe down the notification shade and look for a <b>microphone</b> or <b>privacy</b> toggle — make sure it\'s not disabled.<br>3. If using <b>Bluetooth headphones</b>, check they\'re not set to "headset mode" that mutes the phone\'s built-in mic.<br>4. <b>Settings → Apps → Browser → Permissions → Microphone</b> → Allow.'
+    },
+    'track-ended': {
+      icon: '🔌',
+      title: 'The microphone was disconnected',
+      body: 'Another app may have taken over the microphone, or the device ended the stream.',
+      steps: '1. Close any <b>phone, voice recorder, video call or music</b> app.<br>2. Unplug and replug any wired headset.<br>3. Tap <b>Start Reciting</b> again.<br>4. If it keeps happening, restart your phone.'
+    },
+    'mic-silent': {
+      icon: '🤫',
+      title: 'The microphone is on but hearing nothing',
+      body: 'The microphone has permission, but no sound is reaching the app. Speak clearly and check the microphone isn\'t covered.',
+      steps: '1. <b>Speak loudly</b> into the phone\'s bottom microphone.<br>2. Remove any case or finger covering the mic.<br>3. <b>Disconnect Bluetooth headphones</b> or check their microphone setting.<br>4. Try a <b>wired headset</b> to test a different microphone.<br>5. Tap <b>🎤 Run microphone test</b> below to check live levels.'
+    },
+    'asr-dead': {
+      icon: '📡',
+      title: 'The microphone works, but the speech service is not responding',
+      body: 'Your microphone is picking up sound, but no words are reaching the recognition service. This is usually a network or Google Play Services issue.',
+      steps: '1. <b>Check your internet connection</b> — speech recognition is online-only.<br>2. <b>Huawei / Honor</b>: install <b>Google Chrome</b> from the AppGallery and open the page there — the speech service needs Google Play Services.<br>3. <b>Xiaomi / Redmi / Realme</b>: Settings → Apps → Chrome → Battery → <b>Unrestricted</b> (MIUI kills background services).<br>4. Update the <b>Google</b> app from the Play Store.<br>5. Tap <b>Start Reciting</b> again.'
+    },
+    'reacquire-failed': {
+      icon: '⚠️',
+      title: 'Could not restart the microphone',
+      body: 'The microphone became unavailable and could not be reconnected.',
+      steps: '1. Close other apps that might be using the microphone.<br>2. Tap <b>Start Reciting</b> again.<br>3. If it still fails, restart your phone.<br>4. Tap <b>🎤 Run microphone test</b> to verify the mic works at all.'
+    },
+    'generic': {
+      icon: '🎤',
+      title: 'The microphone isn\'t reaching the app',
+      body: 'The app is running but not receiving speech. Check your microphone and connection.',
+      steps: '1. Check that the microphone isn\'t muted.<br>2. Close any other app using the mic.<br>3. Check your internet connection.<br>4. Tap <b>🎤 Run microphone test</b> below.'
+    }
+  };
+  // Follow-mode variant for asr-dead: we can't verify RMS, so be honest
+  if(kind === 'asr-dead' && followOnly){
+    return {
+      icon: '📡',
+      title: 'Not hearing your recitation',
+      body: 'No speech is reaching the recognition service. Follow mode cannot verify the microphone signal directly, so this is usually a network, Google Play Services, or muted-microphone issue.',
+      steps: '1. <b>Check your internet connection</b> — speech recognition is online-only.<br>2. <b>Check the microphone isn\'t muted</b> (privacy switch, Bluetooth headphones, or System mic settings).<br>3. <b>Huawei / Honor</b>: install <b>Google Chrome</b> from the AppGallery — the speech service needs Google Play Services.<br>4. Update the <b>Google</b> app from the Play Store.<br>5. Tap <b>🎤 Run microphone test</b> below, then tap <b>Start Reciting</b> again.'
+    };
+  }
+  return configs[kind] || configs['generic'];
+}
+
+function reportMicProblem(kind){
+  if(reportMicProblem._shown) return;
+  reportMicProblem._shown = true;
+  stopMicDiagnostic();
+  micDiagnosedWorking = false;   // so the user's next Start Reciting runs a fresh check
+  if(!followOnly){
+    coachTajweedMicFailed = true;
+    try{ updateTajweedStatusChip(); }catch(_){}
+  }
+  const cfg = getMicProblemConfig(kind);
+  addFeedback('⚠️ <b>' + cfg.title + '</b>', true);
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
-  bg.innerHTML = '<div class="modal"><div class="grabber"></div><h2>Microphone isn\'t hearing you</h2><div class="errbox">Your browser reports the microphone as allowed, but no speech is reaching the recognition service after several seconds.</div><div class="okbox"><b>Try these steps:</b><br>1. Unmute your microphone.<br>2. Close any other app using the mic.<br>3. Reload the page.<br>4. On iPhone: Settings → Safari → Microphone → Allow.<br>5. Check that you are connected to the internet — the recognition service is online.</div><button class="primary" id="micWarnClose">Got it</button></div>';
+  bg.innerHTML =
+    '<div class="modal">' +
+      '<div class="grabber"></div>' +
+      '<h2>' + cfg.icon + ' ' + cfg.title + '</h2>' +
+      '<div class="errbox">' + cfg.body + '</div>' +
+      '<div class="okbox"><b>Try these steps:</b><br>' + cfg.steps + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">' +
+        '<button class="primary" id="micProbRetry" type="button">🔄 Try reciting again</button>' +
+        '<button class="ghost" id="micProbTest" type="button">🎤 Run microphone test</button>' +
+        '<button class="ghost" id="micProbClose" type="button">Close</button>' +
+      '</div>' +
+    '</div>';
   document.body.appendChild(bg);
-  const close = () => bg.remove();
+  const close = () => { bg.remove(); reportMicProblem._shown = false; };
   bg.addEventListener('click', e => { if(e.target === bg) close(); });
-  bg.querySelector('#micWarnClose').addEventListener('click', close);
-  addFeedback('⚠️ The browser is not passing speech to the recognition service.', true);
+  bg.querySelector('#micProbClose').addEventListener('click', close);
+  bg.querySelector('#micProbRetry').addEventListener('click', () => {
+    close();
+    if(wantMic) stopReciting();
+    setTimeout(() => { if(!wantMic) startReciting(); }, 300);
+  });
+  bg.querySelector('#micProbTest').addEventListener('click', () => { close(); openMicTestModal(); });
+}
+
+async function openMicTestModal(){
+  // Avoid competing with an active recognizer
+  const wasReciting = wantMic;
+  if(wasReciting){ try{ stopReciting(true); }catch(_){} }
+  stopMicDiagnostic();
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML =
+    '<div class="modal">' +
+      '<div class="grabber"></div>' +
+      '<h2>🎤 Microphone test</h2>' +
+      '<p>Speak normally for a few seconds — you\'ll see your voice level and the words recognised.</p>' +
+      '<div id="micTestStatus">' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">Permission</span><b id="mtPerm">—</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">Microphone</span><b id="mtDev">—</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">Audio track</span><b id="mtTrack">—</b></div>' +
+        '<div style="padding:10px 0;border-bottom:1px solid var(--line)">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Picking sound</span><b id="mtPeak">—</b></div>' +
+          '<div style="height:12px;background:#0b101b;border-radius:99px;overflow:hidden;border:1px solid var(--line)"><div id="mtBar" style="height:100%;width:0;background:linear-gradient(90deg,#4f8cff,#2fd07a);transition:width .1s"></div></div>' +
+        '</div>' +
+        '<div style="padding:10px 0"><span style="color:var(--muted)">Speech heard</span><br><span id="mtTranscript" style="font-family:Amiri,serif;font-size:1.1rem;color:var(--text);direction:rtl;display:block;margin-top:6px;min-height:2em">⏳ waiting…</span></div>' +
+      '</div>' +
+      '<div id="mtDiag" style="margin-top:10px;padding:10px;background:rgba(79,140,255,.08);border-radius:10px;font-size:.82rem;line-height:1.5;color:var(--muted)">Starting test…</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">' +
+        '<button class="primary" id="mtRetry" type="button">🔄 Try again</button>' +
+        '<button class="ghost" id="mtCopy" type="button">📋 Copy diagnostic</button>' +
+        '<button class="ghost" id="mtClose" type="button">Close</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(bg);
+
+  const permEl = bg.querySelector('#mtPerm');
+  const devEl = bg.querySelector('#mtDev');
+  const trackEl = bg.querySelector('#mtTrack');
+  const peakEl = bg.querySelector('#mtPeak');
+  const barEl = bg.querySelector('#mtBar');
+  const transcriptEl = bg.querySelector('#mtTranscript');
+  const diagEl = bg.querySelector('#mtDiag');
+
+  let cleanup = () => {};
+  let stream = null;
+  let barTimer = null;
+  let testRecog = null;
+  let diagTimer1 = null, diagTimer2 = null;
+  let heardSomething = false;
+  let testRms = null;
+
+  const close = () => { try{ cleanup(); }catch(_){} bg.remove(); };
+  bg.addEventListener('click', e => { if(e.target === bg) close(); });
+  bg.querySelector('#mtClose').addEventListener('click', close);
+  bg.querySelector('#mtRetry').addEventListener('click', () => { close(); setTimeout(() => openMicTestModal(), 100); });
+  bg.querySelector('#mtCopy').addEventListener('click', () => {
+    const t = stream && stream.getAudioTracks()[0];
+    const payload = {
+      ua: navigator.userAgent,
+      platform: navigator.platform,
+      standalone: detectStandalone(),
+      permission: micPermission,
+      stream: stream ? 'active' : 'none',
+      track: t ? {
+        readyState: t.readyState,
+        muted: t.muted,
+        enabled: t.enabled,
+        settings: (t.getSettings ? t.getSettings() : {})
+      } : null,
+      rmsPeak: MIC_DIAG.rmsPeak,
+      rmsVoiceWindows: MIC_DIAG.rmsVoiceWindows,
+      asrResults: MIC_DIAG.asrResultCount,
+      speechSupported: SPEECH_SUPPORTED,
+      heardSomething,
+      lastTranscript: transcriptEl.textContent
+    };
+    const txt = JSON.stringify(payload, null, 2);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(() => showToast('📋 Diagnostic copied.')).catch(() => showToast('⚠️ Could not copy.'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); showToast('📋 Diagnostic copied.'); }
+      catch(_){ showToast('⚠️ Could not copy.'); }
+      ta.remove();
+    }
+  });
+
+  try{ await refreshPermissionState(); }catch(_){}
+  permEl.textContent = micPermission === 'granted' ? '✅ ' + micPermission : '⚠️ ' + micPermission;
+  devEl.textContent = '⏳ acquiring';
+  trackEl.textContent = '—';
+
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const t = stream.getAudioTracks()[0];
+    devEl.textContent = '✅ ' + (t.label || 'Audio input');
+    const trackState = t.readyState + (t.muted ? ' · 🔇 muted' : ' · 🔊 live');
+    trackEl.innerHTML = (t.muted || t.readyState !== 'live') ? '⚠️ ' + trackState : '✅ ' + trackState;
+
+    try{
+      const shared = window.__sharedAudioCtx;
+      const ctx = (shared && shared.state === 'running') ? shared : new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024; an.smoothingTimeConstant = 0.3;
+      src.connect(an);
+      const buf = new Float32Array(an.fftSize);
+      testRms = { ctx, src, an, buf, owns: ctx !== shared };
+    }catch(e){ console.warn('[MicTest] RMS failed:', e); }
+
+    barTimer = setInterval(() => {
+      if(!testRms){ barEl.style.width = '0%'; peakEl.textContent = '— (no analyser)'; return; }
+      testRms.an.getFloatTimeDomainData(testRms.buf);
+      let sum = 0; for(let i = 0; i < testRms.buf.length; i++) sum += testRms.buf[i] * testRms.buf[i];
+      const rms = Math.sqrt(sum / testRms.buf.length);
+      const pct = Math.min(100, Math.round(rms * 800));
+      barEl.style.width = pct + '%';
+      peakEl.textContent = pct + '%';
+      if(rms > 0.02) heardSomething = true;
+    }, 100);
+
+    if(SPEECH_SUPPORTED){
+      try{
+        testRecog = new SpeechRecognitionCtor();
+        testRecog.lang = 'ar-SA';
+        testRecog.continuous = true;
+        testRecog.interimResults = true;
+        testRecog.onresult = (ev) => {
+          let txt = '';
+          for(let i = ev.resultIndex; i < ev.results.length; i++) txt += (ev.results[i][0].transcript || '') + ' ';
+          if(txt.trim()) transcriptEl.textContent = txt.trim();
+        };
+        testRecog.onerror = (ev) => { transcriptEl.textContent = '⚠️ ' + (ev.error || 'error'); };
+        testRecog.start();
+      }catch(e){
+        transcriptEl.textContent = '⚠️ ' + (e.message || 'Could not start recogniser');
+      }
+    } else {
+      transcriptEl.textContent = '⚠️ Speech recognition not available in this browser';
+    }
+
+    diagTimer1 = setTimeout(() => {
+      if(!heardSomething && testRms){
+        diagEl.innerHTML = '🤫 <b>Microphone is not hearing any sound.</b><br>Speak loudly into the phone\'s bottom microphone, or check that no case or finger is covering it.';
+        diagEl.style.color = 'var(--warn)';
+      } else if(!testRms){
+        diagEl.innerHTML = '⚠️ <b>Acoustic test unavailable.</b> Watch the "Speech heard" line below — if it stays empty after you speak, the issue is with the microphone or speech service.';
+      }
+    }, 3000);
+
+    diagTimer2 = setTimeout(() => {
+      if(!heardSomething && transcriptEl.textContent === '⏳ waiting…'){
+        diagEl.innerHTML = '🚫 <b>No speech detected after 8 seconds.</b><br>Check your microphone permission and your internet connection.';
+        diagEl.style.color = 'var(--bad)';
+      } else if(heardSomething && transcriptEl.textContent === '⏳ waiting…'){
+        diagEl.innerHTML = '📡 <b>The microphone is working, but no words were recognised.</b><br>This is a speech service issue — check your internet connection, or install the Google app / Google Chrome.';
+        diagEl.style.color = 'var(--warn)';
+      } else if(transcriptEl.textContent !== '⏳ waiting…'){
+        diagEl.innerHTML = '✅ <b>Microphone and speech recognition are working.</b><br>You\'re ready to recite.';
+        diagEl.style.color = 'var(--good)';
+      }
+    }, 8000);
+
+    cleanup = () => {
+      if(barTimer){ clearInterval(barTimer); barTimer = null; }
+      if(diagTimer1){ clearTimeout(diagTimer1); diagTimer1 = null; }
+      if(diagTimer2){ clearTimeout(diagTimer2); diagTimer2 = null; }
+      if(testRms){
+        try{ testRms.src.disconnect(); testRms.an.disconnect(); if(testRms.owns) testRms.ctx.close(); }catch(_){}
+        testRms = null;
+      }
+      if(testRecog){ try{ testRecog.abort(); }catch(_){} testRecog = null; }
+      if(stream){ try{ stream.getTracks().forEach(tr => tr.stop()); }catch(_){} stream = null; }
+    };
+  }catch(e){
+    devEl.textContent = '❌ ' + (e.message || 'Failed');
+    trackEl.textContent = '—';
+    diagEl.innerHTML = '⚠️ <b>Could not acquire microphone.</b><br>' + escapeHtml(e.message || e.name || 'Unknown error') + '<br>Check permissions in your browser settings.';
+    diagEl.style.color = 'var(--bad)';
+  }
 }
 
 let lastSilenceResetAt = 0;
@@ -7581,7 +8035,8 @@ async function startReciting(){
       const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
       if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
          nm === 'DevicesNotFoundError' || nm === 'SecurityError'){
-        markTajweedMicFailed();
+        coachTajweedMicFailed = true;
+        updateTajweedStatusChip();
       } else {
         coachTajweedMicFailed = false;
         updateTajweedStatusChip();
@@ -7613,15 +8068,15 @@ async function startReciting(){
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
-    recRunning = true; lastResultAt = performance.now(); sessionHadResult = false; micWarningShown = false;
-    startMicWatchdog(); armSpeechKeepalive();
+    recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
+    startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
     addFeedback('🎧 Listening — recite from anywhere in the page or surah.');
     updateFsMicBtn(); syncFsButtons();
   }catch(e){
     console.error('[Speech] start failed:', e);
     addFeedback('⚠️ Could not start listening: ' + (e.message || e), true);
-    wantMic = false; releaseMicStream(); stopMicWatchdog(); setMicButton(); updateFsMicBtn(); syncFsButtons();
+    wantMic = false; releaseMicStream(); stopMicDiagnostic(); setMicButton(); updateFsMicBtn(); syncFsButtons();
   }
 }
 
@@ -7638,14 +8093,14 @@ function stopReciting(silent){
   prevWordAudio = null;
   setMicButton(); recRunning = false; speechStarting = false;
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
-  releaseWakeLock(); clearSilenceTimer(); stopMicWatchdog();
+  releaseWakeLock(); clearSilenceTimer(); stopMicDiagnostic();
   releaseMicStream();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
   updateFsMicBtn(); syncFsButtons();
 }
 function pauseMic(){
   micPaused = true; recRunning = false;
-  disarmSpeechKeepalive(); stopMicWatchdog();
+  disarmSpeechKeepalive(); stopMicDiagnostic();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} }
   releaseMicStream();
 }
@@ -7655,9 +8110,9 @@ function resumeMic(){
     if(!followOnly){
       ensureMicStream().then(s => { if(!s) markTajweedMicFailed(); }).catch(() => {});
     }
-    recRunning = true; speechFatalError = false; micWarningShown = false;
+    recRunning = true; speechFatalError = false;
     lastResultAt = performance.now();
-    startMicWatchdog(); armSpeechKeepalive();
+    startMicDiagnostic(); armSpeechKeepalive();
     try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
@@ -7667,7 +8122,7 @@ function stopEverything(silent){ stopPlayback(); stopReciting(true); if(!silent)
 function finish(){
   finished=true; wantMic=false;
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
-  clearSilenceTimer(); stopMicWatchdog();
+  clearSilenceTimer(); stopMicDiagnostic();
   cancelFollowPinTimer();
   releaseMicStream();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
@@ -10268,6 +10723,8 @@ btnBackHome.addEventListener('click', () => { if(readerFullscreen) exitReaderFul
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !homeMenu.hidden) closeMenu(); });
   if(homeMenuInstall) homeMenuInstall.addEventListener('click', () => { closeMenu(); handleInstallMenuTap(); });
   if(homeMenuNotify) homeMenuNotify.addEventListener('click', () => { closeMenu(); enableNotifications(); });
+  const homeMenuMicTest = document.getElementById('homeMenuMicTest');
+  if(homeMenuMicTest) homeMenuMicTest.addEventListener('click', () => { closeMenu(); openMicTestModal(); });
   if(homeMenuShare) homeMenuShare.addEventListener('click', () => { closeMenu(); shareApp(); });
   if(homeMenuQr)    homeMenuQr.addEventListener('click',    () => { closeMenu(); openQrScreen(); });
   if(homeMenuFeedback) homeMenuFeedback.addEventListener('click', () => { closeMenu(); openFeedbackModal(); });
