@@ -6497,7 +6497,9 @@ async function runMFAInference(w, seg, heard) {
   const ratio = seg.durationMs / expectedMs;
   const durationOk = ratio > 0.35 && ratio < 2.80;
   const L = Math.max(heard.length, w.norm.length);
-  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
+
+const tol = (w.norm.length === 3) ? 0 : (w.norm.length === 4 || w.norm.length === 5) ? 1 : (toleranceFor(L) + 1);
+
   const normOk = heard === w.norm || lev(heard, w.norm) <= tol;
   const hPhon = phonArCached(heard);
   const phonOk = w.phon.length >= 2 && hPhon.length >= 2 && lev(hPhon, w.phon) <= tol;
