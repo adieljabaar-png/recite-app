@@ -1488,6 +1488,39 @@ body.light-mode .feedback-status.err{color:#8a2033;}
 .prayer-row .pr-name{flex:1;min-width:0;font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:baseline;gap:8px;}
 .prayer-row .pr-countdown{font-size:.66rem;font-weight:600;color:var(--accent);white-space:nowrap;}
 .prayer-row .pr-time{font-size:1.02rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.02em;}
+
+.tajweed-notice{
+  background:rgba(255,176,32,.10);
+  border:1px solid rgba(255,176,32,.40);
+  color:#ffd68a;
+  border-radius:13px;
+  padding:10px 14px;
+  font-size:.78rem;
+  line-height:1.5;
+  margin:8px 0;
+}
+.tajweed-notice b{color:#fff}
+.tajweed-notice .tj-rules{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;
+}
+.tajweed-notice .tj-rule{
+  display:inline-block;padding:2px 9px;
+  background:rgba(155,110,255,.22);
+  border:1px solid rgba(155,110,255,.55);
+  border-radius:999px;font-size:.68rem;font-weight:800;
+  color:#e6d9ff;letter-spacing:.02em;
+}
+body.light-mode .tajweed-notice{
+  color:#7a5500;background:rgba(198,138,0,.08);
+  border-color:rgba(198,138,0,.35);
+}
+body.light-mode .tajweed-notice b{color:#1a2233}
+body.light-mode .tajweed-notice .tj-rule{
+  background:rgba(120,80,220,.14);
+  border-color:rgba(120,80,220,.50);
+  color:#5b2d9e;
+}
+
 .pr-bell{width:32px;height:32px;border-radius:50%;padding:0;flex-shrink:0;background:transparent;border:2px solid var(--line);color:var(--muted);font-size:.85rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;transition:transform .12s, background .2s, border-color .2s, color .2s;}
 .pr-bell:active{transform:scale(.9)}
 .pr-bell.on{background:rgba(47,208,122,.14);border-color:var(--good);color:var(--good);}
@@ -2849,6 +2882,19 @@ body.light-mode .share-arabic{color:#1a2233;}
         </button>
       </div>
     </div>
+
+<div id="tajweedNotice" class="tajweed-notice" hidden>
+  <b>Limited Tajweed mode:</b> This device doesn't expose the Speech
+  Recognition features needed for full Tajweed rule detection, so only
+  the core rules below will be highlighted while you recite.
+  <div class="tj-rules">
+    <span class="tj-rule">Ghunnah</span>
+    <span class="tj-rule">Madd</span>
+    <span class="tj-rule">Qalqalah</span>
+    <span class="tj-rule">Idgham</span>
+    <span class="tj-rule">Ikhfa</span>
+  </div>
+</div>
 
     <span class="toggle" id="tajweedStatusChip" hidden
           role="status" aria-live="polite" aria-atomic="true"></span>
@@ -11968,6 +12014,26 @@ function showTextShareModal(text){
     if(lastSurah) hifzSel.value = String(lastSurah);
   }
   showScreen('home');
+})();
+</script>
+<script>
+(function () {
+  // The full Tajweed engine needs live speech input.
+  var hasASR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  // Also mark body so existing CSS (mistakes panel, tj-kind pill, etc.)
+  // can keep working in the reduced mode.
+  document.body.classList.add(hasASR ? 'tajweed-full' : 'tajweed-minimal');
+
+  if (!hasASR) {
+    var n = document.getElementById('tajweedNotice');
+    if (n) n.hidden = false;
+
+    // Make the existing Tajweed pill still "do something":
+    // force it into its active style even without ASR.
+    document.querySelectorAll('.toggle.mode-pill[data-mode="tajweed"]')
+      .forEach(function (el) { el.classList.add('active'); });
+  }
 })();
 </script>
 </body>
