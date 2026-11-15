@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.15 — Version bump to force clients to fetch the updated
+   v2.4.16 — Version bump to force clients to fetch the updated
    index.html that ships the Tajweed rule-engine fixes.
 
    Changes in index.html (this deployment):
