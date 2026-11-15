@@ -5230,13 +5230,16 @@ function updateTajweedStatusChip(){
     if(!isRmsSupported() || (wantMic && !rmsAnalyser.isRunning())){
       chip.className = 'toggle tj-status-ready';
       chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready · transcript-only';
-      chip.title = 'Tajweed rule checks are active. Acoustic analysis (RMS) is unavailable on this browser, so checks run on the speech transcript only.';
-      chip.setAttribute('aria-label', 'Tajweed rule checks active — transcript-only mode');
+      chip.title =
+        'ACTIVE (transcript): madd (ASR timing), ghunnah, ikhfa, iqlab, silent letters, emphatic letters, qalqalah letter-presence.\n\n' +
+        'DISABLED — need microphone waveform: laam shamsiyyah, idghaam_ghunnah, idghaam_no_ghunnah, ham_wasl, qalqalah plosive-echo.\n\n' +
+        'Enable the microphone and reload to arm the acoustic rules.';
+      chip.setAttribute('aria-label', 'Tajweed transcript-only — 5 acoustic rules disabled');
     } else {
       chip.className = 'toggle tj-status-ready';
       chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready';
-      chip.title = 'Tajweed rule checks are active: madd length, ghunnah length & letters, qalqalah, silent letters.';
-      chip.setAttribute('aria-label', 'Tajweed rule checks active');
+      chip.title = 'All 12 Tajweed rules active: madd length, ghunnah length & letters, qalqalah echo, laam shamsiyyah, hamzat al-wasl, idghaam (with & without ghunnah), iqlab, silent letters, emphatics.';
+      chip.setAttribute('aria-label', 'All Tajweed rule checks active');
     }
   } else {
     chip.className = 'toggle tj-status-loading';
@@ -5547,6 +5550,24 @@ function strict1GhunnahOk(w, heard){
         'nasal murmur absent (spectrum-only check)');
       return false;
     }
+    // Transcript-only fallback (no RMS): if the isolated nasal is still
+    // present in the heard transcript while the word is annotated as
+    // idghaam_ghunnah, flag a soft warning. ASR normalisation can
+    // legitimately reproduce the original letter, so this is a warning
+    // rather than a red error.
+    if (!rmsAvail && heard && w.tjRules.ghunnahLetters.length){
+      for (const gn of w.tjRules.ghunnahLetters){
+        for (let i = 0; i < gn.length; i++){
+          const ch = gn[i];
+          if ((ch === N || ch === M) && heard.indexOf(ch) !== -1){
+            markStrict1Warning(w, 'idghaam-ghunnah-transcript',
+              'isolated ' + (ch === N ? 'ن' : 'م') +
+              ' present in transcript — idghaam may not be applied (transcript-only)');
+            return true;
+          }
+        }
+      }
+    }
     return true;
   }
 
@@ -5746,6 +5767,7 @@ const TAJWEED_ERROR_NAMES = {
   'ghunnah-length-iqlab-batch':           'Iqlab — too short (fast batch)',
   'ghunnah-asr':             'Ghunnah confirmed by spectrum (ASR missed it)',
   'nasal-dropped':           'Nasal letter dropped in transcript',
+  'idghaam-ghunnah-transcript': 'Idghaam (with ghunnah) — nasal not merged (transcript)',
   'silent':                     'Silent letter — pronounced',
   'silent-laam-shamsiyyah':     'Solar lām — voiced instead of assimilated',
   'silent-extra-syllable':      'Extra syllable (silent letter voiced)',
@@ -5779,8 +5801,25 @@ function getTajweedRuleInfo(kind){
     return { tajweedName: name, tajweedExplanation: expl };
   }
   const directName = TAJWEED_ERROR_NAMES[kind];
-  const rule       = kind.split('-')[0];
-  const ruleInfo   = TAJWEED_RULE_INFO[rule];
+
+  // Map compound error kinds back to their underlying Tajweed rule
+  let rule;
+  if (kind.indexOf('madda_necessary')   !== -1) rule = 'madda_necessary';
+  else if (kind.indexOf('madda_permissible') !== -1) rule = 'madda_permissible';
+  else if (kind.indexOf('madda_normal')      !== -1) rule = 'madda_normal';
+  else if (kind.indexOf('idghaam_ghunnah')   !== -1) rule = 'idghaam_ghunnah';
+  else if (kind.indexOf('idghaam_no_ghunnah')!== -1) rule = 'idghaam_no_ghunnah';
+  else if (kind.indexOf('ikhfa')             !== -1) rule = 'ikhfa';
+  else if (kind.indexOf('iqlab')             !== -1) rule = 'iqlab';
+  else if (kind.indexOf('ghunnah')           !== -1) rule = 'ghunnah';
+  else if (kind === 'silent' || kind.startsWith('silent-')) rule =
+        (kind === 'silent-laam-shamsiyyah') ? 'laam_shamsiyah' : 'silent';
+  else if (kind.startsWith('qalqalah-'))     rule = 'qalqalah';
+  else if (kind === 'hamzat-al-wasl')        rule = 'ham_wasl';
+  else if (kind === 'nasal-dropped')         rule = 'ghunnah';
+  else rule = kind.split('-')[0];
+
+  const ruleInfo = TAJWEED_RULE_INFO[rule];
   const tajweedName = directName || (ruleInfo ? ruleInfo.name : ('Tajweed — ' + kind));
   const tajweedExplanation = ruleInfo
     ? (ruleInfo.name + ' — ' + ruleInfo.desc)
@@ -5846,11 +5885,12 @@ function markStrict1Warning(w, kind, detail){
 function runStrict1Checks(idx, heard, opts){
   opts = opts || {};
   if (followOnly) return;
-  if (!coachTajweedReady) return;
   const w = words[idx];
   if (!w) return;
   if (w.isMuqattaat) return;
 
+  // Emphatic letters use only w.norm + EMPHATIC_FAMILY — no annotations needed.
+  // Run them even when Tajweed annotations failed to load.
   if (STRICT_FEATURES.emphatics() && heard && w.norm && heard !== w.norm){
     const viol = emphaticViolation(heard, w.norm);
     if (viol.length){
@@ -5858,6 +5898,9 @@ function runStrict1Checks(idx, heard, opts){
         'sounded as ' + viol[0].heard, 'yellow');
     }
   }
+
+  // Every remaining check requires the annotation data.
+  if (!coachTajweedReady) return;
 
   const now = performance.now();
   if (batchTimingCtx) batchTimingCtx.wordCount++;
@@ -8102,6 +8145,16 @@ async function startReciting(){
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
     addFeedback('🎧 Listening — recite from anywhere in the page or surah.');
+    // Inform the user when acoustic rules are unavailable
+    if (!followOnly && !rmsAnalyser.isRunning() && !_rmsUnavailableNotified){
+      _rmsUnavailableNotified = true;
+      addFeedback(
+        'ℹ️ <b>Acoustic Tajweed rules are off</b> — this browser cannot access the microphone waveform. ' +
+        'Active: madd, ghunnah, ikhfa, iqlab, silent, emphatics, qalqalah letters. ' +
+        'Disabled: laam shamsiyyah, idghaam_ghunnah, idghaam_no_ghunnah, ham_wasl, qalqalah echo.',
+        false, true
+      );
+    }
     updateFsMicBtn(); syncFsButtons();
   }catch(e){
     console.error('[Speech] start failed:', e);

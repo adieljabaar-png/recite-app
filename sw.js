@@ -1,41 +1,72 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.12 — Version bump to force clients to update to the latest
-   index.html. This deployment bundles two changes that never
-   actually reached clients because the v2.4.11 VERSION constant
-   was never bumped in code (only the header comment was updated).
+   v2.4.13 — Version bump to force clients to fetch the updated
+   index.html that ships the Tajweed rule-engine fixes.
 
-     • NEW (index.html, this release): Comprehensive microphone
-       diagnostic system. Detects four failure modes — track health
-       (mute / ended), RMS silence detection, ASR death when audio
-       is proven present, and a 12 s fallback — and shows targeted
-       step-by-step guidance for each. Once the mic is verified
-       working (first ASR result), the diagnostic stops for the
-       remainder of the page session and is not re-run on every
-       Start Reciting, so no extra getUserMedia calls are made.
-       Adds a "Test microphone" menu item with a live RMS level bar,
-       live transcript and a Copy-diagnostic button.
+   Changes in index.html (this deployment):
 
-     • FIXES FROM v2.4.11 (previously intended but not deployed):
-       The app now properly handles the new translation audio
-       sources (EveryAyah, Islamic Network, QuranEnc for both
-       English and Turkish). The version bump forces stale broken
-       translation downloads to be dropped from versioned caches.
+     • FIX (getTajweedRuleInfo): compound Ghunnah error kinds
+       (ghunnah-ikhfa, ghunnah-iqlab, ghunnah-idghaam_ghunnah)
+       now show the correct rule name AND description in the
+       mistake tooltip, rather than falling back to a generic
+       "Ghunnah — nasalisation held ~2 counts" explanation
+       for all of them.
 
-     • Retained the early-return in serveRangeFromCached for opaque
-       responses just in case any future translation sources require
-       no-CORS fetching. Opaque responses cannot be sliced or
-       measured, so the SW immediately returns the full cached
-       response instead of throwing an error when the media player
-       requests a Range header.
+     • FIX (runStrict1Checks): the emphatic-letter check now
+       runs BEFORE the coachTajweedReady gate, so ص/ض/ط/ظ/ق/ح/خ/ع/غ
+       misuse is still detected when the Quran.com Tajweed
+       annotations fail to load. Previously every rule went
+       silent in that case.
 
-     • Every other feature carried over unchanged from v2.4.3.
+     • FIX (strict1GhunnahOk): idghaam_ghunnah now has a
+       transcript-only fallback. If the microphone waveform is
+       unavailable AND the isolated ن/م still appears in the
+       ASR transcript, a yellow warning is raised. Previously
+       this rule had zero coverage in transcript-only mode.
+
+     • IMPROVEMENT (updateTajweedStatusChip): the rule-ready
+       chip now enumerates the exact rules that are active and
+       disabled in transcript-only mode, so users know what the
+       engine is (and isn't) checking.
+
+     • IMPROVEMENT (startReciting): one-shot informational
+       feedback when the acoustic rules are disabled because
+       the browser cannot access the microphone waveform.
+
+   No functional SW logic changes in this deployment — all of
+   the fixes are client-side (index.html). This version bump
+   is purely to invalidate qc-shell-*, qc-text-*, qc-fonts-*
+   and qc-runtime-* caches so the new index.html and refreshed
+   Tajweed annotation fetches reach existing clients.
+
+   The persistent qc-audio cache is preserved across the bump —
+   users keep their downloaded surahs and translation audio.
+
+   Previously-retained features (unchanged):
+
+     • Microphone diagnostic system with four failure modes:
+       track health (mute / ended), RMS silence, ASR death when
+       audio is proven present, and a 12 s fallback. The
+       diagnostic stops after the first successful ASR result
+       so subsequent Start Reciting calls do not trigger extra
+       getUserMedia re-calls. Includes a "Test microphone" menu
+       item with live RMS level, live transcript, and copy-
+       diagnostic button.
+
+     • Translation audio sources (EveryAyah, Islamic Network,
+       QuranEnc for English and Turkish) are handled via the
+       persistent qc-audio cache.
+
+     • serveRangeFromCached early-returns for opaque responses
+       (QuranEnc without CORS) — they cannot be sliced or
+       measured, so the SW returns the full cached response
+       instead of throwing when the player requests a Range.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.12';
+const VERSION = '2.4.13';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
