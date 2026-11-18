@@ -4809,7 +4809,7 @@ function recPush(newToks){
   if(overflow > 0){ recTokens.splice(0, overflow); recCursor = Math.max(0, recCursor - overflow); }
 }
 function recReset(){
-  recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0; pendingFollowConfirm = null;
+  recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
   interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
   currentConsensusSet = new Set();
 }
@@ -6267,40 +6267,7 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.80;
-// Follow mode stays on the current Quran word. Recovery never jumps over it.
 const FOLLOW_MAX_LOOKAHEAD  = 0;
-// Fuzzy matches need a second, independent ASR result for the same target.
-const FOLLOW_CONFIRM_MIN   = 0.78;
-const FOLLOW_CONFIRM_STRONG = 0.88;
-let pendingFollowConfirm = null;
-
-function followConfirmMatch(heard, hPhon, hPhonLoose, w){
-  if (!w || !heard) return false;
-  // Exact text or exact pronunciation-key matches are strong enough to accept now.
-  if (heard === w.norm || (hPhon && hPhon === w.phon) ||
-      (followOnly && hPhonLoose && hPhonLoose === w.phonLoose)) {
-    pendingFollowConfirm = null;
-    return true;
-  }
-  const confidence = followExitConfidence(heard, hPhon, hPhonLoose, w);
-  if (confidence < FOLLOW_CONFIRM_MIN) {
-    pendingFollowConfirm = null;
-    return false;
-  }
-  if (confidence >= FOLLOW_CONFIRM_STRONG) {
-    pendingFollowConfirm = null;
-    return true;
-  }
-  const signature = String(w.norm) + '|' + String(heard);
-  if (pendingFollowConfirm && pendingFollowConfirm.ptr === ptr &&
-      pendingFollowConfirm.signature === signature &&
-      pendingFollowConfirm.batchId !== currentBatchId) {
-    pendingFollowConfirm = null;
-    return true;
-  }
-  pendingFollowConfirm = { ptr, signature, batchId: currentBatchId };
-  return false;
-}
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
@@ -6342,7 +6309,6 @@ function cancelFollowPinTimer(){
 }
 function noteFollowProgress(){
   followWrongTokens = 0;
-  pendingFollowConfirm = null;
   cancelFollowPinTimer();
 }
 function noteFollowWrongToken(){
@@ -6826,7 +6792,16 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    // Alternative consensus helps choose a transcript, but never approves a Quran word by itself.
+    if (followOnly && w && currentConsensusSet.size > 0 && currentConsensusSet.has(w.norm)){
+      if (heard === w.norm || lev(heard, w.norm) <= 1 ||
+          isMatchWord(heard, hPhon, hPhonLoose, w)){
+        commitCorrect(ptr, null);
+        advancePast(1);
+        noteFollowProgress();
+        pendingHeard.length = 0;
+        used++; continue;
+      }
+    }
 
     const nextW        = words[ptr + 1];
     const isLastInAyah = !nextW || nextW.verse !== w.verse;
@@ -6839,7 +6814,7 @@ function gradeFollowFast(tokens, startIdx){
         const conf = followExitConfidence(heard, hPhon, hPhonLoose, w);
         if (conf < FOLLOW_TAU_EXIT) exitOk = false;
       }
-      if (exitOk && followConfirmMatch(heard, hPhon, hPhonLoose, w)){
+      if (exitOk){
         commitCorrect(ptr, null);
         advancePast(1);
         noteFollowProgress();
@@ -6885,8 +6860,7 @@ function gradeFollowFast(tokens, startIdx){
     }
     if (jumped){ used++; continue; }
 
-    if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose) &&
-        followConfirmMatch(heard, hPhon, hPhonLoose, w)){
+    if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)){
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
@@ -6894,8 +6868,7 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    if (isFollowPlausible(heard, hPhon, hPhonLoose, w) &&
-        followConfirmMatch(heard, hPhon, hPhonLoose, w)){
+    if (isFollowPlausible(heard, hPhon, hPhonLoose, w)){
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
