@@ -6530,19 +6530,22 @@ async function runSpeechResultProcessing(snap) {
     const isFinal = result.isFinal;
     const alternatives = result.alternatives;
     if (!alternatives || !alternatives.length) continue;
-    const floor = confidenceFloor();
+    // Compare every hypothesis with the Quran words currently expected.
+    // Browser confidence is often missing or poorly calibrated for Arabic;
+    // it must not discard a low-confidence hypothesis that matches the ayah.
     const useScoring = alternatives.length > 1;
-    let bestAlt = null, bestTranscript = '', bestWeighted = -1;
+    let bestAlt = null, bestTranscript = '', bestWeighted = -Infinity;
     for (let ai = 0; ai < alternatives.length; ai++) {
       const cand = alternatives[ai];
       const tr = (cand.transcript || '').trim();
       if (!tr) continue;
-      const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
-      if (isFinal && conf > 0 && conf < floor) continue;
+      const conf = (typeof cand.confidence === 'number' && Number.isFinite(cand.confidence)) ? cand.confidence : 0;
       const candToks = tr.split(/\s+/).filter(Boolean);
       if (!candToks.length) continue;
       const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
-      const weighted = (rawScore * 3) + (conf * 1.5);
+      // Quran-context agreement dominates confidence. Confidence only breaks
+      // ties, so an ASR-ranked wrong word cannot beat a better ayah match.
+      const weighted = (rawScore * 5) + (Math.max(0, Math.min(1, conf)) * 0.5) - (ai * 0.0001);
       if (weighted > bestWeighted) { bestWeighted = weighted; bestAlt = cand; bestTranscript = tr; }
     }
     if (!bestAlt || !bestTranscript) continue;
@@ -6652,10 +6655,13 @@ function buildPhraseObjects(rec) {
   }
   if (!phrases.length) return false;
   try { 
-    rec.phrases = phrases; 
-    rec.__lastPhrasePtr = ptr; 
-    if ('processLocally' in rec) rec.processLocally = true;
-    return true; 
+    rec.phrases = phrases;
+    rec.__lastPhrasePtr = ptr;
+    // Phrase biasing is independent of on-device recognition. Do not set
+    // processLocally here: that requires a separately verified/downloaded
+    // Arabic model (setupOnDeviceArabic), otherwise some browsers stop returning
+    // useful results or fail to start their normal online recognizer.
+    return true;
   }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
@@ -7579,7 +7585,7 @@ function retrySpeechWithoutPhrases(){
   try{
     speechRecognition = createSpeechRecognition(true);
     if(!speechRecognition) return false;
-    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
+    speechRecognition.maxAlternatives = followOnly ? 5 : 6;
     try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechRecognition.start(); }catch(_){ return false; }
     recRunning = true;
     lastResultAt = performance.now();
@@ -8542,7 +8548,7 @@ async function startReciting(){
   try{
     speechRecognition = createSpeechRecognition();
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
-    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
+    speechRecognition.maxAlternatives = followOnly ? 5 : 6;
     if(speechStarting){}
     else { try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
