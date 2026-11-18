@@ -1,0 +1,2761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0d1119">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="READ">
+    <link rel="manifest" id="manifest-link">
+    <link rel="apple-touch-icon" id="apple-touch-icon">
+    <link rel="icon" id="favicon-link">
+    <title>READ — Arabic Reading Tutor</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+
+        /* Palette copied from the Recite app (dark = default, body.light-mode = light) */
+        :root {
+            --primary: #4f8cff; --primary-hover: #3a72e6;
+            --bg-main: #0d1119; --bg-card: #151c2b; --panel-2: #1b2436;
+            --text-main: #e8edf7; --text-light: #8f9bb3;
+            --border: #28334a; --panel-bg: #151c2b; --panel-text: #e8edf7;
+            --accent: #ffb020; --highlight: rgba(255,176,32,.12);
+            --success: #2fd07a; --success-bg: rgba(47,208,122,.14);
+            --danger: #ff5a6a; --danger-bg: rgba(255,90,106,.14);
+            --shadow: 0 8px 22px rgba(0,0,0,.28);
+            --gold: #c9a227; --gold-soft: rgba(201,162,39,.65);
+            --bar-bg: rgba(13,17,25,.88);
+            --glow: rgba(79,140,255,.20);
+        }
+        body.light-mode {
+            --primary: #2a6fe0; --primary-hover: #1f5bc4;
+            --bg-main: #f5f7fb; --bg-card: #ffffff; --panel-2: #eef2f8;
+            --text-main: #1a2233; --text-light: #5a6884;
+            --border: #d1dae8; --panel-bg: #ffffff; --panel-text: #1a2233;
+            --accent: #c68a00; --highlight: rgba(198,138,0,.10);
+            --success: #1f9a5a; --success-bg: rgba(31,154,90,.12);
+            --danger: #d63d52; --danger-bg: rgba(214,61,82,.10);
+            --shadow: 0 8px 22px rgba(0,0,0,.08);
+            --gold: #a67c00; --gold-soft: rgba(166,124,0,.65);
+            --bar-bg: rgba(245,247,251,.88);
+            --glow: rgba(42,111,224,.16);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        img, svg, video { max-width: 100%; }
+        body { overflow-x: hidden; overflow-wrap: break-word; }
+        body {
+            font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main);
+            margin: 0; padding: 10px; padding-bottom: 80px; line-height: 1.5;
+            transition: background 0.3s, color 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .page-bar {
+            position: sticky; top: 0; z-index: 90;
+            margin: -10px -10px 12px -10px; padding: 10px;
+            background: var(--bg-main); transition: background 0.3s;
+        }
+        .page-bar-inner {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; max-width: 1000px; margin: 0 auto;
+        }
+        .page-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .back-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0 16px; height: 40px; border-radius: 11px;
+            background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
+            font-family: inherit; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.03em;
+            cursor: pointer; -webkit-appearance: none; flex-shrink: 0; box-shadow: var(--shadow);
+            transition: transform .12s, border-color .2s, background .2s;
+            touch-action: manipulation;
+        }
+        .iconbtn {
+            width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border);
+            background: var(--bg-card); color: var(--text-main); font-size: 1.05rem; line-height: 1;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+            -webkit-appearance: none; padding: 0; flex-shrink: 0; box-shadow: var(--shadow);
+            transition: transform .12s, filter .12s, background .2s, border-color .2s;
+            touch-action: manipulation;
+        }
+        .back-pill:hover, .iconbtn:hover { border-color: var(--primary); }
+        .back-pill:active, .iconbtn:active { transform: scale(.94); }
+        .iconbtn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .iconbtn .info-glyph { font-weight: 800; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 1.15rem; }
+
+        .app-header {
+            display: flex; align-items: center; justify-content: center;
+            gap: 12px; flex-wrap: wrap; max-width: 1000px;
+            margin: 0 auto 15px auto; padding: 0;
+        }
+
+        .app-title {
+            font-size: 2.2rem; font-weight: 800; letter-spacing: 8px;
+            text-align: center; color: var(--text-main); line-height: 1.1;
+            margin-bottom: 4px; font-family: 'Inter', sans-serif; text-transform: uppercase;
+        }
+
+        .install-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border-radius: 24px; padding: 3px 3px 3px 14px;
+            box-shadow: var(--shadow); flex-shrink: 0;
+        }
+        .install-pill.hidden { display: none; }
+        .install-pill-btn {
+            background: transparent; color: white; border: none;
+            font-weight: 700; font-size: 0.82rem; cursor: pointer; padding: 7px 2px;
+            display: flex; align-items: center; gap: 5px; touch-action: manipulation;
+        }
+        .install-pill-close {
+            background: rgba(255,255,255,0.22); color: white; border: none;
+            width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.78rem; font-weight: 700; flex-shrink: 0; padding: 0; line-height: 1;
+            touch-action: manipulation;
+        }
+        .install-pill-close:hover { background: rgba(255,255,255,0.4); }
+
+        .practice-banner {
+            display: none; max-width: 1000px; margin: 0 auto 12px auto;
+            padding: 10px 16px; background: var(--highlight);
+            border-left: 4px solid var(--accent); border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; color: var(--text-main); text-align: center;
+        }
+        .practice-banner.show { display: block; }
+
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 1000px; margin: 0 auto 15px auto; background: var(--bg-card);
+            padding: 12px 20px; border-radius: 12px; box-shadow: var(--shadow);
+            flex-wrap: wrap; gap: 10px; position: relative; z-index: 50;
+        }
+        .top-bar-left { display: flex; align-items: center; gap: 10px; }
+
+        .icon-btn {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--bg-main); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-main); transition: all 0.2s; padding: 0;
+            touch-action: manipulation;
+        }
+        .icon-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .icon-btn svg { width: 24px; height: 24px; }
+
+        .menu-container { position: relative; }
+        .menu-dropdown {
+            position: absolute; top: calc(100% + 8px); left: 0;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-width: 230px; padding: 6px; z-index: 200;
+            display: none; transform-origin: top left;
+        }
+        .menu-dropdown.show { display: block; }
+        .menu-item {
+            display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+            border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+            color: var(--text-main); touch-action: manipulation;
+        }
+        .menu-item:hover { background: var(--bg-main); }
+        .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--primary); }
+        .menu-item.danger { color: var(--danger); }
+        .menu-item.danger svg { color: var(--danger); }
+        .menu-item.danger:hover { background: var(--danger-bg); }
+
+        .mic-status {
+            display: flex; align-items: center; font-weight: 600; font-size: 0.85rem;
+            padding: 8px 16px; border-radius: 20px; background: var(--bg-main);
+            color: var(--text-light); transition: all 0.3s;
+        }
+        .mic-status.listening { background: var(--success-bg); color: var(--success); }
+        .mic-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background: var(--text-light); }
+        .mic-status.listening .mic-dot { background: var(--success); animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .overview-summary {
+            flex: 1; min-width: 180px; text-align: right;
+            font-size: 0.8rem; line-height: 1.35; color: var(--text-light);
+        }
+        .overview-summary strong { display: block; color: var(--text-main); font-size: 0.88rem; margin-bottom: 2px; }
+        .overview-summary p { margin: 0; }
+
+        .nav-tabs {
+            display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+            overflow-x: visible; justify-content: center;
+            -webkit-overflow-scrolling: touch; padding-bottom: 10px;
+            scrollbar-width: none; position: relative; z-index: 10;
+        }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        @media (max-width: 480px) {
+            .nav-tab { padding: 9px 12px; font-size: 0.8rem; }
+        }
+        .nav-tab {
+            padding: 10px 18px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            color: var(--text-light); transition: all 0.2s; user-select: none; flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        .nav-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .nav-tab.disabled { opacity: 0.5; pointer-events: none; }
+
+        .screen {
+            display: none; background: var(--bg-card); border-radius: 12px; padding: 15px;
+            max-width: 1000px; margin: 0 auto 20px auto; box-shadow: var(--shadow);
+        }
+        .screen.active { display: block; }
+
+        .test-panel {
+            display: none; background: var(--panel-bg); color: var(--panel-text);
+            border-radius: 14px; padding: 14px 16px 16px 16px; margin-bottom: 18px;
+            text-align: center; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .test-panel.active { display: block; position: sticky; top: 8px; z-index: 100; }
+        .timer-container {
+            width: 100%; height: 8px; background: rgba(148, 163, 184, 0.35);
+            border-radius: 4px; overflow: hidden;
+        }
+        .timer-fill {
+            height: 100%; width: 100%; background: var(--accent);
+            transform-origin: left; transition: transform 0.1s linear;
+        }
+        .timer-fill.low { background: var(--danger); }
+
+        .target-word {
+            margin-top: 12px;
+            font-family: 'Amiri', 'Traditional Arabic', 'Times New Roman', serif;
+            font-weight: 700; font-size: 2.6rem; line-height: 1.35;
+            direction: rtl; color: var(--panel-text); text-align: center;
+            letter-spacing: 1px; min-height: 3.4rem;
+        }
+
+        .heard-line {
+            display: none; margin-top: 10px; padding: 8px 12px;
+            font-size: 0.9rem; font-weight: 600; color: var(--accent);
+            background: rgba(245, 158, 11, 0.14);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: 6px; text-align: center; line-height: 1.3; word-break: break-word;
+        }
+        .heard-line.show { display: block; }
+        .heard-line.bad { color: var(--danger); background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.45); }
+
+        .panel-stop-btn {
+            display: none; width: 100%; max-width: 360px;
+            margin: 14px auto 0 auto; padding: 14px;
+            background: var(--primary); color: #FFFFFF;
+            border: none; border-radius: 8px;
+            font-size: 1.05rem; font-weight: 700; cursor: pointer;
+            letter-spacing: 0.3px; touch-action: manipulation;
+        }
+        .panel-stop-btn.show { display: block; }
+        .panel-stop-btn:hover { background: var(--primary-hover); }
+
+        .pause-controls { display: none; gap: 10px; justify-content: center; margin-top: 14px; }
+        .pause-controls.show { display: flex; }
+        .btn-pause {
+            padding: 10px 22px; border-radius: 8px; border: none;
+            font-weight: 700; font-size: 0.95rem; cursor: pointer;
+            background: var(--success); color: white; touch-action: manipulation;
+        }
+        .btn-pause-stop { background: var(--danger); }
+
+        .ar {
+            font-family: 'Amiri', 'Traditional Arabic', 'Times New Roman', serif;
+            font-weight: 700; font-size: 2.2rem; line-height: 1.4; direction: rtl;
+            cursor: pointer; padding: 6px 8px; border-radius: 6px; display: inline-block;
+            transition: background 0.2s ease; word-break: break-word; letter-spacing: 0.5px;
+            -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+        .ar:hover, .ar:active { background: var(--border); }
+
+        .grid-row {
+            display: grid; gap: 8px; margin-bottom: 15px; direction: rtl;
+            grid-template-columns: repeat(4, 1fr);
+        }
+        @media (min-width: 480px) { .grid-row { grid-template-columns: repeat(6, 1fr); } }
+        @media (min-width: 768px) { .grid-row { grid-template-columns: repeat(8, 1fr); } }
+        @media (min-width: 1024px) { .grid-row { grid-template-columns: repeat(14, 1fr); } }
+
+        .grid-cell {
+            display: flex; align-items: center; justify-content: center;
+            padding: 12px 6px; border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg-card); transition: all 0.3s; min-height: 70px;
+            touch-action: manipulation;
+            -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+        }
+        .grid-cell.has-translit { flex-direction: column; gap: 3px; min-height: 92px; padding: 10px 4px; }
+        .translit {
+            font-family: 'Inter', sans-serif; font-size: 0.68rem; font-weight: 600;
+            color: var(--text-light); direction: ltr; text-align: center;
+            line-height: 1.15; text-transform: capitalize;
+        }
+
+        .practice-grid {
+            display: grid; gap: 10px; margin-top: 10px; direction: rtl;
+            grid-template-columns: repeat(2, 1fr);
+        }
+        @media (min-width: 480px) { .practice-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 768px) { .practice-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (min-width: 1024px) { .practice-grid { grid-template-columns: repeat(5, 1fr); } }
+
+        .practice-cell {
+            display: flex; justify-content: center; align-items: center; padding: 14px 6px;
+            border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card);
+            transition: all 0.3s; min-height: 80px; touch-action: manipulation;
+            -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+        }
+
+        .ayah-grid {
+            display: grid; gap: 10px; margin-top: 10px; direction: rtl;
+            grid-template-columns: 1fr;
+        }
+        .ayah-grid .practice-cell { padding: 18px 16px; min-height: 76px; justify-content: center; }
+        .ayah-grid .ar { font-size: 1.75rem; line-height: 1.65; }
+
+        .vowel-desc {
+            max-width: 680px; margin: 0 auto 14px auto;
+            background: var(--bg-main); border: 1px solid var(--border);
+            border-left: 4px solid var(--primary); border-radius: 8px; padding: 10px 18px;
+        }
+        .vowel-desc p {
+            margin: 6px 0; font-size: 0.9rem; color: var(--text-main);
+            padding-left: 14px; text-indent: -14px; line-height: 1.45;
+        }
+        .vowel-desc p[style*="text-align: center"] { text-indent: 0; padding-left: 0; }
+
+        @media (max-width: 600px) and (orientation: portrait) {
+            #screen-1 .grid-row, #screen-2 .practice-grid, #screen-3 .practice-grid,
+            #screen-4 .practice-grid, #screen-5 .practice-grid,
+            #screen-6 .practice-grid, #screen-7 .practice-grid, #screen-8 .practice-grid,
+            #screen-12 .practice-grid, #screen-13 .practice-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+            #screen-9 .practice-grid, #screen-10 .practice-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            #screen-1 .ar, #screen-2 .ar, #screen-3 .ar, #screen-4 .ar,
+            #screen-5 .ar, #screen-6 .ar, #screen-7 .ar, #screen-8 .ar, #screen-12 .ar,
+            #screen-13 .ar { font-size: 1.55rem; padding: 4px 3px; letter-spacing: 0; }
+            #screen-9 .ar, #screen-10 .ar { font-size: 1.8rem; padding: 5px 4px; letter-spacing: 0; }
+            #screen-1 .grid-cell, #screen-2 .practice-cell, #screen-3 .practice-cell,
+            #screen-4 .practice-cell, #screen-5 .practice-cell, #screen-6 .practice-cell,
+            #screen-7 .practice-cell, #screen-8 .practice-cell, #screen-12 .practice-cell,
+            #screen-13 .practice-cell { padding: 10px 3px; min-height: 60px; }
+            #screen-1 .grid-cell.has-translit { min-height: 76px; padding: 8px 3px; }
+            #screen-1 .translit { font-size: 0.6rem; }
+            #screen-9 .practice-cell, #screen-10 .practice-cell { padding: 12px 5px; min-height: 70px; }
+            #screen-14 .ar { font-size: 1.45rem; padding: 4px 3px; letter-spacing: 0; }
+            #screen-14 .practice-cell { padding: 12px 8px; min-height: 68px; }
+            .vowel-desc { padding: 10px 14px; }
+            .vowel-desc p { font-size: 0.85rem; }
+            .heard-line { font-size: 0.82rem; padding: 7px 10px; }
+            .target-word { font-size: 2.1rem; }
+        }
+
+        .test-mode-active .ar { cursor: default; }
+        .test-mode-active .grid-cell, .test-mode-active .practice-cell { pointer-events: none; }
+
+        .grid-cell.highlight, .practice-cell.highlight {
+            background: var(--success-bg) !important;
+            border: 2px solid var(--success) !important;
+            transform: scale(1.03); position: relative; z-index: 5;
+            animation: highlightPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes highlightPulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.38); }
+            70% { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .grid-cell.correct, .practice-cell.correct {
+            background: var(--success) !important;
+            border-color: var(--success) !important; transform: scale(1.02);
+        }
+        .grid-cell.incorrect, .practice-cell.incorrect {
+            background: var(--danger-bg) !important;
+            border: 2px solid var(--danger) !important;
+        }
+        .grid-cell.incorrect .ar, .practice-cell.incorrect .ar { color: var(--danger); }
+
+        .score-progress-container {
+            margin: 0 auto 20px auto; max-width: 600px;
+            background: var(--bg-main); padding: 12px 18px; border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        .score-info {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.9rem; font-weight: 600; margin-bottom: 8px;
+            color: var(--text-main); flex-wrap: wrap; gap: 6px;
+        }
+        .score-value { color: var(--primary); font-size: 1.1rem; }
+        .best-score-badge {
+            background: var(--highlight); color: var(--accent);
+            padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;
+        }
+        .progress-bar-bg { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+        .progress-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            transition: width 0.3s ease; border-radius: 5px;
+        }
+        .completion-badge {
+            display: none; background: var(--success-bg); color: var(--success);
+            padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;
+        }
+
+        .btn {
+            display: block; width: 100%; max-width: 320px; margin: 0 auto 15px auto; padding: 14px;
+            background: var(--primary); color: white; border: none; border-radius: 8px;
+            font-size: 1.05rem; font-weight: 600; cursor: pointer; touch-action: manipulation;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+        .status-bar { text-align: center; font-size: 0.9rem; font-weight: 600; margin-top: 10px; min-height: 40px; color: var(--text-light); }
+
+        .content-card {
+            background: var(--bg-main); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
+        }
+        .content-card h3 { margin-top: 0; font-size: 1.05rem; color: var(--primary); }
+        .content-card ol, .content-card ul { padding-left: 20px; margin: 8px 0; }
+        .content-card li { margin-bottom: 8px; font-size: 0.92rem; }
+        .content-card p { font-size: 0.92rem; margin: 8px 0; }
+        .content-card code { background: var(--border); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+        .instruction-box {
+            background: var(--highlight); border-left: 4px solid var(--accent);
+            padding: 12px 16px; border-radius: 8px; margin: 10px 0; font-size: 0.92rem;
+        }
+        .platform-badge {
+            display: inline-block; background: var(--primary); color: white;
+            padding: 4px 10px; border-radius: 12px; font-size: 0.78rem;
+            font-weight: 700; margin-bottom: 10px;
+        }
+
+        .mic-test-live {
+            background: var(--bg-main); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px 16px; margin: 12px 0;
+            min-height: 60px; font-size: 1rem; direction: rtl; text-align: center;
+            font-family: 'Amiri', 'Traditional Arabic', serif; font-weight: 700;
+            color: var(--text-main); word-break: break-word; line-height: 1.4;
+        }
+        .mic-test-live.empty {
+            color: var(--text-light); font-family: 'Inter', sans-serif;
+            font-weight: 600; font-size: 0.9rem; direction: ltr;
+        }
+        .mic-test-verdict {
+            margin-top: 8px; padding: 10px 14px; border-radius: 8px;
+            font-weight: 700; text-align: center; font-size: 0.95rem;
+        }
+        .mic-test-verdict.ok  { background: var(--success-bg); color: var(--success); }
+        .mic-test-verdict.bad { background: var(--danger-bg); color: var(--danger); }
+        .mic-test-verdict.info{ background: var(--highlight); color: var(--accent); }
+
+        .toast {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--panel-bg); color: var(--panel-text);
+            padding: 12px 20px; border-radius: 30px; font-size: 0.9rem; font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            z-index: 3000; opacity: 0; pointer-events: none; max-width: 90%; text-align: center;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        .qr-overlay {
+            display: none; position: fixed; inset: 0; z-index: 2000;
+            background: rgba(6, 78, 59, 0.97);
+            align-items: center; justify-content: center; flex-direction: column; padding: 20px;
+        }
+        .qr-overlay.show { display: flex; }
+        .qr-card {
+            background: #FFFFFF; border-radius: 18px; padding: 22px 20px;
+            display: flex; flex-direction: column; align-items: center;
+            max-width: 92vw; max-height: 92vh;
+        }
+        .qr-card h3 { margin: 0 0 14px 0; color: #064E3B; font-size: 1.1rem; text-align: center; font-weight: 700; }
+        .qr-card img { width: min(72vw, 72vh, 420px); height: auto; display: block; border-radius: 10px; }
+        .qr-card .qr-url { margin-top: 16px; font-size: 0.82rem; color: #374151; word-break: break-all; text-align: center; font-weight: 600; direction: ltr; }
+        .qr-close {
+            position: absolute; top: 18px; right: 18px;
+            width: 46px; height: 46px; border-radius: 50%;
+            background: rgba(255,255,255,0.18); color: #FFFFFF;
+            border: none; cursor: pointer; font-size: 1.5rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; line-height: 1;
+            touch-action: manipulation;
+        }
+        .qr-hint { margin-top: 14px; color: rgba(255,255,255,0.85); font-size: 0.82rem; text-align: center; font-weight: 500; max-width: 340px; }
+
+        .voice-wizard-overlay {
+            display: none; position: fixed; inset: 0; z-index: 2500;
+            background: rgba(0, 0, 0, 0.75);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .voice-wizard-overlay.show { display: flex; }
+        .voice-wizard-card {
+            background: var(--bg-card); border-radius: 16px; padding: 20px;
+            max-width: 92vw; width: 480px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .voice-wizard-card h3 { margin-top: 0; color: var(--primary); text-align: center; font-size: 1.1rem; }
+        .voice-wizard-card ol { padding-left: 20px; margin: 12px 0; }
+        .voice-wizard-card li { margin-bottom: 8px; font-size: 0.92rem; line-height: 1.5; }
+        .voice-wizard-card .wizard-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .voice-wizard-card .wizard-actions .btn { max-width: none; flex: 1; min-width: 140px; margin: 0; }
+        .voice-wizard-card .wizard-actions .btn-secondary {
+            background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border);
+        }
+        .voice-wizard-card .wizard-actions .btn-secondary:hover { background: var(--border); }
+
+        @media (max-width: 600px) {
+            .top-bar { flex-direction: column; align-items: stretch; padding: 15px; }
+            .top-bar-left { justify-content: space-between; }
+            
+            .overview-summary { text-align: center; }
+            .app-title { font-size: 1.8rem; letter-spacing: 5px; }
+        }
+
+        #screen-12 .practice-grid, #screen-11 .practice-grid,
+        #stopping-1-grid, #stopping-2-grid, #hamza-grid {
+            display: flex !important; flex-direction: column !important; gap: 10px !important;
+        }
+        #screen-12 .practice-cell, #screen-11 .practice-cell,
+        #stopping-1-grid .practice-cell, #stopping-2-grid .practice-cell, #hamza-grid .practice-cell {
+            justify-content: center !important; align-items: center !important;
+            overflow-x: auto !important; white-space: nowrap !important;
+            padding: 14px 16px !important; min-height: 60px !important; scrollbar-width: none;
+        }
+        #screen-12 .practice-cell::-webkit-scrollbar, #screen-11 .practice-cell::-webkit-scrollbar,
+        #stopping-1-grid .practice-cell::-webkit-scrollbar, #stopping-2-grid .practice-cell::-webkit-scrollbar, #hamza-grid .practice-cell::-webkit-scrollbar {
+            display: none;
+        }
+        #screen-12 .ar, #screen-11 .ar,
+        #stopping-1-grid .ar, #stopping-2-grid .ar, #hamza-grid .ar {
+            white-space: nowrap !important; font-size: 1.6rem !important;
+            padding: 0 !important; margin: 0 !important;
+        }
+
+        /* ===== Recite look: gradient background, gold frames, shaded surfaces ===== */
+        body {
+            background: radial-gradient(1200px 600px at 50% -220px, #1a2540 0%, var(--bg-main) 60%);
+            background-attachment: fixed; min-height: 100vh; min-height: 100dvh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        body.light-mode {
+            background: radial-gradient(1200px 600px at 50% -220px, #e6edfa 0%, #f5f7fb 60%);
+            background-attachment: fixed;
+        }
+        .page-bar { background: var(--bar-bg); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+        .nav-tab, .back-pill, .iconbtn, .top-bar, .screen, .content-card, .vowel-desc,
+        .score-progress-container, .test-panel, .practice-banner, .instruction-box, .btn-secondary,
+        .grid-cell:not(.correct):not(.incorrect):not(.highlight),
+        .practice-cell:not(.correct):not(.incorrect):not(.highlight) {
+            border: 1px solid var(--gold) !important;
+        }
+        .nav-tab, .back-pill, .iconbtn, .grid-cell, .practice-cell {
+            background: linear-gradient(180deg, var(--panel-2), var(--bg-card));
+        }
+        .top-bar, .screen, .content-card {
+            background:
+                radial-gradient(260px 140px at 30% -20%, var(--glow), transparent 70%),
+                linear-gradient(180deg, var(--panel-2), var(--bg-card));
+            box-shadow: var(--shadow);
+        }
+        .nav-tab, .back-pill, .iconbtn { box-shadow: var(--shadow); }
+        .nav-tab.active {
+            background: linear-gradient(180deg, #5c96ff, #3a72e6); color: #fff;
+            box-shadow: 0 5px 16px rgba(79,140,255,.32);
+        }
+        .nav-tab:hover, .back-pill:hover, .iconbtn:hover { filter: brightness(1.08); }
+        .top-bar { justify-content: center; }
+        .overview-summary { text-align: center; flex: 1 1 100%; }
+        .btn { background: linear-gradient(180deg, #5c96ff, #3a72e6); color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
+        .btn.btn-secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); color: var(--text-main); box-shadow: var(--shadow); }
+        .btn.btn-danger { background: linear-gradient(180deg, #ff6b7a, #e04555); }
+
+        /* ===== Info pop-up (same style as the Recite coach Info pop-up) ===== */
+        .modal-bg { position: fixed; inset: 0; background: rgba(4,7,14,.82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+            display: flex; align-items: flex-end; justify-content: center; z-index: 1000; animation: rdFade .2s; }
+        body.light-mode .modal-bg { background: rgba(230,235,245,.85); }
+        .modal { background: linear-gradient(180deg, #1b2436, #131b2a); border: 1px solid var(--gold); border-bottom: none;
+            border-radius: 22px 22px 0 0; width: 100%; max-width: 520px; padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+            max-height: 82vh; overflow-y: auto; animation: rdSlide .28s cubic-bezier(.2,.9,.3,1); color: var(--text-main); }
+        body.light-mode .modal { background: linear-gradient(180deg, #ffffff, #eef2f8); }
+        @keyframes rdSlide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes rdFade { from { opacity: 0; } to { opacity: 1; } }
+        .modal .grabber { width: 38px; height: 4px; background: #3a4863; border-radius: 99px; margin: 0 auto 14px; }
+        body.light-mode .modal .grabber { background: #c8d3e6; }
+        .info-modal h2 { display: flex; align-items: center; gap: 9px; font-size: 1.15rem; margin: 0 0 8px; }
+        .info-modal > p { margin: 0 0 14px; color: var(--text-light); font-size: .82rem; line-height: 1.55; }
+        .info-modal .feature { background: rgba(79,140,255,.06); border: 1px solid rgba(79,140,255,.22); border-radius: 13px; padding: 12px 13px; margin-bottom: 10px; }
+        body.light-mode .info-modal .feature { background: rgba(42,111,224,.05); border-color: rgba(42,111,224,.20); }
+        .info-modal .feature h3 { margin: 0 0 8px; font-size: .95rem; color: var(--text-main); display: flex; align-items: center; gap: 7px; }
+        .info-modal .feature h3 .fnum { background: var(--primary); color: #fff; width: 22px; height: 22px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
+        .info-modal .feature ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+        .info-modal .feature ul li { position: relative; padding-left: 18px; font-size: .83rem; line-height: 1.55; color: var(--text-light); }
+        .info-modal .feature ul li::before { content: '•'; color: var(--primary); font-weight: 700; font-size: 1.1em; line-height: 1; position: absolute; left: 0; top: 2px; }
+        .info-modal .feature ul li b { color: var(--text-main); }
+        .info-modal .footer-note { text-align: center; color: var(--text-light); font-size: .72rem; margin: 6px 0 14px; font-style: italic; }
+        .info-modal .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+        .info-modal .btn-group button { width: 100%; height: 50px; font: inherit; font-weight: 600; font-size: .95rem; cursor: pointer; border-radius: 12px; }
+        .info-modal .btn-group .primary { background: linear-gradient(180deg, #5c96ff, #3a72e6); border: 1px solid #3a72e6; color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
+        .info-modal .btn-group .secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); border: 1px solid var(--gold); color: var(--text-main); }
+        @media (min-width: 640px) { .modal-bg { align-items: center; padding: 20px; } .modal { border-radius: 22px; border-bottom: 1px solid var(--gold); max-height: 88vh; } }
+    </style>
+</head>
+<body data-theme="midnight">
+    <script>try{if(localStorage.getItem('qc.theme')==='light')document.body.classList.add('light-mode');}catch(e){}</script>
+
+    <div class="page-bar">
+        <div class="page-bar-inner">
+            <button id="back-btn" class="back-pill" type="button" aria-label="Back to Recite home screen">Back</button>
+            <div class="page-bar-right">
+                <button id="info-btn" class="back-pill" type="button" aria-label="About Read Arabic">Info</button>
+                <button id="theme-btn" class="iconbtn" type="button" aria-label="Toggle dark / light theme">🌙</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="practice-banner" class="practice-banner"></div>
+
+    <div class="top-bar">
+        <div class="overview-summary">
+            <div class="app-title">READ</div>
+            <strong>📖 Overview</strong>
+            <p>READ is a voice-powered trainer for Arabic letters, vowels, words, and short surahs. Practice your current lesson before advancing.</p>
+        </div>
+    </div>
+
+    <div id="test-panel" class="test-panel">
+        <div class="timer-container"><div id="timer-fill" class="timer-fill"></div></div>
+        <div id="target-word" class="target-word"></div>
+        <div id="heard-line" class="heard-line"></div>
+        <div id="pause-controls" class="pause-controls">
+            <button class="btn-pause" onclick="resumeTest()">▶ Continue</button>
+            <button class="btn-pause btn-pause-stop" onclick="stopTest()">■ Stop Test</button>
+        </div>
+        <button id="panel-stop-btn" class="panel-stop-btn" onclick="stopTest()">Stop Test</button>
+    </div>
+
+    <div class="nav-tabs">
+        <div class="nav-tab active" data-screen="screen-1">Lesson 1</div>
+        <div class="nav-tab" data-screen="screen-2">Lesson 2</div>
+        <div class="nav-tab" data-screen="screen-3">Lesson 3</div>
+        <div class="nav-tab" data-screen="screen-4">Lesson 4</div>
+        <div class="nav-tab" data-screen="screen-5">Lesson 5</div>
+        <div class="nav-tab" data-screen="screen-6">Lesson 6</div>
+        <div class="nav-tab" data-screen="screen-7">Lesson 7</div>
+        <div class="nav-tab" data-screen="screen-8">Lesson 8</div>
+        <div class="nav-tab" data-screen="screen-9">Lesson 9</div>
+        <div class="nav-tab" data-screen="screen-13">Lesson 10</div>
+        <div class="nav-tab" data-screen="screen-10">Lesson 11</div>
+        <div class="nav-tab" data-screen="screen-12">Lesson 12</div>
+        <div class="nav-tab" data-screen="screen-11">Lesson 13</div>
+        <div class="nav-tab" data-screen="screen-14">Lesson 14</div>
+    </div>
+
+    <div id="screen-1" class="screen active">
+        <h2 style="text-align:center;">Alphabet</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 6px 0;">
+            There are 28 letters in the Arabic alphabet without "Hamzah".
+        </p>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Tap any letter to hear its pronunciation.
+        </p>
+        <div class="grid-row" id="alphabet-grid"></div>
+        <div class="status-bar" id="status-screen-1"></div>
+    </div>
+
+    <div id="screen-2" class="screen">
+        <h2 style="text-align:center;">Short Vowels (Letters)</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Tap any letter to hear its pronunciation. (Practice only.)
+        </p>
+        <h3 style="text-align:center;">Letters with Fat'hah</h3>
+        <div class="vowel-desc">
+            <p>– It is a small line that appears above the letter.</p>
+            <p>– On a light letter, it has the "a" sound as in the word "car".</p>
+            <p>– On a heavy letter, it has the "o" sound as in the word "hot".</p>
+        </div>
+        <div class="practice-grid" id="new-short-fat-ha-grid"></div>
+        <h3 style="text-align:center;">Letters with Kasrah</h3>
+        <div class="vowel-desc">
+            <p>– It is a small line that appears below a letter.</p>
+            <p>– It has the "i" sound as in the word "in".</p>
+        </div>
+        <div class="practice-grid" id="new-short-kasrah-grid"></div>
+        <h3 style="text-align:center;">Letters with Dhammah</h3>
+        <div class="vowel-desc">
+            <p>– It is a small version of the letter "و" which appears above a letter.</p>
+            <p>– It has the "u" sound as in the word "put".</p>
+        </div>
+        <div class="practice-grid" id="dhammah-image-grid"></div>
+    </div>
+
+    <div id="screen-3" class="screen">
+        <h2 style="text-align:center;">Short Vowels (Mixed)</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Tap any letter to hear its pronunciation. (Practice only.)
+        </p>
+        <h3 style="text-align:center;">Letters with Fat'hah</h3>
+        <div class="practice-grid" id="short-fat-ha-grid"></div>
+        <h3 style="text-align:center;margin-top:30px;">Letters with Dhammah</h3>
+        <div class="practice-grid" id="short-dhammah-grid"></div>
+        <h3 style="text-align:center;margin-top:30px;">Letters with Kasrah</h3>
+        <div class="practice-grid" id="short-kasrah-grid"></div>
+    </div>
+
+    <div id="screen-4" class="screen">
+        <h2 style="text-align:center;">Short Vowel Practice</h2>
+        <div class="practice-grid" id="short-practice-grid"></div>
+    </div>
+
+    <div id="screen-5" class="screen">
+        <h2 style="text-align:center;">Long Vowels with Fat'hah</h2>
+        <div class="vowel-desc">
+            <p>– A long vowel is an extension of a short vowel. Arabic language has 3 long vowel letters: <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">ا و ي</span></p>
+            <p>– <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بَ</span> (short) <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بَا</span> (long)</p>
+            <p>– <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بُ</span> (short) <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بُو</span> (long)</p>
+            <p>– <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بِ</span> (short) <span style="font-family: 'Amiri', serif; font-size: 1.1rem;">بِي</span> (long)</p>
+            <p>– Fat'hah is followed by a naked 'Alif'; eg. <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">بَا</span></p>
+            <p>– Dhammah is followed by a naked 'Waw'; eg. <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">بُو</span></p>
+            <p>– Kasrah is followed by a naked 'Yaa'; eg. <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">بِي</span></p>
+            <p>– Long vowels are lengthened for 2 counts.</p>
+        </div>
+        <h3 style="text-align:center;">Letters</h3>
+        <div class="practice-grid" id="long-fat-ha-grid"></div>
+        <h3 style="text-align:center;">Practice</h3>
+        <div class="practice-grid" id="long-fat-ha-practice-grid"></div>
+    </div>
+
+    <div id="screen-6" class="screen">
+        <h2 style="text-align:center;">Long Vowels with Kasrah</h2>
+        <h3 style="text-align:center;">Letters</h3>
+        <div class="practice-grid" id="long-kasrah-grid"></div>
+        <h3 style="text-align:center;">Practice</h3>
+        <div class="practice-grid" id="long-kasrah-practice-grid"></div>
+    </div>
+
+    <div id="screen-7" class="screen">
+        <h2 style="text-align:center;">Long Vowels with Dhammah</h2>
+        <h3 style="text-align:center;">Letters</h3>
+        <div class="practice-grid" id="long-dhammah-grid"></div>
+        <h3 style="text-align:center;">Practice</h3>
+        <div class="practice-grid" id="long-dhammah-practice-grid"></div>
+    </div>
+
+    <div id="screen-8" class="screen">
+        <h2 style="text-align:center;">Tanwin (Double Vowels)</h2>
+        <div class="vowel-desc">
+            <p>– Tanwin is the same short vowels accompanying each other.</p>
+            <p>– It is pronounced by adding an 'n' to the end of the vowel.</p>
+            <p>– It always comes at the end of a word.</p>
+            <p>– Two Fathah's will always be accompanied by an 'Alif'. Exceptions are 'Ta mabuta' and 'Hamza'.</p>
+            <p style="margin-top:10px;">Example: <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بًا</span> (ban), <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بٌ</span> (bun), <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بٍ</span> (bin).</p>
+        </div>
+        <h3 style="text-align:center;margin-top:20px;">Letters with Fat'hatain (ً)</h3>
+        <div class="practice-grid" id="tanwin-fat-ha-grid"></div>
+        <h3 style="text-align:center;margin-top:20px;">Letters with Dhammatain (ٌ)</h3>
+        <div class="practice-grid" id="tanwin-dhammah-grid"></div>
+        <h3 style="text-align:center;margin-top:20px;">Letters with Kasratain (ٍ)</h3>
+        <div class="practice-grid" id="tanwin-kasrah-grid"></div>
+    </div>
+
+    <div id="screen-9" class="screen">
+        <h2 style="text-align:center;">Joined Letters</h2>
+        <div class="vowel-desc">
+            <p>– In Arabic, letters can take various forms when they are joined together.</p>
+            <p>– The top letter is always read first and the first dot or set of dots belongs to that letter.</p>
+        </div>
+        <div class="practice-grid" id="joining-grid"></div>
+    </div>
+
+    <div id="screen-10" class="screen">
+        <h2 style="text-align:center;">Sun and Moon Letters</h2>
+        <div class="vowel-desc">
+            <p><strong>Sun and Moon Letters:</strong></p>
+            <p>When there is <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">ل</span> at the beginning of a word, <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">ل</span> is pronounced when there is a Sukoon on top of it.</p>
+            <p style="text-align: center; margin-top: 10px;">Example:</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; margin-bottom: 15px;">الْقَوْم</p>
+            <p>When there is <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">ل</span> at the beginning of a word, <span style="font-family: 'Amiri', serif; font-size: 1.2rem;">ل</span> is NOT pronounced when there is nothing on top of it.</p>
+            <p style="text-align: center; margin-top: 10px;">Example:</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem;">الشَّمْس</p>
+        </div>
+        <div class="practice-grid" id="sun-moon-grid"></div>
+        <div class="status-bar" id="status-screen-10"></div>
+    </div>
+
+    <div id="screen-11" class="screen">
+        <h2 style="text-align:center;">Hamzatul Wasl</h2>
+        <div class="vowel-desc">
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; margin-bottom: 15px; direction: rtl;">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>
+            <p>When Hamzatul Wasl at the beginning of word, it is pronounced. Example:</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الْحَمْدُ</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الدِّينِ</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الرَّحْمَنِ</p>
+        </div>
+        <button class="btn btn-start-test" data-screen="screen-11" onclick="handleTestButton(this)">Start Test</button>
+        <div class="practice-grid" id="hamza-grid"></div>
+        <div class="status-bar" id="status-screen-11"></div>
+    </div>
+
+    <div id="screen-12" class="screen">
+        <h2 style="text-align:center;">Stopping Rules</h2>
+        <div class="vowel-desc">
+            <p><strong>Stopping rules:</strong></p>
+            <p>Rules for stopping apply whenever the reciter stops on a word in the middle or at the end of an ayah. Even if the recitation is stopped due to running out of breath, these rules are still applied.</p>
+            <p>Stopping rules for specific situation are :</p>
+            <p><strong><u>Short vowels:</u></strong></p>
+            <p>When stopping on a word ending with short vowel, the short vowel is replaced with a sukoon.</p>
+            <p>Example</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِين</p>
+            <p>Sometimes when short vowel is removed, it will produce a long vowel.</p>
+            <p>Example:</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">هُوَ اللَّهُ الَّذِي لَا إِلَهَ إِلَّا هُوَ</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">لِإِيلَافِ قُرَيْشٍ</p>
+            <p><strong><u>Tanwin:</u></strong></p>
+            <p>When stopping on a word ending with double dhammah or double kasrah, it is replaced with a sukoon.</p>
+            <p>Example:</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">سَيَصْلَى نَارًا ذَاتَ لَهَبٍ</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">أَيَحْسَبُ أَنْ لَمْ يَرَهُ أَحَدٌ</p>
+            <p>When stopping on a word ending with double fathah, one fathah is dropped and the word is pronounced with long vowel.</p>
+            <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">يَقُولُ أَهْلَكْتُ مَالًا لُّبَدًا</p>
+        </div>
+        <button class="btn btn-start-test" data-screen="screen-12" onclick="handleTestButton(this)">Start Test</button>
+        <h3>Short Vowels &amp; Tanwin</h3>
+        <div class="practice-grid" id="stopping-1-grid"></div>
+        <h3>Long Vowels &amp; Taa Marbootah</h3>
+        <div class="practice-grid" id="stopping-2-grid"></div>
+        <div class="status-bar" id="status-screen-12"></div>
+    </div>
+
+    <div id="screen-13" class="screen">
+        <h2 style="text-align:center;">Review Practice</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Tap any word to hear its pronunciation. (Practice only.)
+        </p>
+        <div class="practice-grid" id="review-grid"></div>
+    </div>
+
+    <div id="screen-14" class="screen">
+        <h2 style="text-align:center;">Recite Ayah</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Recite each ayah aloud, word for word. Every word in the ayah must be spoken for it to count as correct.
+        </p>
+
+        <h3 style="text-align:center;">Surah 112 — Al-Ikhlas</h3>
+        <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-112-grid" data-score-key="screen-14-surah-112" onclick="handleTestButton(this)">Start Test</button>
+        <div class="score-progress-container" data-score-key="screen-14-surah-112">
+            <div class="score-info">
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span class="completion-badge">✓ Completed</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+        </div>
+        <div class="ayah-grid" id="surah-112-grid"></div>
+        <div class="status-bar" id="status-screen-14-surah-112"></div>
+
+        <h3 style="text-align:center;margin-top:30px;">Surah 113 — Al-Falaq</h3>
+        <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-113-grid" data-score-key="screen-14-surah-113" onclick="handleTestButton(this)">Start Test</button>
+        <div class="score-progress-container" data-score-key="screen-14-surah-113">
+            <div class="score-info">
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span class="completion-badge">✓ Completed</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+        </div>
+        <div class="ayah-grid" id="surah-113-grid"></div>
+        <div class="status-bar" id="status-screen-14-surah-113"></div>
+
+        <h3 style="text-align:center;margin-top:30px;">Surah 114 — An-Nas</h3>
+        <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-114-grid" data-score-key="screen-14-surah-114" onclick="handleTestButton(this)">Start Test</button>
+        <div class="score-progress-container" data-score-key="screen-14-surah-114">
+            <div class="score-info">
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span class="completion-badge">✓ Completed</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+        </div>
+        <div class="ayah-grid" id="surah-114-grid"></div>
+        <div class="status-bar" id="status-screen-14-surah-114"></div>
+    </div>
+
+    <div id="screen-18" class="screen">
+        <h2 style="text-align:center;">🎙 Test Microphone</h2>
+        <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
+            Checks what the browser's speech recogniser can do on <em>this</em> device. Nothing here is scored.
+        </p>
+        <div class="content-card">
+            <h3>Detected engine</h3>
+            <div id="mic-test-engine" style="font-size:0.92rem;">Checking…</div>
+        </div>
+        <div class="content-card">
+            <h3>Live transcript</h3>
+            <div id="mic-test-live" class="mic-test-live empty">Tap <strong>Start Mic Test</strong> below, then say a letter such as <span style="font-family:'Amiri',serif;font-weight:700;">أَبَ</span> or <span style="font-family:'Amiri',serif;font-weight:700;">بَ</span>.</div>
+            <div id="mic-test-verdict" class="mic-test-verdict info" style="display:none;"></div>
+        </div>
+        <button class="btn" id="mic-test-btn" onclick="toggleMicTest()">🎙 Start Mic Test</button>
+        <div class="content-card">
+            <h3>Phrase hints (Chrome 129+)</h3>
+            <p id="mic-test-hints-status" style="font-size:0.9rem;"></p>
+            <p style="font-size:0.85rem;color:var(--text-light);">
+                When supported, the app passes a shortlist of the exact words being learned to the recogniser for better short-word accuracy.
+            </p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div id="voice-wizard-overlay" class="voice-wizard-overlay" onclick="if(event.target===this)closeVoiceWizard()">
+        <div class="voice-wizard-card">
+            <h3>🔊 Set Up Arabic Voice</h3>
+            <p style="font-size:0.9rem;color:var(--text-light);">Your device does not currently have an Arabic Text‑to‑Speech voice installed. Without it, tapping Arabic letters will produce no sound.</p>
+            <ol>
+                <li>Open your phone's <strong>Settings</strong> app.</li>
+                <li>Go to <strong>System → Languages &amp; input → Text‑to‑speech output</strong> (on Samsung: <strong>General management → Language and input → Text‑to‑speech</strong>).</li>
+                <li>Tap the <strong>⚙️ gear icon</strong> next to <strong>Speech Services by Google</strong> (or your preferred TTS engine).</li>
+                <li>Tap <strong>Install voice data</strong>.</li>
+                <li>Select <strong>العربية (Arabic)</strong> and download it.</li>
+                <li>Return to the app and tap any Arabic letter — you should now hear the pronunciation.</li>
+            </ol>
+            <p style="font-size:0.85rem;color:var(--text-light);">On some devices the path may differ slightly. If you cannot find the TTS settings, try the button below to jump directly to the system TTS screen.</p>
+            <div class="wizard-actions">
+                <button class="btn" onclick="openTtsSettings()">Open TTS Settings</button>
+                <button class="btn btn-secondary" onclick="closeVoiceWizard()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         VERCEL WEB ANALYTICS
+         Loaded from a disguised first-party path (/mt-demo/*) via
+         the vercel.json rewrite so ad-blockers do not recognise it.
+         ============================================================ -->
+    <script>
+        window.va = window.va || function () {
+            (window.vaq = window.vaq || []).push(arguments);
+        };
+    </script>
+    <script defer src="/mt-demo/script.js" data-endpoint="/mt-demo"
+            onerror="console.warn('Vercel Analytics script failed to load from /mt-demo/script.js — check vercel.json rewrite and that /mt-demo path is reachable.');"></script>
+
+    <!-- ============================================================
+         SERVICE WORKER REGISTRATION (fixes analytics + offline)
+         ============================================================ -->
+    <script>
+        (function () {
+            if (!('serviceWorker' in navigator)) return;
+
+            const hadControllerAtStart = !!navigator.serviceWorker.controller;
+            let refreshing = false;
+
+            navigator.serviceWorker.register('./sw.js', { scope: './' })
+                .then(function (reg) {
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                    reg.addEventListener('updatefound', function () {
+                        const newWorker = reg.installing;
+                        if (!newWorker) return;
+                        newWorker.addEventListener('statechange', function () {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('Service worker registration failed:', err);
+                });
+
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                if (refreshing) return;
+                if (!hadControllerAtStart) return;
+                refreshing = true;
+                window.location.reload();
+            });
+        })();
+    </script>
+
+    <script>
+    (function () {
+        "use strict";
+
+        // =========================================================
+        // APP ICON — pure SVG paths (renders reliably at any size,
+        // on any device, with no external font dependency).
+        // =========================================================
+        const APP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+            <rect width="192" height="192" rx="40" fill="#000000"/>
+            <path d="M 26 46 Q 26 38 36 38 L 94 54 L 94 154 Q 64 138 26 148 Z" fill="#FFD700"/>
+            <path d="M 166 46 Q 166 38 156 38 L 98 54 L 98 154 Q 128 138 166 148 Z" fill="#FFD700"/>
+            <rect x="94" y="54" width="4" height="100" fill="#000000" opacity="0.4"/>
+            <g stroke="#000000" stroke-width="2.5" stroke-linecap="round" opacity="0.55">
+                <line x1="40" y1="76" x2="82" y2="81"/>
+                <line x1="40" y1="94" x2="82" y2="99"/>
+                <line x1="40" y1="112" x2="82" y2="117"/>
+                <line x1="40" y1="130" x2="66" y2="134"/>
+                <line x1="152" y1="76" x2="110" y2="81"/>
+                <line x1="152" y1="94" x2="110" y2="99"/>
+                <line x1="152" y1="112" x2="110" y2="117"/>
+                <line x1="152" y1="130" x2="126" y2="134"/>
+            </g>
+        </svg>`;
+
+        // =========================================================
+        // NAV TAB DELEGATION
+        // =========================================================
+        document.addEventListener('click', function (e) {
+            const el = e.target;
+            if (!el || !el.closest) return;
+            const tab = el.closest('.nav-tab');
+            if (!tab) return;
+            if (tab.classList.contains('disabled')) return;
+            const screenId = tab.getAttribute('data-screen');
+            if (!screenId) return;
+            try { switchScreen(screenId, tab); }
+            catch (err) { console.error('Tab switch error:', err); }
+        });
+
+        // =========================================================
+        // DATA
+        // =========================================================
+        const alphabet = ['ا','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي'];
+        const alphabetTranslit = ['Alif','Baa','Taa','Thaa','Jeem','Haa (deep)','Khaa','Daal','Dhaal','Raa','Zay','Seen','Sheen','Saad','Daad','Taa (heavy)','Zaa (heavy)','Ayn','Ghayn','Faa','Qaaf','Kaaf','Laam','Meem','Noon','Haa (light)','Waaw','Yaa'];
+
+        const joiningPractice = [
+            'بـ','تـ','ثـ','جـ','حـ','خـ','هـ',
+            'ـبـ','ـتـ','ـثـ','ـجـ','ـحـ','ـخـ','ـهـ',
+            'ـب','ـت','ـث','ـج','ـح','ـخ','ـه',
+            'بـ','تـ','ثـ','جـ','حـ','خـ','هـ',
+            'ـبـ','ـتـ','ـثـ','ـجـ','ـحـ','ـخـ','ـهـ',
+            'ـب','ـت','ـث','ـج','ـح','ـخ','ـه',
+            'بـ','تـ','ثـ','جـ','حـ','خـ','هـ'
+        ];
+
+        const hamzaPractice = ['فَانصَبْ','لَيْلَةُ الْقَدْرِ','وَالرَّيْشُونَ','بِاسْمِ','وَالْأُخْرَى','الْغَفُورُ الْوَدُودُ','هُوَ اللَّهُ','اللَّهُ الصَّمَدُ','إِنَّ الْمُسْلِمِينَ','بِاللَّيْلِ','وَكَانَ اللَّهُ','عَلَّمَ الْقُرْآنَ','عِندَ اللَّهِ','وَهُوَ الْعَزِيزُ','إِنَّ الْأَوَّلِينَ','وَالصُّحْى','هُوَ الْأَوَّلُ','هُمُ الْمُفْلِحُونَ','بِالْقَلَمِ','هُوَ الَّذِي','إِنَّ الشِّرْكَ','وَالنَّجْمِ','مِنَ الَّذِينَ','فَتَمَتَّعُوا','وَالْتِّينِ','جَنَاحَ الذُّلِّ','عَنِ النَّبَإِ الْعَظِيمِ','مِنَ الرُّسُلِ','أَنَّهُ الْفِرَاقُ','وَاسْتَغْفِرُوا اللَّهَ'];
+        const sunMoonPractice = ['الْقَمَرُ','الَّذِينَ','الطُّورُ','الضِّعْفُ','الْأَرْضِ','الْمِيزَانَ','الصِّيَامُ','الْفَتْحُ','الرُّوحُ','الْبَلَدِ','الصُّبْحُ','النُّجُومُ','اللِّقَاءُ','الْقَارِعَةُ','التِّينِ','السَّمَاءُ','النَّاسِ','الذِّبَابُ','الثُّرَابِ','الْمِسْكِينِ','الذَّهَبُ','النَّارُ','الطَّارِقُ','الْخُرُوجُ','الْقَوْمُ','الظَّالِمُ','الْهُدَى','السُّجُودُ','الْمِيرَاثُ','الشِّتَاءُ','السَّبِيلُ'];
+        const stopping1 = ['بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ','الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ','هُوَ اللَّهُ الَّذِي لَا إِلَهَ إِلَّا هُوَ','لِإِيلَافِ قُرَيْشٍ','سَيَصْلَى نَارًا ذَاتَ لَهَبٍ','أَيَحْسَبُ أَنْ لَمْ يَرَهُ أَحَدٌ','يَقُولُ أَهْلَكْتُ مَالًا لُّبَدًا'];
+        const stopping2 = ['وَالشَّمْسِ وَضُحَاهَا','وَاللَّيْلِ إِذَا يَغْشَى','وَبِالْآخِرَةِ هُمْ يُوقِنُونَ'];
+        const shortFatHa = ['أَبَ','تَبَ','ثَتَ','جَحَ','خَخَ','دَذَ','رَزَ','سَشَ','صَضَ','طَظَ','عَغَ','فَقَ','كَ','لَ','مَ','نَ','هَ','وَ','يَ'];
+        const shortDhammah = ['أُبُ','تُبُ','ثُتُ','جُحُ','خُخُ','دُذُ','رُزُ','سُشُ','صُضُ','طُظُ','عُغُ','فُقُ','كُ','لُ','مُ','نُ','هُ','وُ','يُ'];
+        const shortKasrah = ['إِبِ','تِبِ','ثِتِ','جِحِ','خِخِ','دِذِ','رِزِ','سِشِ','صِضِ','طِظِ','عِغِ','فِقِ','كِ','لِ','مِ','نِ','هِ','وِ','يِ'];
+        const shortPractice = ['رَفَعَ','أَمَرَ','كَسَبَ','وَقَبَ','خَلَقَ','حَسَدَ','لَكَ','تَرَ','فَهُوَ','هُوَ','وَلِيَ','مَلَكَ','عَبَسَ','وَلَدَ','جَمَعَ','فَعَلَ','إِرَمْ','لَهُ','صُحُفَ','خُلُقَ','قُتِلَ','أُذِنَ','يَكُنْ','خَشِيَ'];
+
+        const longFatHa = ['بَا','تَا','ثَا','جَا','حَا','خَا','دَا','ذَا','رَا','زَا','سَا','شَا','صَا','ضَا','طَا','ظَا','عَا','غَا','فَا','قَا','كَا','لَا','مَا','نَا','هَا','وَا','يَا'];
+        const longFatHaPractice = ['زَادَ','خَافَ','تَابَ','جَاهَدَ','حَاسَبَ','جُنَاحُ','شَارَبَ','فَرَاغٌ','خَادِعَ','قَاتَلَ','صَابَرَ','تَعَالَ'];
+
+        const longKasrah = ['إِي','بِي','تِي','ثِي','جِي','حِي','خِي','دِي','ذِي','رِي','زِي','سِي','شِي','صِي','ضِي','طِي','ظِي','عِي','غِي','فِي','قِي','كِي','لِي','مِي','نِي','وِي','هِي','ئِي','يِي'];
+        const longKasrahPractice = ['دِينِي','فِيهِ','أَرِنِي','كِتَابِي','أَحِيبُ','بُوَارِي','مَفَاتِيحُ','رَازِقِينَ','عِبَادِي','عَذَابِي','تَمَاثِيلُ','مَقَادِيرُ','أَخِيهِ','بَنِيهِ'];
+        const longDhammah = ['أُو','بُو','تُو','ثُو','جُو','حُو','خُو','دُو','ذُو','رُو','زُو','سُو','شُو','صُو','ضُو','طُو','ظُو','عُو','غُو','فُو','قُو','كُو','لُو','مُو','نُو','هُو','وُو','يُو'];
+        const longDhammahPractice = ['نُوحٌ','طُورٌ','تُوبُوا','نُورٌ','قَالُوا','يَرْجُو','يَقُومُ','تَكُونُ','هَارُونَ','قَارُونَ','دَاخِرُونَ','سَبَقُونَا','بَاسِطُونَ','رَاجِعُونَ'];
+        const reviewWords = [].concat(shortPractice, longFatHaPractice, longKasrahPractice, longDhammahPractice);
+        const imageFatHa = ['أَ','بَ','تَ','ثَ','جَ','حَ','خَ','دَ','ذَ','رَ','زَ','سَ','شَ','صَ','ضَ','طَ','ظَ','عَ','غَ','فَ','قَ','كَ','لَ','مَ','نَ','هَ','وَ','يَ'];
+        const imageKasrah = ['إِ','بِ','تِ','ثِ','جِ','حِ','خِ','دِ','ذِ','رِ','زِ','سِ','شِ','صِ','ضِ','طِ','ظِ','عِ','غِ','فِ','قِ','كِ','لِ','مِ','نِ','هِ','وِ','يِ'];
+        const imageDhammah = ['أُ','بُ','تُ','ثُ','جُ','حُ','خُ','دُ','ذُ','رُ','زُ','سُ','شُ','صُ','ضُ','طُ','ظُ','عُ','غُ','فُ','قُ','كُ','لُ','مُ','نُ','هُ','وُ','يُ'];
+
+        const tanwinFatHa = ['وًا', 'بًا', 'تًا', 'ثًا', 'جًا', 'حًا', 'خًا', 'يًا', 'هًا', 'نًا', 'مًا', 'لًا', 'كًا', 'دًا', 'قًا', 'فًا', 'غًا', 'عًا', 'ظًا', 'طًا', 'ضًا', 'صًا', 'شًا', 'سًا', 'زًا', 'رًا', 'ذًا'];
+        const tanwinDhammah = ['وٌ', 'بٌ', 'تٌ', 'ثٌ', 'جٌ', 'حٌ', 'خٌ', 'يٌ', 'هٌ', 'نٌ', 'مٌ', 'لٌ', 'كٌ', 'دٌ', 'قٌ', 'فٌ', 'غٌ', 'عٌ', 'ظٌ', 'طٌ', 'ضٌ', 'صٌ', 'شٌ', 'سٌ', 'زٌ', 'رٌ', 'ذٌ'];
+        const tanwinKasrah = ['وٍ', 'بٍ', 'تٍ', 'ثٍ', 'جٍ', 'حٍ', 'خٍ', 'يٍ', 'هِ', 'نٍ', 'مٍ', 'لٍ', 'كٍ', 'دٍ', 'قٍ', 'فٍ', 'غٍ', 'عٍ', 'ظٍ', 'طٍ', 'ضٍ', 'صٍ', 'شٍ', 'سٍ', 'زٍ', 'رٍ', 'ذٍ'];
+
+        const surah112 = ['قُلْ هُوَ اللَّهُ أَحَدٌ','اللَّهُ الصَّمَدُ','لَمْ يَلِدْ وَلَمْ يُولَدْ','وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ'];
+        const surah113 = ['قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ','مِن شَرِّ مَا خَلَقَ','وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ','وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ','وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ'];
+        const surah114 = ['قُلْ أَعُوذُ بِرَبِّ النَّاسِ','مَلِكِ النَّاسِ','إِلَهِ النَّاسِ','مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ','الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ','مِنَ الْجِنَّةِ وَالنَّاسِ'];
+
+        (function () {
+            const iconDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(APP_ICON_SVG);
+            const fav = document.getElementById('favicon-link'); if (fav) fav.href = iconDataUri;
+            const apple = document.getElementById('apple-touch-icon'); if (apple) apple.href = iconDataUri;
+            const manifest = {
+                name: 'READ', short_name: 'READ',
+                description: 'Learn to read Arabic with voice feedback.',
+                start_url: '.', scope: '.', display: 'standalone', orientation: 'portrait',
+                background_color: '#ECFDF5', theme_color: '#059669',
+                icons: [
+                    { src: iconDataUri, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+                    { src: iconDataUri, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+                    { src: iconDataUri, sizes: '192x192', type: 'image/svg+xml', purpose: 'maskable' }
+                ]
+            };
+            const mUri = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+            const ml = document.getElementById('manifest-link'); if (ml) ml.href = mUri;
+        })();
+
+        const SCORE_PREFIX = 'art_best_';
+        const TOTAL_TESTS_KEY = 'art_total_tests';
+        function getBestScore(key) { return parseInt(localStorage.getItem(SCORE_PREFIX + key) || '0', 10); }
+        function saveBestScore(key, score) {
+            localStorage.setItem(TOTAL_TESTS_KEY, (parseInt(localStorage.getItem(TOTAL_TESTS_KEY) || '0', 10) + 1).toString());
+            if (score > getBestScore(key)) localStorage.setItem(SCORE_PREFIX + key, score);
+        }
+
+        const ENGINE_PROFILE_KEY = 'art_engine_profile_v2';
+        function detectEngineName() {
+            const ua = navigator.userAgent || '';
+            if (/Edg\//.test(ua)) return 'edge';
+            if (/OPR\//.test(ua) || /Opera/.test(ua)) return 'opera';
+            if (/Chrome\//.test(ua)) return 'chrome';
+            if (/Safari\//.test(ua)) return 'safari';
+            if (/Firefox\//.test(ua)) return 'firefox';
+            return 'unknown';
+        }
+        function defaultEngineProfile() {
+            const name = detectEngineName();
+            const isCloud = name === 'chrome' || name === 'edge' || name === 'opera';
+            return {
+                name: name, isCloud: isCloud,
+                supportsPhraseHints: (typeof SpeechRecognitionPhrase !== 'undefined'),
+                firstInterimMs: isCloud ? 550 : 260,
+                finalAfterEndMs: isCloud ? 950 : 480,
+                firstInterimSamples: 0, finalSamples: 0
+            };
+        }
+        function loadEngineProfile() {
+            try {
+                const raw = localStorage.getItem(ENGINE_PROFILE_KEY);
+                if (!raw) return null;
+                const p = JSON.parse(raw);
+                if (p.name !== detectEngineName()) return null;
+                p.supportsPhraseHints = (typeof SpeechRecognitionPhrase !== 'undefined');
+                return p;
+            } catch (e) { return null; }
+        }
+        function saveEngineProfile(p) { try { localStorage.setItem(ENGINE_PROFILE_KEY, JSON.stringify(p)); } catch (e) {} }
+        let engineProfile = loadEngineProfile() || defaultEngineProfile();
+        saveEngineProfile(engineProfile);
+        function observeFirstInterim(deltaMs) {
+            if (!(deltaMs > 0 && deltaMs < 6000)) return;
+            const n = engineProfile.firstInterimSamples || 0;
+            engineProfile.firstInterimMs = (engineProfile.firstInterimMs * n + deltaMs) / (n + 1);
+            engineProfile.firstInterimSamples = n + 1;
+            saveEngineProfile(engineProfile);
+        }
+        function observeFinalLatency(deltaMs) {
+            if (!(deltaMs > 0 && deltaMs < 6000)) return;
+            const n = engineProfile.finalSamples || 0;
+            engineProfile.finalAfterEndMs = (engineProfile.finalAfterEndMs * n + deltaMs) / (n + 1);
+            engineProfile.finalSamples = n + 1;
+            saveEngineProfile(engineProfile);
+        }
+        function resetCalibration() {
+            const d = defaultEngineProfile();
+            engineProfile.firstInterimMs = d.firstInterimMs;
+            engineProfile.finalAfterEndMs = d.finalAfterEndMs;
+            engineProfile.firstInterimSamples = 0;
+            engineProfile.finalSamples = 0;
+            saveEngineProfile(engineProfile);
+        }
+
+        // =========================================================
+        // SPEECH SYNTHESIS — fixes begin here
+        // =========================================================
+        let cachedVoice = null;
+
+        /**
+         * Returns an Arabic voice ONLY if one exists.
+         * Never falls back to an English or other voice.
+         */
+        function pickArabicVoice() {
+            if (!window.speechSynthesis) return null;
+            let voices = [];
+            try { voices = window.speechSynthesis.getVoices() || []; } catch (e) { return null; }
+
+            let arSA = null, arAny = null;
+            for (let i = 0; i < voices.length; i++) {
+                const lang = (voices[i].lang || '').toLowerCase();
+                if (lang.indexOf('ar') !== 0) continue;
+                if (!arSA && lang.indexOf('ar-sa') === 0) arSA = voices[i];
+                if (!arAny) arAny = voices[i];
+            }
+            return arSA || arAny || null;
+        }
+
+        function hasArabicVoice() {
+            return !!pickArabicVoice();
+        }
+
+        /**
+         * Shows the voice‑setup wizard when no Arabic voice exists.
+         * Called automatically on the first failed tap, or manually from the menu.
+         */
+        let voiceWizardShown = false;
+        function maybeShowVoiceWizard() {
+            if (voiceWizardShown) return;
+            if (hasArabicVoice()) return;
+            voiceWizardShown = true;
+            showVoiceWizard();
+        }
+        function showVoiceWizard() {
+            const overlay = document.getElementById('voice-wizard-overlay');
+            if (overlay) overlay.classList.add('show');
+        }
+        function closeVoiceWizard() {
+            const overlay = document.getElementById('voice-wizard-overlay');
+            if (overlay) overlay.classList.remove('show');
+        }
+        function openTtsSettings() {
+            // Attempt to open the system TTS settings on Android.
+            // There is no universal web API, but the intent URI below
+            // is recognised by many Android builds.
+            const intentUri = 'intent:#Intent;action=com.android.settings.TTS_SETTINGS;end';
+            try {
+                window.location.href = intentUri;
+            } catch (e) {
+                showToast('Could not open TTS settings automatically. Follow the steps above.');
+            }
+        }
+
+
+        // Letter names — a bare single letter (ب و ف ي …) is read by many Arabic TTS
+        // engines as a word or preposition ("with", "and", "so") instead of the letter.
+        // Speaking the letter's name is what every engine pronounces correctly.
+        const LETTER_NAMES = {
+            'ا':'أَلِف','ء':'هَمْزَة','أ':'هَمْزَة','إ':'هَمْزَة','ب':'بَاء','ت':'تَاء','ث':'ثَاء','ج':'جِيم','ح':'حَاء','خ':'خَاء',
+            'د':'دَال','ذ':'ذَال','ر':'رَاء','ز':'زَاي','س':'سِين','ش':'شِين','ص':'صَاد','ض':'ضَاد','ط':'طَاء','ظ':'ظَاء',
+            'ع':'عَيْن','غ':'غَيْن','ف':'فَاء','ق':'قَاف','ك':'كَاف','ل':'لَام','م':'مِيم','ن':'نُون','ه':'هَاء','و':'وَاو','ي':'يَاء'
+        };
+        function letterNameFor(text) {
+            const t = (text || '').replace(/[\u0640\s]/g, '');
+            if (t.length === 1 && LETTER_NAMES[t]) return LETTER_NAMES[t];
+            return null;
+        }
+
+
+        // Letters whose lone "consonant + short vowel" syllable is mispronounced by some Arabic
+        // voices (e.g. شَ). These are spoken with the same lengthened carrier used in Lessons 3–11.
+        // Add any other letter here if a voice mispronounces it.
+        const CLEAR_SYLLABLE_LETTERS = 'ش';
+        function needsClearSyllable(text) {
+            const t = (text || '').replace(/[\u0640\s]/g, '');
+            return t.length === 2 && CLEAR_SYLLABLE_LETTERS.indexOf(t.charAt(0)) !== -1 && /[\u064E\u064F\u0650]/.test(t.charAt(1));
+        }
+
+        function addFinalVowelCarrier(text) {
+            const t = (text || '').trim();
+            if (!t) return t;
+            if (/[\u064E\u064F\u0650\u064B\u064C\u064D]$/.test(t)) return t + '\u0640';
+            return t;
+        }
+
+        const TAJWEED_FORCE_SCREENS = {
+            'screen-3': true, 'screen-4': true, 'screen-5': true,
+            'screen-6': true, 'screen-7': true, 'screen-8': true,
+            'screen-9': true, 'screen-10': true, 'screen-13': true
+        };
+        function forceFinalTajweedVowel(text) {
+            let t = (text || '').trim();
+            if (!t) return t;
+            t = t.replace(/\u0640+$/, '');
+            const last = t.slice(-1);
+            if (last === '\u064E') return t + '\u0627';
+            if (last === '\u064F') return t + '\u0648';
+            if (last === '\u0650') return t + '\u064A';
+            return t;
+        }
+
+        /**
+         * FIXED speakArabic:
+         *  - guards against missing speechSynthesis
+         *  - delays speak() after cancel() for Android
+         *  - uses pickArabicVoice() (never a non‑Arabic voice)
+         *  - reports real errors via toast
+         *  - triggers the voice‑setup wizard when no Arabic voice exists
+         */
+        function speakArabic(text, onDone, forceFinalTajweed) {
+            let finished = false;
+            function done() { if (finished) return; finished = true; if (typeof onDone === 'function') onDone(); }
+
+            if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance === 'undefined') {
+                showToast('🔇 No speech engine found. Enable Text‑to‑speech in Android settings.');
+                done(); return;
+            }
+
+            const prepared = letterNameFor(text) || ((forceFinalTajweed || needsClearSyllable(text)) ? forceFinalTajweedVowel(text) : addFinalVowelCarrier(text));
+
+            function speakNow() {
+                const u = new SpeechSynthesisUtterance(prepared);
+                u.lang = 'ar-SA';                 // keep this unless a real Arabic voice is found
+                u.rate = 0.8;
+
+                const voice = pickArabicVoice();
+                if (voice) {
+                    u.voice = voice;
+                    if (voice.lang) u.lang = voice.lang;
+                } else {
+                    // No Arabic voice — leave u.lang = 'ar-SA' so the engine can
+                    // report 'language-unavailable' via onerror instead of failing silently.
+                }
+
+                u.onend = done;
+                u.onerror = function (ev) {
+                    const err = ev && ev.error;
+                    if (err === 'language-unavailable' || err === 'voice-unavailable') {
+                        showToast('🔇 No Arabic voice installed — opening setup guide.');
+                        maybeShowVoiceWizard();
+                    } else if (err === 'synthesis-failed' || err === 'synthesis-unavailable') {
+                        showToast('🔇 Speech engine failed. Install or restart Google Text‑to‑Speech.');
+                    } else if (err === 'not-allowed') {
+                        showToast('🔇 Speech blocked — tap the page once, then retry.');
+                    }
+                    done();
+                };
+
+                try { window.speechSynthesis.speak(u); }
+                catch (e) { showToast('🔇 Could not speak: ' + (e.name || 'error')); done(); return; }
+
+                // Safety net: if onend never fires, resolve after a timeout.
+                setTimeout(function () {
+                    if (finished) return;
+                    const poll = setInterval(function () {
+                        if (!window.speechSynthesis.speaking) { clearInterval(poll); done(); }
+                    }, 150);
+                    setTimeout(function () { clearInterval(poll); done(); }, 12000);
+                }, 700);
+            }
+
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+            // Android ignores cancel()+speak() in the same tick.
+            setTimeout(speakNow, 60);
+        }
+
+        // =========================================================
+        // TAP HANDLING — fixes the Android "link" issue
+        // =========================================================
+        function handleArabicTap(arEl) {
+            if (!arEl) return;
+            if (isTestMode) return;
+            const text = (arEl.textContent || '').trim();
+            if (!text) return;
+            const activeScreen = document.querySelector('.screen.active');
+            const screenId = activeScreen ? activeScreen.id : '';
+            const forceFinal = !!TAJWEED_FORCE_SCREENS[screenId];
+            speakArabic(text, null, forceFinal);
+        }
+
+        // =========================================================
+        // (rest of the app logic — unchanged, except where noted)
+        // =========================================================
+
+        function normalizeArabicAggressive(text) {
+            if (!text) return "";
+            return text
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآا]/g, 'ا').replace(/[ىي]/g, 'ي').replace(/ة/g, 'ه')
+                .replace(/[حخه]/g, 'ه').replace(/[عذ]/g, 'ا').replace(/[غج]/g, 'غ')
+                .replace(/[طت]/g, 'ت').replace(/[صس]/g, 'س').replace(/[ضدذ]/g, 'د')
+                .replace(/[ثت]/g, 'ت').replace(/[ذز]/g, 'ز').replace(/[قك]/g, 'ك')
+                .replace(/[فب]/g, 'ب').replace(/\s+/g, '')
+                .toLowerCase();
+        }
+        function normalizeArabicStrict(text) {
+            if (!text) return "";
+            return text
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ى/g, 'ي')
+                .replace(/ة/g, 'ه')
+                .replace(/\s+/g, '')
+                .toLowerCase();
+        }
+        function normalizeArabic(text) { return childMode ? normalizeArabicAggressive(text) : normalizeArabicStrict(text); }
+
+        function normalizeArabicKeepSpacesAggressive(text) {
+            if (!text) return "";
+            return text
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآا]/g, 'ا').replace(/[ىي]/g, 'ي').replace(/ة/g, 'ه')
+                .replace(/[حخه]/g, 'ه').replace(/[عذ]/g, 'ا').replace(/[غج]/g, 'غ')
+                .replace(/[طت]/g, 'ت').replace(/[صس]/g, 'س').replace(/[ضدذ]/g, 'د')
+                .replace(/[ثت]/g, 'ت').replace(/[ذز]/g, 'ز').replace(/[قك]/g, 'ك')
+                .replace(/[فب]/g, 'ب')
+                .replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+        function normalizeArabicKeepSpacesStrict(text) {
+            if (!text) return "";
+            return text
+                .replace(/[\u064B-\u065F\u0670]/g, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ى/g, 'ي')
+                .replace(/ة/g, 'ه')
+                .replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+        function normalizeArabicKeepSpaces(text) { return childMode ? normalizeArabicKeepSpacesAggressive(text) : normalizeArabicKeepSpacesStrict(text); }
+
+        let childMode = false;
+        let requiredSimilarity = 0.3;
+        let requiredCoverage = 1.0;
+
+        function getSimilarity(s1, s2) {
+            if (s1 === s2) return 1.0;
+            if (s1.length === 0 || s2.length === 0) return 0.0;
+            const track = Array(s2.length + 1).fill(null).map(function () { return Array(s1.length + 1).fill(null); });
+            for (let i = 0; i <= s1.length; i++) track[0][i] = i;
+            for (let j = 0; j <= s2.length; j++) track[j][0] = j;
+            for (let j = 1; j <= s2.length; j++) {
+                for (let i = 1; i <= s1.length; i++) {
+                    const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                    track[j][i] = Math.min(track[j][i - 1] + 1, track[j - 1][i] + 1, track[j - 1][i - 1] + indicator);
+                }
+            }
+            return 1 - (track[s2.length][s1.length] / Math.max(s1.length, s2.length));
+        }
+
+        const LETTER_VARIANTS_RAW = {
+            'ا': ['ا','ألف','الف','أليب','اليف','ألفا','الفا','همزة','همزه','ء','alif','alef','aleph','elif','hamza','hamzah','hamsa'],
+            'ب': ['ب','باء','با','بى','به','بيه','بي','ba','baa','bah','beh','be','b'],
+            'ت': ['ت','تاء','تا','تى','ته','تيه','تي','ta','taa','tah','teh','te','t'],
+            'ث': ['ث','ثاء','ثا','ثى','ثه','ثيه','ثي','tha','thaa','thah','theh','the','th'],
+            'ج': ['ج','جيم','جي','جم','جى','جيه','jim','jeem','jem','jeh','ji','j'],
+            'ح': ['ح','حاء','حا','حى','حه','حيه','ha','haa','hah','heh','h'],
+            'خ': ['خ','خاء','خا','خى','خه','خيه','kha','khaa','khah','kheh','kh'],
+            'د': ['د','دال','دا','دل','دى','ده','dal','daal','dahl','da','d'],
+            'ذ': ['ذ','ذال','ذا','ذل','ذى','ذه','dhal','dhaal','thal','zal','zhal','dh','dha'],
+            'ر': ['ر','راء','را','رى','ره','ريه','ra','raa','rah','reh','r'],
+            'ز': ['ز','زاي','زا','زى','زاء','زي','زيه','za','zaa','zay','zai','zah','zeh','z'],
+            'س': ['س','سين','سي','سن','سى','سيه','sa','saa','sin','seen','seh','s'],
+            'ش': ['ش','شين','شي','شن','شى','شيه','sha','shaa','shin','sheen','sheh','sh'],
+            'ص': ['ص','صاد','صا','صد','صى','صه','sa','saa','sad','saad','swad','sah','s'],
+            'ض': ['ض','ضاد','ضا','ضد','ضى','ضه','da','daa','dad','daad','dwad','dah','d'],
+            'ط': ['ط','طاء','طا','طه','طى','طيه','ta','taa','tah','twah','t'],
+            'ظ': ['ظ','ظاء','ظا','ظه','ظى','ظيه','za','zaa','zah','dha','dhaa','dhah','z'],
+            'ع': ['ع','عين','عي','عن','عى','عيه','a','aa','ain','ayn','ayin','ein'],
+            'غ': ['غ','غين','غي','غن','غى','غيه','gha','ghaa','ghain','ghayn','ghin','gh'],
+            'ف': ['ف','فاء','فا','فه','فى','فيه','fa','faa','fah','feh','f'],
+            'ق': ['ق','قاف','قا','قف','قى','قيه','qa','qaa','qaf','qah','q'],
+            'ك': ['ك','كاف','كا','كف','كى','كيه','ka','kaa','kaf','kah','k'],
+            'ل': ['ل','لام','لا','لم','لى','ليه','la','laa','lam','lah','l'],
+            'م': ['م','ميم','مي','مم','مى','ميه','ma','maa','mim','meem','mah','m'],
+            'ن': ['ن','نون','نو','نن','نى','نيه','na','naa','nun','noon','nah','n'],
+            'ه': ['ه','هاء','ها','هه','هى','هيه','ha','haa','hah','heh','h'],
+            'و': ['و','واو','وا','وو','وى','ويه','wa','waa','waw','wow','wah','w'],
+            'ي': ['ي','ياء','يا','يه','يى','ييه','ya','yaa','yah','yeh','y']
+        };
+        const LETTER_VARIANTS = (function () {
+            const map = {};
+            const keys = Object.keys(LETTER_VARIANTS_RAW);
+            for (let ki = 0; ki < keys.length; ki++) {
+                const letter = keys[ki];
+                const key = normalizeArabicAggressive(letter);
+                if (!key) continue;
+                if (!map[key]) map[key] = {};
+                const arr = LETTER_VARIANTS_RAW[letter];
+                for (let i = 0; i < arr.length; i++) {
+                    const nv = normalizeArabicAggressive(arr[i]);
+                    if (nv) map[key][nv] = true;
+                }
+            }
+            return map;
+        })();
+
+        function getLetterCore(text) { return (text || '').replace(/[\u064B-\u065F\u0670\u0640\u06D6-\u06ED]/g, '').trim(); }
+        function getTargetLetters(text) {
+            return (text || '').replace(/[\u064B-\u065F\u0670\u0640\u06D6-\u06ED]/g, '').replace(/[^\u0621-\u064A]/g, '').split('');
+        }
+
+        function matchSingleLetter(targetLetter, spoken) {
+            const normTarget = normalizeArabic(targetLetter);
+            const normSpoken = normalizeArabic(spoken);
+            if (!normTarget || !normSpoken) return false;
+            if (normSpoken === normTarget) return true;
+            const aggTarget = normalizeArabicAggressive(targetLetter);
+            const variants = LETTER_VARIANTS[aggTarget];
+            if (variants) {
+                const vk = Object.keys(variants);
+                for (let i = 0; i < vk.length; i++) if (normSpoken === vk[i]) return true;
+            }
+            if (normSpoken.length <= 2 && normSpoken.charAt(0) === normTarget.charAt(0)) return true;
+            return false;
+        }
+
+        function getLetterOptions(key) {
+            const set = {};
+            if (key) set[key] = true;
+            if (childMode) {
+                const aggKey = normalizeArabicAggressive(key);
+                const variants = LETTER_VARIANTS[aggKey];
+                if (variants) {
+                    const vk = Object.keys(variants);
+                    for (let i = 0; i < vk.length; i++) if (vk[i]) set[vk[i]] = true;
+                }
+            }
+            return Object.keys(set).sort(function (a, b) { return b.length - a.length; });
+        }
+
+        function matchLettersDetailed(target, spoken) {
+            const letters = getTargetLetters(target);
+            const spokenNorm = normalizeArabicKeepSpaces(spoken);
+            const missing = [];
+            if (!spokenNorm) return { ok: false, missing: letters, matched: 0 };
+            let pos = 0;
+            for (let li = 0; li < letters.length; li++) {
+                const letter = letters[li];
+                const key = normalizeArabic(letter);
+                if (!key) continue;
+                const options = getLetterOptions(key);
+                let foundAt = -1, foundLen = 0;
+                for (let i = pos; i < spokenNorm.length && foundAt === -1; i++) {
+                    for (let o = 0; o < options.length; o++) {
+                        const opt = options[o];
+                        if (opt && spokenNorm.indexOf(opt, i) === i) { foundAt = i; foundLen = opt.length; break; }
+                    }
+                }
+                if (foundAt === -1) missing.push(letter);
+                else pos = foundAt + foundLen;
+            }
+            const matched = letters.length - missing.length;
+            return { ok: missing.length === 0, missing: missing, matched: matched };
+        }
+
+        function matchAllLetters(target, spoken) {
+            const letters = getTargetLetters(target);
+            if (letters.length === 0) return false;
+            const res = matchLettersDetailed(target, spoken);
+            if (res.ok) return true;
+            if (requiredCoverage >= 1.0) return false;
+            if (letters.length < 4) return false;
+            return (res.matched / letters.length) >= requiredCoverage;
+        }
+
+        function matchWord(target, spoken) {
+            const normTarget = normalizeArabic(target);
+            const normSpoken = normalizeArabic(spoken);
+            if (!normTarget || !normSpoken) return false;
+            if (normSpoken === normTarget) return true;
+            const minRatio = engineProfile.isCloud ? 0.78 : 0.85;
+            if (normSpoken.length < normTarget.length * minRatio) return false;
+            const threshold = engineProfile.isCloud
+                ? Math.max(0.6, requiredSimilarity)
+                : Math.max(0.7, requiredSimilarity);
+            return getSimilarity(normSpoken, normTarget) >= threshold;
+        }
+
+        function addSpokenChunk(text) {
+            text = (text || '').trim();
+            if (!text) return;
+            const norm = normalizeArabic(text);
+            if (!norm) return;
+            for (let i = 0; i < spokenChunks.length; i++) {
+                const cn = normalizeArabic(spokenChunks[i]);
+                if (cn === norm || cn.indexOf(norm) !== -1) return;
+            }
+            spokenChunks = spokenChunks.filter(function (c) { return norm.indexOf(normalizeArabic(c)) === -1; });
+            spokenChunks.push(text);
+        }
+        function getSpokenCandidates() {
+            if (spokenChunks.length === 0) return [];
+            if (spokenChunks.length === 1) return [spokenChunks[0]];
+            return spokenChunks.concat([spokenChunks.join(' ')]);
+        }
+        function resetSpokenChunks() { spokenChunks = []; spokenBuffer = []; }
+        function addToBuffer(transcript) {
+            const norm = normalizeArabic(transcript);
+            if (!norm) return;
+            spokenBuffer.push(norm);
+            if (spokenBuffer.length > 6) spokenBuffer.shift();
+        }
+        function bufferContainsWord(target) {
+            if (spokenBuffer.length === 0) return false;
+            if (matchAllLetters(target, spokenBuffer.join(''))) return true;
+            for (let i = 0; i < spokenBuffer.length; i++) {
+                for (let j = i + 1; j <= spokenBuffer.length; j++) {
+                    if (matchAllLetters(target, spokenBuffer.slice(i, j).join(''))) return true;
+                }
+            }
+            return false;
+        }
+        function bufferCoversCurrentSequence() {
+            for (let start = Math.max(0, currentIndex - 2); start <= currentIndex; start++) {
+                const seq = currentWords.slice(start, currentIndex + 1).join('');
+                if (matchAllLetters(seq, spokenBuffer.join(''))) {
+                    for (let k = start; k < currentIndex; k++) {
+                        const c = currentCells[k];
+                        if (!c) continue;
+                        if (c.className.indexOf('correct') === -1) currentTestScore++;
+                        c.classList.remove('highlight', 'incorrect');
+                        c.classList.add('correct');
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let micAvailable = !!SpeechRecognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ar-SA';
+            recognition.interimResults = true;
+            recognition.continuous = true;
+            recognition.maxAlternatives = 5;
+        }
+
+        // =========================================================
+        // (rest of the app logic continues unchanged)
+        // For brevity in this answer the remaining functions are
+        // identical to the original file. They are included below.
+        // =========================================================
+
+        // ---- render helpers ----
+        function renderGrid(id, data, translits) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+            for (let i = 0; i < data.length; i++) {
+                const div = document.createElement('div');
+                div.className = 'grid-cell' + (translits ? ' has-translit' : '');
+                let html = '<span class="ar">' + data[i] + '</span>';
+                if (translits && translits[i]) html += '<span class="translit">' + translits[i] + '</span>';
+                div.innerHTML = html;
+                el.appendChild(div);
+            }
+        }
+        function renderPracticeGrid(id, data) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+            for (let i = 0; i < data.length; i++) {
+                const div = document.createElement('div');
+                div.className = 'practice-cell';
+                div.innerHTML = '<span class="ar">' + data[i] + '</span>';
+                el.appendChild(div);
+            }
+        }
+
+        const AUTO_SKIP = ['screen-1','screen-2','screen-3','screen-4','screen-5','screen-6','screen-7','screen-8','screen-9','screen-10','screen-13','screen-15','screen-18'];
+
+        function injectScoreUI() {
+            const screens = document.querySelectorAll('.screen');
+            for (let i = 0; i < screens.length; i++) {
+                const screen = screens[i];
+                if (AUTO_SKIP.indexOf(screen.id) !== -1) continue;
+                const h2 = screen.querySelector('h2');
+                if (!h2) continue;
+                if (screen.querySelector('.score-progress-container')) continue;
+                const totalCells = screen.querySelectorAll('.grid-cell, .practice-cell').length;
+                const container = document.createElement('div');
+                container.className = 'score-progress-container';
+                container.dataset.scoreKey = screen.id;
+                container.innerHTML =
+                    '<div class="score-info">' +
+                        '<span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">' + totalCells + '</span></span>' +
+                        '<span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">' + totalCells + '</span></span>' +
+                        '<span class="completion-badge">✓ Completed</span>' +
+                    '</div>' +
+                    '<div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>';
+                const btn = screen.querySelector('.btn-start-test');
+                if (btn) btn.insertAdjacentElement('afterend', container);
+                else h2.insertAdjacentElement('afterend', container);
+                container.dataset.populated = '1';
+            }
+        }
+
+        function populateCustomScores() {
+            const containers = document.querySelectorAll('.score-progress-container[data-score-key]');
+            for (let i = 0; i < containers.length; i++) {
+                const container = containers[i];
+                if (container.dataset.populated === '1') continue;
+                const screenEl = container.closest('.screen');
+                if (!screenEl) continue;
+                let total = 0;
+                const grids = screenEl.querySelectorAll('.practice-grid, .grid-row, .ayah-grid');
+                for (let g = 0; g < grids.length; g++) {
+                    total += grids[g].querySelectorAll('.practice-cell, .grid-cell').length;
+                }
+                if (!total) {
+                    const allCells = screenEl.querySelectorAll('.grid-cell, .practice-cell').length;
+                    const allCon = screenEl.querySelectorAll('.score-progress-container').length || 1;
+                    total = Math.round(allCells / allCon);
+                }
+                const cc = container.querySelector('.correct-count');
+                const tc = container.querySelector('.total-count');
+                const tcB = container.querySelector('.total-count-b');
+                if (tc) tc.textContent = total;
+                if (tcB) tcB.textContent = total;
+                if (cc) cc.textContent = '0';
+                container.dataset.populated = '1';
+            }
+        }
+
+        function refreshAllBestScores() {
+            const cs = document.querySelectorAll('.score-progress-container');
+            for (let i = 0; i < cs.length; i++) {
+                const c = cs[i];
+                const key = c.dataset.scoreKey;
+                if (!key) continue;
+                const b = getBestScore(key);
+                const bestVal = c.querySelector('.best-score-val');
+                if (bestVal) bestVal.textContent = b;
+            }
+        }
+
+        function switchScreen(id, tab) {
+            try { stopTest(); } catch (e) {}
+            const screens = document.querySelectorAll('.screen');
+            for (let i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+            const target = document.getElementById(id);
+            if (target) target.classList.add('active');
+            const tabs = document.querySelectorAll('.nav-tab');
+            for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+            if (tab) tab.classList.add('active');
+            if (id === 'screen-18') { try { updateMicTestScreen(); } catch (e) {} }
+            const marked = document.querySelectorAll('.grid-cell.correct, .grid-cell.incorrect, .practice-cell.correct, .practice-cell.incorrect');
+            for (let i = 0; i < marked.length; i++) marked[i].classList.remove('correct', 'incorrect');
+            try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+        }
+
+        function renderResetPreview() {
+            const container = document.getElementById('reset-data-preview');
+            if (!container) return;
+            const keys = [
+                ['screen-4', 'Lesson 4 — Short Vowel Practice'],
+                ['screen-5', "Lesson 5 — Long Vowels (Fat'hah)"],
+                ['screen-6', 'Lesson 6 — Long Vowels (Kasrah)'],
+                ['screen-7', 'Lesson 7 — Long Vowels (Dhammah)'],
+                ['screen-8', 'Lesson 8 — Tanwin'],
+                ['screen-9', 'Lesson 9 — Joined Letters'],
+                ['screen-12', 'Lesson 12 — Stopping Rules'],
+                ['screen-11', 'Lesson 13 — Hamzatul Wasl'],
+                ['screen-14-surah-112', 'Lesson 14 — Surah 112 (Al-Ikhlas)'],
+                ['screen-14-surah-113', 'Lesson 14 — Surah 113 (Al-Falaq)'],
+                ['screen-14-surah-114', 'Lesson 14 — Surah 114 (An-Nas)']
+            ];
+            let html = '<ul style="margin:0;padding-left:20px;font-size:0.9rem;">';
+            let hasAny = false;
+            for (let i = 0; i < keys.length; i++) {
+                const k = keys[i][0], label = keys[i][1];
+                const b = getBestScore(k);
+                if (b > 0) { html += '<li><strong>' + label + '</strong>: ' + b + ' correct</li>'; hasAny = true; }
+            }
+            html += '</ul>';
+            const totalTests = parseInt(localStorage.getItem(TOTAL_TESTS_KEY) || '0', 10);
+            html += '<p style="margin-top:10px;font-size:0.85rem;color:var(--text-light);">Total test attempts: <strong>' + totalTests + '</strong></p>';
+            if (!hasAny) html = '<p style="font-size:0.9rem;">No saved scores yet. Take a test to record a score.</p>' + html;
+            container.innerHTML = html;
+        }
+
+        function resetApp() {
+            if (!confirm('⚠️ Are you sure you want to reset all scores, progress, and preferences? This cannot be undone.')) return;
+            const keys = Object.keys(localStorage).filter(function (k) { return k.indexOf('art_') === 0; });
+            for (let i = 0; i < keys.length; i++) localStorage.removeItem(keys[i]);
+            cachedVoice = null;
+            engineProfile = defaultEngineProfile();
+            saveEngineProfile(engineProfile);
+            refreshAllBestScores();
+            updateInstallPill();
+            showToast('✅ All data has been reset.');
+        }
+
+        let deferredPrompt = null;
+        let isInstalled = false;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            updateInstallPill();
+        });
+        window.addEventListener('appinstalled', function () {
+            deferredPrompt = null; isInstalled = true;
+            showToast('🎉 App installed!');
+            updateInstallUI(); updateInstallPill();
+        });
+
+        function detectPlatform() {
+            const ua = navigator.userAgent || '';
+            const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isAndroid = /Android/i.test(ua);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            return { ua: ua, isIOS: isIOS, isAndroid: isAndroid, isStandalone: isStandalone };
+        }
+        function dismissInstallPill() {
+            const p = document.getElementById('install-pill');
+            if (p) p.classList.add('hidden');
+            localStorage.setItem('art_install_dismissed', '1');
+            showToast('Install notice dismissed.');
+        }
+        function installFromPill() {
+            const plat = detectPlatform();
+            if (plat.isStandalone || isInstalled) { dismissInstallPill(); return; }
+            if (deferredPrompt) triggerInstall();
+            else showToast('Use your browser menu to add this app to your home screen.');
+        }
+        function updateInstallPill() {
+            const pill = document.getElementById('install-pill');
+            if (!pill) return;
+            const dismissed = localStorage.getItem('art_install_dismissed') === '1';
+            const plat = detectPlatform();
+            if (dismissed || plat.isStandalone || isInstalled) pill.classList.add('hidden');
+            else pill.classList.remove('hidden');
+        }
+        function updateInstallUI() {
+            const plat = detectPlatform();
+            const badge = document.getElementById('platform-badge');
+            const statusText = document.getElementById('install-status-text');
+            const installBtn = document.getElementById('install-btn');
+            const instrDiv = document.getElementById('install-instructions');
+            const instrContent = document.getElementById('instructions-content');
+            if (!badge) return;
+            if (plat.isStandalone || isInstalled) {
+                badge.textContent = '✅ Installed';
+                statusText.textContent = 'This app is already installed and running in standalone mode.';
+                installBtn.style.display = 'none'; instrDiv.style.display = 'none'; return;
+            }
+            if (plat.isIOS) badge.textContent = '📱 iOS Device';
+            else if (plat.isAndroid) badge.textContent = '📱 Android Device';
+            else badge.textContent = '💻 Desktop';
+            if (deferredPrompt) {
+                statusText.textContent = 'Great news! This app can be installed automatically on your device.';
+                installBtn.style.display = 'block'; instrDiv.style.display = 'none'; return;
+            }
+            installBtn.style.display = 'none';
+            instrDiv.style.display = 'block';
+            let html = '';
+            if (plat.isIOS) {
+                statusText.textContent = 'Automatic install is not available on iOS. Follow the steps below:';
+                html = '<div class="instruction-box"><p><strong>Safari (iPhone/iPad):</strong></p><ol><li>Tap the <strong>Share</strong> button (square with arrow) at the bottom.</li><li>Scroll down and tap <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong> in the top-right corner.</li></ol></div><p style="font-size:0.85rem;color:var(--text-light);">Note: This must be done in Safari.</p>';
+            } else if (plat.isAndroid) {
+                statusText.textContent = 'Follow these steps to add the app to your home screen:';
+                html = '<div class="instruction-box"><p><strong>Chrome (Android):</strong></p><ol><li>Tap the <strong>⋮ menu</strong> (three dots) in the top-right.</li><li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm by tapping <strong>Install</strong> or <strong>Add</strong>.</li></ol></div>';
+            } else {
+                statusText.textContent = 'Follow these steps to install on your desktop:';
+                html = '<div class="instruction-box"><p><strong>Chrome / Edge (Desktop):</strong></p><ol><li>Look for the <strong>install icon</strong> in the address bar.</li><li>Click it and select <strong>Install</strong>.</li></ol></div>';
+            }
+            instrContent.innerHTML = html;
+        }
+        function triggerInstall() {
+            if (!deferredPrompt) {
+                showToast('Install prompt not available. Follow the instructions.');
+                updateInstallUI(); return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function (choice) {
+                if (choice.outcome === 'accepted') showToast('🎉 Installing...');
+                else showToast('Installation cancelled.');
+                deferredPrompt = null;
+                updateInstallUI(); updateInstallPill();
+            });
+        }
+
+        function closeQrOverlay() {
+            const overlay = document.getElementById('qr-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        function handleQrOverlayClick(e) { if (e.target === e.currentTarget) closeQrOverlay(); }
+
+        function enterPracticeOnlyMode(reason) {
+            micAvailable = false;
+            const banner = document.getElementById('practice-banner');
+            if (banner) {
+                banner.textContent = '🎧 ' + (reason || 'Microphone unavailable — Practice Mode only. Tap any word to hear it read aloud.');
+                banner.classList.add('show');
+            }
+            const btns = document.querySelectorAll('.btn-start-test');
+            for (let i = 0; i < btns.length; i++) { btns[i].disabled = true; btns[i].textContent = 'Practice Only'; }
+        }
+
+        function computeWordTimeout(target) {
+            const letters = Math.max(1, getTargetLetters(target).length);
+            const base = Math.max(engineProfile.firstInterimMs, 400) * 1.5 +
+                         engineProfile.finalAfterEndMs * 2.5 +
+                         letters * 850;
+            const padded = engineProfile.isCloud ? base * 1.25 : base * 1.12;
+            return Math.max(4000, Math.min(24000, Math.round(padded)));
+        }
+
+        // ---- Test‑mode state ----
+        let isTestMode = false;
+        let isTransitioning = false;
+        let isRecognizing = false;
+        let isPaused = false;
+        let pendingAdvance = false;
+        let currentWords = [];
+        let currentIndex = 0;
+        let currentCells = [];
+        let currentScreenId = '';
+        let currentScoreKey = '';
+        let currentGridId = null;
+        let currentStartBtn = null;
+        let currentTestScore = 0;
+        let timerAnimation = null;
+        let hasSpoken = false;
+        let spokenChunks = [];
+        let spokenBuffer = [];
+        let silenceStartTime = 0;
+        const SILENCE_DURATION = 7000;
+        let WORD_TIMEOUT = 15000;
+        let wordTimerActive = false;
+        let wordDeadline = 0;
+        let wordTimeRemaining = WORD_TIMEOUT;
+        let lastSecondsShown = -1;
+        let listeningStartedAt = 0;
+        let speechEndedAt = 0;
+        let firstInterimObserved = false;
+        let consecutiveFailures = 0;
+        let wordsScored = 0;
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._hideTimer);
+            t._hideTimer = setTimeout(function () { t.classList.remove('show'); }, 3000);
+        }
+
+        function startTimerLoop() {
+            cancelAnimationFrame(timerAnimation);
+            const timerFill = document.getElementById('timer-fill');
+            function animate() {
+                if (!isTestMode || isPaused) return;
+                const now = Date.now();
+                if (wordTimerActive) {
+                    const remaining = wordDeadline - now;
+                    const progress = Math.max(0, Math.min(1, remaining / WORD_TIMEOUT));
+                    if (timerFill) {
+                        timerFill.style.transform = 'scaleX(' + progress + ')';
+                        if (progress <= 0.34) timerFill.classList.add('low');
+                        else timerFill.classList.remove('low');
+                    }
+                    const secs = Math.max(0, Math.ceil(remaining / 1000));
+                    if (secs !== lastSecondsShown) {
+                        lastSecondsShown = secs;
+                        updateStatus('⏱ ' + secs + 's — Word ' + (currentIndex + 1) + ' of ' + currentWords.length);
+                    }
+                    if (remaining <= 0) { markIncorrect(); return; }
+                }
+                if (now - silenceStartTime >= SILENCE_DURATION) { pauseTest(); return; }
+                timerAnimation = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+        function resetWordTimer() {
+            const target = currentWords[currentIndex] || '';
+            WORD_TIMEOUT = computeWordTimeout(target);
+            wordTimerActive = true;
+            wordTimeRemaining = WORD_TIMEOUT;
+            wordDeadline = Date.now() + WORD_TIMEOUT;
+            lastSecondsShown = -1;
+            const timerFill = document.getElementById('timer-fill');
+            if (timerFill) {
+                timerFill.style.transform = 'scaleX(1)';
+                timerFill.classList.remove('low');
+            }
+        }
+        function freezeWordTimer() { if (wordTimerActive) wordTimeRemaining = Math.max(0, wordDeadline - Date.now()); }
+        function unfreezeWordTimer() { if (wordTimerActive) wordDeadline = Date.now() + wordTimeRemaining; }
+        function clearWordTimer() { wordTimerActive = false; wordTimeRemaining = WORD_TIMEOUT; wordDeadline = 0; lastSecondsShown = -1; }
+        function resetSilenceTimer() { silenceStartTime = Date.now(); }
+
+        function scrollToHighlightedCell(cell) {
+            if (!cell) return;
+            cell.scrollLeft = 0;
+            requestAnimationFrame(function () {
+                const panel = document.getElementById('test-panel');
+                let offset = 24;
+                if (panel && panel.classList.contains('active')) offset = 8 + panel.offsetHeight + 16;
+                const rect = cell.getBoundingClientRect();
+                const targetY = window.scrollY + rect.top - offset;
+                if (Math.abs(window.scrollY - targetY) < 12) return;
+                window.scrollTo({ top: Math.max(targetY, 0), behavior: 'smooth' });
+            });
+        }
+        function getCurrentScoreContainer() {
+            if (currentGridId) return document.querySelector('.score-progress-container[data-score-key="' + currentScoreKey + '"]');
+            const screenEl = document.getElementById(currentScreenId);
+            return screenEl ? screenEl.querySelector('.score-progress-container') : null;
+        }
+        function updateHeardLine(text, isBad) {
+            const el = document.getElementById('heard-line');
+            if (!el) return;
+            if (text) {
+                el.textContent = text;
+                el.classList.add('show');
+                if (isBad) el.classList.add('bad'); else el.classList.remove('bad');
+            } else {
+                el.textContent = '';
+                el.classList.remove('show', 'bad');
+            }
+        }
+        function clearHeardLine() { updateHeardLine(''); }
+        function updateTargetWord(text) { const el = document.getElementById('target-word'); if (el) el.textContent = text || ''; }
+        function updateStatus(text) {
+            if (!currentScoreKey) return;
+            const el = document.getElementById('status-' + currentScoreKey);
+            if (el) el.textContent = text;
+        }
+        function updateMicIndicator(isListening) {
+            const status = document.getElementById('mic-status');
+            const text = document.getElementById('mic-text');
+            if (!status || !text) return;
+            if (isListening) { status.classList.add('listening'); text.textContent = 'Listening...'; }
+            else { status.classList.remove('listening'); text.textContent = 'Mic Off'; }
+        }
+
+        function setPhraseHintsForWords(words) {
+            if (!recognition || !engineProfile.supportsPhraseHints) return;
+            try {
+                const cleaned = [];
+                const seen = {};
+                for (let i = 0; i < words.length; i++) {
+                    const stripped = (words[i] || '').replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '').trim();
+                    if (!stripped || seen[stripped]) continue;
+                    seen[stripped] = true;
+                    if (cleaned.length < 900) cleaned.push(stripped);
+                }
+                const phrases = [];
+                for (let i = 0; i < cleaned.length; i++) phrases.push(new SpeechRecognitionPhrase(cleaned[i], 1.0));
+                recognition.phrases = phrases;
+            } catch (e) {}
+        }
+        function clearPhraseHints() { if (!recognition) return; try { recognition.phrases = []; } catch (e) {} }
+
+        function handleTestButton(btn) {
+            if (isTestMode && currentStartBtn === btn) stopTest();
+            else startTest(btn.dataset.screen, btn.dataset.grid || null, btn.dataset.scoreKey || null, btn);
+        }
+
+        function startTest(screenId, gridId, scoreKey, btnEl) {
+            if (!micAvailable) { showToast('🎧 Practice Mode — microphone unavailable on this device.'); return; }
+            if (!recognition) { enterPracticeOnlyMode('Speech recognition is not available in this browser.'); return; }
+            stopTest();
+
+            currentScreenId = screenId;
+            currentScoreKey = scoreKey || screenId;
+            currentGridId = gridId || null;
+            currentStartBtn = btnEl || document.querySelector('#' + screenId + ' .btn-start-test');
+
+            recognition.lang = 'ar-SA';
+
+            isTestMode = true;
+            isPaused = false;
+            isTransitioning = false;
+            pendingAdvance = false;
+            currentIndex = 0;
+            currentTestScore = 0;
+            resetSpokenChunks();
+            clearHeardLine();
+            updateTargetWord('');
+            clearWordTimer();
+            listeningStartedAt = 0;
+            speechEndedAt = 0;
+            firstInterimObserved = false;
+            consecutiveFailures = 0;
+            wordsScored = 0;
+
+            let cells;
+            if (currentGridId) {
+                const grid = document.getElementById(currentGridId);
+                cells = grid ? grid.querySelectorAll('.practice-cell, .grid-cell') : [];
+            } else {
+                const screenEl = document.getElementById(screenId);
+                cells = screenEl.querySelectorAll('.grid-cell, .practice-cell');
+            }
+            currentWords = [];
+            for (let i = 0; i < cells.length; i++) {
+                const ar = cells[i].querySelector('.ar');
+                const w = ar ? ar.textContent.trim() : '';
+                if (w) currentWords.push(w);
+            }
+            currentCells = Array.prototype.slice.call(cells);
+
+            const cleared = document.querySelectorAll('.grid-cell.correct, .grid-cell.incorrect, .practice-cell.correct, .practice-cell.incorrect');
+            for (let i = 0; i < cleared.length; i++) cleared[i].classList.remove('correct', 'incorrect');
+
+            setPhraseHintsForWords(currentWords);
+
+            const scoreContainer = getCurrentScoreContainer();
+            if (scoreContainer) {
+                const cc = scoreContainer.querySelector('.correct-count');
+                const tc = scoreContainer.querySelector('.total-count');
+                const pb = scoreContainer.querySelector('.progress-bar-fill');
+                const cb = scoreContainer.querySelector('.completion-badge');
+                if (cc) cc.textContent = '0';
+                if (tc) tc.textContent = currentWords.length;
+                if (pb) pb.style.width = '0%';
+                if (cb) cb.style.display = 'none';
+            }
+
+            const screens = document.querySelectorAll('.screen');
+            for (let i = 0; i < screens.length; i++) screens[i].classList.remove('test-mode-active');
+            const activeScreen = document.getElementById(screenId);
+            if (activeScreen) activeScreen.classList.add('test-mode-active');
+            const tabs = document.querySelectorAll('.nav-tab');
+            for (let i = 0; i < tabs.length; i++) tabs[i].classList.add('disabled');
+
+            if (currentStartBtn) currentStartBtn.style.display = 'none';
+
+            const panel = document.getElementById('test-panel');
+            if (panel) panel.classList.add('active');
+            const pc = document.getElementById('pause-controls');
+            if (pc) pc.classList.remove('show');
+            const psb = document.getElementById('panel-stop-btn');
+            if (psb) psb.classList.add('show');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            updateStatus('Get ready...');
+            setTimeout(function () { if (isTestMode) nextWord(); }, 1000);
+        }
+
+        function stopTest() {
+            if (!isTestMode && !isPaused) return;
+            isTestMode = false;
+            isPaused = false;
+            hasSpoken = false;
+            resetSpokenChunks();
+            isTransitioning = false;
+            pendingAdvance = false;
+            cancelAnimationFrame(timerAnimation);
+            clearWordTimer();
+            if (recognition) {
+                try { recognition.abort(); } catch (e) {}
+                recognition.lang = 'ar-SA';
+            }
+            isRecognizing = false;
+            updateMicIndicator(false);
+            clearHeardLine();
+            updateTargetWord('');
+            clearPhraseHints();
+
+            if (currentStartBtn) {
+                currentStartBtn.style.display = '';
+                currentStartBtn.textContent = 'Start Test';
+                currentStartBtn.classList.remove('btn-stop');
+                currentStartBtn = null;
+            }
+
+            const screens = document.querySelectorAll('.screen');
+            for (let i = 0; i < screens.length; i++) screens[i].classList.remove('test-mode-active');
+            const tabs = document.querySelectorAll('.nav-tab');
+            for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove('disabled');
+            const highlighted = document.querySelectorAll('.grid-cell.highlight, .practice-cell.highlight');
+            for (let i = 0; i < highlighted.length; i++) highlighted[i].classList.remove('highlight');
+
+            const panel = document.getElementById('test-panel');
+            if (panel) panel.classList.remove('active');
+            const pc = document.getElementById('pause-controls');
+            if (pc) pc.classList.remove('show');
+            const psb = document.getElementById('panel-stop-btn');
+            if (psb) psb.classList.remove('show');
+
+            const timerFill = document.getElementById('timer-fill');
+            if (timerFill) { timerFill.style.transform = 'scaleX(1)'; timerFill.classList.remove('low'); }
+
+            if (currentScoreKey) {
+                const statusEl = document.getElementById('status-' + currentScoreKey);
+                if (statusEl) statusEl.textContent = '';
+            }
+            currentScreenId = '';
+            currentScoreKey = '';
+            currentGridId = null;
+        }
+
+        function pauseTest() {
+            if (!isTestMode || isPaused) return;
+            isPaused = true;
+            cancelAnimationFrame(timerAnimation);
+            freezeWordTimer();
+            if (recognition) { try { recognition.abort(); } catch (e) {} }
+            isRecognizing = false;
+            updateMicIndicator(false);
+            const pc = document.getElementById('pause-controls');
+            if (pc) pc.classList.add('show');
+            const psb = document.getElementById('panel-stop-btn');
+            if (psb) psb.classList.remove('show');
+            updateStatus('⏸ Paused — silence detected. Press Continue or Stop.');
+        }
+
+        function resumeTest() {
+            if (!isTestMode || !isPaused) return;
+            isPaused = false;
+            const pc = document.getElementById('pause-controls');
+            if (pc) pc.classList.remove('show');
+            const psb = document.getElementById('panel-stop-btn');
+            if (psb) psb.classList.add('show');
+            if (pendingAdvance || isTransitioning) {
+                pendingAdvance = false;
+                isTransitioning = false;
+                nextWord();
+                return;
+            }
+            unfreezeWordTimer();
+            lastSecondsShown = -1;
+            updateStatus('Listening... (Word ' + (currentIndex + 1) + ' of ' + currentWords.length + ')');
+            resetSilenceTimer();
+            startListening();
+            startTimerLoop();
+        }
+
+        function nextWord() {
+            if (!isTestMode || isPaused) return;
+            for (let i = 0; i < currentCells.length; i++) currentCells[i].classList.remove('highlight');
+            clearHeardLine();
+            updateTargetWord('');
+
+            const scoreContainer = getCurrentScoreContainer();
+            if (scoreContainer) {
+                const cc = scoreContainer.querySelector('.correct-count');
+                if (cc) cc.textContent = currentTestScore;
+                const progress = (currentIndex / currentWords.length) * 100;
+                const pb = scoreContainer.querySelector('.progress-bar-fill');
+                if (pb) pb.style.width = Math.min(progress, 100) + '%';
+            }
+
+            if (currentIndex >= currentWords.length) {
+                const finishedKey = currentScoreKey;
+                const finishedScore = currentTestScore;
+                const finishedTotal = currentWords.length;
+                if (scoreContainer) {
+                    const pb = scoreContainer.querySelector('.progress-bar-fill');
+                    const cb = scoreContainer.querySelector('.completion-badge');
+                    if (pb) pb.style.width = '100%';
+                    if (cb) cb.style.display = 'inline-block';
+                }
+                saveBestScore(finishedKey, finishedScore);
+                refreshAllBestScores();
+                stopTest();
+                const statusEl = document.getElementById('status-' + finishedKey);
+                if (statusEl) statusEl.textContent = '🎉 Test Complete! Score: ' + finishedScore + ' / ' + finishedTotal;
+                return;
+            }
+
+            hasSpoken = false;
+            resetSpokenChunks();
+            isTransitioning = false;
+            pendingAdvance = false;
+
+            const cell = currentCells[currentIndex];
+            if (cell) {
+                cell.classList.add('highlight');
+                scrollToHighlightedCell(cell);
+            }
+            updateStatus('Listening... (Word ' + (currentIndex + 1) + ' of ' + currentWords.length + ')');
+            updateTargetWord(currentWords[currentIndex]);
+            resetWordTimer();
+            resetSilenceTimer();
+            startListening();
+            startTimerLoop();
+        }
+
+        function markCorrect() {
+            if (isTransitioning || isPaused) return;
+            isTransitioning = true;
+            cancelAnimationFrame(timerAnimation);
+            clearWordTimer();
+            if (recognition) { try { recognition.abort(); } catch (e) {} }
+            isRecognizing = false;
+            updateMicIndicator(false);
+            const cell = currentCells[currentIndex];
+            if (cell) { cell.classList.remove('highlight', 'incorrect'); cell.classList.add('correct'); }
+            currentIndex++;
+            currentTestScore++;
+            pendingAdvance = true;
+            consecutiveFailures = 0;
+            wordsScored++;
+            tryAdvance();
+        }
+
+        function markIncorrect() {
+            if (isTransitioning || isPaused || !isTestMode) return;
+            isTransitioning = true;
+            cancelAnimationFrame(timerAnimation);
+            clearWordTimer();
+            if (recognition) { try { recognition.abort(); } catch (e) {} }
+            updateMicIndicator(false);
+            const cell = currentCells[currentIndex];
+            if (cell) { cell.classList.remove('highlight', 'correct'); cell.classList.add('incorrect'); }
+            const wordNo = currentIndex + 1;
+            currentIndex++;
+            pendingAdvance = true;
+            const scoreContainer = getCurrentScoreContainer();
+            if (scoreContainer) {
+                const cc = scoreContainer.querySelector('.correct-count');
+                if (cc) cc.textContent = currentTestScore;
+            }
+            updateHeardLine('❌ Word ' + wordNo + ' timed out — marked incorrect. Moving on…', true);
+            updateStatus('❌ Word ' + wordNo + ' marked incorrect (window elapsed).');
+            consecutiveFailures++;
+            wordsScored++;
+            if (consecutiveFailures >= 3 && wordsScored <= 5) {
+                resetCalibration();
+                consecutiveFailures = 0;
+                showToast('🎧 Recalibrating audio…');
+            }
+            tryAdvance();
+        }
+
+        function tryAdvance() {
+            if (!pendingAdvance) return;
+            if (isRecognizing) return;
+            pendingAdvance = false;
+            if (isTestMode && !isPaused) setTimeout(nextWord, 400);
+        }
+
+        function startListening() {
+            if (!recognition || !isTestMode || isTransitioning || pendingAdvance || isPaused) return;
+            if (isRecognizing) return;
+            try {
+                recognition.start();
+                isRecognizing = true;
+                updateMicIndicator(true);
+            } catch (e) {
+                if (e.name === 'InvalidStateError') { isRecognizing = true; updateMicIndicator(true); }
+                else updateStatus('⚠️ Could not start mic: ' + e.name);
+            }
+        }
+
+        if (recognition) {
+            recognition.onstart = function () { listeningStartedAt = Date.now(); firstInterimObserved = false; };
+            recognition.onspeechstart = function () {
+                if (isTestMode) { hasSpoken = true; if (!isPaused) resetSilenceTimer(); }
+            };
+            recognition.onspeechend = function () { if (isTestMode) speechEndedAt = Date.now(); };
+            recognition.onresult = function (event) {
+                if (!isTestMode || isTransitioning || isPaused) return;
+                hasSpoken = true;
+                resetSilenceTimer();
+                if (!firstInterimObserved && listeningStartedAt) {
+                    observeFirstInterim(Date.now() - listeningStartedAt);
+                    firstInterimObserved = true;
+                }
+                const latest = event.results[event.results.length - 1];
+                if (latest.isFinal && speechEndedAt) {
+                    observeFinalLatency(Date.now() - speechEndedAt);
+                    speechEndedAt = 0;
+                }
+                const alternatives = [];
+                for (let j = 0; j < latest.length; j++) {
+                    const t = (latest[j].transcript || '').trim();
+                    if (t) alternatives.push(t);
+                }
+                if (alternatives.length === 0) return;
+
+                addSpokenChunk(alternatives[0]);
+                addToBuffer(alternatives[0]);
+
+                const target = currentWords[currentIndex];
+                const core = getLetterCore(target);
+                const candidates = alternatives.concat(getSpokenCandidates());
+
+                if (core.length === 1) {
+                    for (let c = 0; c < candidates.length; c++) {
+                        if (matchSingleLetter(core, candidates[c])) { markCorrect(); return; }
+                    }
+                    if (bufferContainsWord(target)) { markCorrect(); return; }
+                } else {
+                    for (let c = 0; c < candidates.length; c++) {
+                        if (matchAllLetters(target, candidates[c])) { markCorrect(); return; }
+                    }
+                    if (bufferContainsWord(target)) { markCorrect(); return; }
+                    for (let c = 0; c < candidates.length; c++) {
+                        if (matchWord(target, candidates[c])) { markCorrect(); return; }
+                    }
+                    const bufferJoined = spokenBuffer.join(' ');
+                    if (bufferJoined && matchWord(target, bufferJoined)) { markCorrect(); return; }
+                }
+
+                const secsLeft = wordTimerActive
+                    ? Math.max(0, Math.ceil((wordDeadline - Date.now()) / 1000))
+                    : Math.ceil(WORD_TIMEOUT / 1000);
+                let msg = '👂 Heard: "' + alternatives[0] + '" (' + secsLeft + 's left)';
+                if (core.length !== 1) {
+                    const cands = getSpokenCandidates();
+                    const best = cands.length ? cands[cands.length - 1] : alternatives[0];
+                    const res = matchLettersDetailed(target, best);
+                    if (res.missing.length) msg += ' — still need: ' + res.missing.join(' ');
+                }
+                updateHeardLine(msg, true);
+            };
+            recognition.onerror = function (e) {
+                if (e.error === 'aborted' || e.error === 'no-speech') return;
+                if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                    if (isTestMode) { updateStatus('⚠️ Microphone blocked. Allow mic access in your browser settings.'); stopTest(); }
+                    enterPracticeOnlyMode('Microphone blocked — Practice Mode only. Tap any word to hear it read aloud.');
+                } else if (e.error === 'audio-capture') {
+                    if (isTestMode) { updateStatus('⚠️ No microphone found.'); stopTest(); }
+                    enterPracticeOnlyMode('No microphone found — Practice Mode only.');
+                } else if (e.error === 'network') {
+                    if (isTestMode) updateStatus('⚠️ Speech service unreachable — check internet.');
+                }
+            };
+            recognition.onend = function () {
+                isRecognizing = false;
+                updateMicIndicator(false);
+                if (!isTestMode || isPaused) return;
+                if (pendingAdvance) { tryAdvance(); return; }
+                if (isTransitioning) return;
+                setTimeout(function () {
+                    if (isTestMode && !isTransitioning && !pendingAdvance && !isRecognizing && !isPaused) startListening();
+                }, 200);
+            };
+        }
+
+        // ---- Mic test (unchanged) ----
+        let micTestActive = false;
+        let micTestTimer = null;
+        let micTestDeadline = 0;
+        let micTestHeard = '';
+        let micTestRecog = null;
+
+        function updateMicTestScreen() {
+            const engineEl = document.getElementById('mic-test-engine');
+            const hintsEl = document.getElementById('mic-test-hints-status');
+            const verdictEl = document.getElementById('mic-test-verdict');
+            const liveEl = document.getElementById('mic-test-live');
+            if (!engineEl) return;
+            if (!SpeechRecognition) {
+                engineEl.innerHTML = '<strong style="color:var(--danger);">No speech recognition API</strong> — Practice Mode only.';
+                if (hintsEl) hintsEl.textContent = 'Not available.';
+                return;
+            }
+            const name = engineProfile.name;
+            const cloudLabel = engineProfile.isCloud ? 'cloud (Google)' : 'on-device';
+            engineEl.innerHTML = 'Browser engine: <strong>' + name + '</strong> — ' + cloudLabel + '<br>' +
+                'Median first interim: <strong>' + Math.round(engineProfile.firstInterimMs) + ' ms</strong> (' + engineProfile.firstInterimSamples + ' samples)<br>' +
+                'Median final after speech end: <strong>' + Math.round(engineProfile.finalAfterEndMs) + ' ms</strong> (' + engineProfile.finalSamples + ' samples)';
+            if (hintsEl) {
+                hintsEl.innerHTML = engineProfile.supportsPhraseHints
+                    ? '✅ <strong>Supported</strong> — phrase hints will be used automatically in tests.'
+                    : '⚠️ <strong>Not supported</strong> — upgrade to Chrome 129+ to enable phrase hints.';
+            }
+            if (verdictEl) {
+                if (verdictEl.className.indexOf('ok') === -1 && verdictEl.className.indexOf('bad') === -1) {
+                    verdictEl.style.display = 'none';
+                }
+            }
+            if (!micTestHeard && liveEl) {
+                liveEl.classList.add('empty');
+                liveEl.textContent = 'Tap Start Mic Test below, then say a letter such as أَبَ or بَ.';
+            }
+        }
+
+        function toggleMicTest() { if (micTestActive) stopMicTest(); else startMicTest(); }
+
+        function startMicTest() {
+            if (!SpeechRecognition) { showToast('🎙 Speech recognition not available in this browser.'); return; }
+            micTestActive = true;
+            micTestHeard = '';
+            const btn = document.getElementById('mic-test-btn');
+            if (btn) { btn.textContent = '■ Stop Mic Test'; btn.classList.add('btn-stop'); }
+            const live = document.getElementById('mic-test-live');
+            if (live) { live.classList.add('empty'); live.textContent = 'Listening…'; }
+            const verdict = document.getElementById('mic-test-verdict');
+            if (verdict) { verdict.style.display = 'none'; verdict.className = 'mic-test-verdict info'; }
+
+            try {
+                micTestRecog = new SpeechRecognition();
+                micTestRecog.lang = 'ar-SA';
+                micTestRecog.interimResults = true;
+                micTestRecog.continuous = true;
+                micTestRecog.maxAlternatives = 5;
+
+                if (engineProfile.supportsPhraseHints) {
+                    try {
+                        const seen = {};
+                        const phrases = [];
+                        const sample = alphabet.concat(shortFatHa.slice(0, 8), shortDhammah.slice(0, 8), shortKasrah.slice(0, 8));
+                        for (let i = 0; i < sample.length; i++) {
+                            const stripped = sample[i].replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '').trim();
+                            if (!stripped || seen[stripped]) continue;
+                            seen[stripped] = true;
+                            phrases.push(new SpeechRecognitionPhrase(stripped, 1.0));
+                        }
+                        micTestRecog.phrases = phrases;
+                    } catch (e) {}
+                }
+
+                micTestRecog.onresult = function (event) {
+                    if (!micTestActive) return;
+                    const latest = event.results[event.results.length - 1];
+                    let best = '';
+                    for (let j = 0; j < latest.length; j++) {
+                        const t = (latest[j].transcript || '').trim();
+                        if (t && t.length > best.length) best = t;
+                    }
+                    if (!best) return;
+                    micTestHeard = best;
+                    micTestDeadline = Date.now() + 30000;
+                    if (live) { live.classList.remove('empty'); live.textContent = best; }
+                    const core = getLetterCore(best).charAt(0);
+                    const v = document.getElementById('mic-test-verdict');
+                    if (v) {
+                        v.style.display = 'block';
+                        if (core && /[\u0621-\u064A]/.test(core)) {
+                            v.className = 'mic-test-verdict ok';
+                            v.textContent = '✅ Mic works — recogniser returned Arabic text.';
+                        } else {
+                            v.className = 'mic-test-verdict info';
+                            v.textContent = '👂 Heard something, but no Arabic letters were recognised. Try saying أَبَ.';
+                        }
+                    }
+                };
+                micTestRecog.onerror = function (e) {
+                    if (e.error === 'aborted' || e.error === 'no-speech') return;
+                    const v = document.getElementById('mic-test-verdict');
+                    if (v) { v.style.display = 'block'; v.className = 'mic-test-verdict bad'; v.textContent = '❌ Error: ' + e.error; }
+                    stopMicTest();
+                };
+                micTestRecog.onend = function () {
+                    if (!micTestActive) return;
+                    setTimeout(function () {
+                        if (!micTestActive || !micTestRecog) return;
+                        try { micTestRecog.start(); }
+                        catch (err) {
+                            if (err.name !== 'InvalidStateError') {
+                                const v = document.getElementById('mic-test-verdict');
+                                if (v) { v.style.display = 'block'; v.className = 'mic-test-verdict bad'; v.textContent = '❌ Could not restart mic: ' + err.name; }
+                                stopMicTest();
+                            }
+                        }
+                    }, 200);
+                };
+                micTestRecog.start();
+                updateMicIndicator(true);
+            } catch (e) {
+                showToast('⚠️ Could not start: ' + (e.name || 'error'));
+                stopMicTest();
+                return;
+            }
+
+            micTestDeadline = Date.now() + 30000;
+            clearTimeout(micTestTimer);
+            (function tick() {
+                if (!micTestActive) return;
+                if (Date.now() >= micTestDeadline) {
+                    if (!micTestHeard) {
+                        const v = document.getElementById('mic-test-verdict');
+                        if (v) { v.style.display = 'block'; v.className = 'mic-test-verdict bad'; v.textContent = '❌ Nothing heard within 30 seconds.'; }
+                    }
+                    stopMicTest();
+                    return;
+                }
+                micTestTimer = setTimeout(tick, 500);
+            })();
+        }
+
+        function stopMicTest() {
+            micTestActive = false;
+            clearTimeout(micTestTimer);
+            micTestTimer = null;
+            if (micTestRecog) { try { micTestRecog.abort(); } catch (e) {} micTestRecog = null; }
+            updateMicIndicator(false);
+            const btn = document.getElementById('mic-test-btn');
+            if (btn) { btn.textContent = '🎙 Start Mic Test'; btn.classList.remove('btn-stop'); }
+            const live = document.getElementById('mic-test-live');
+            if (live && !micTestHeard) {
+                live.classList.add('empty');
+                live.textContent = 'Tap Start Mic Test below, then say a letter such as أَبَ or بَ.';
+            }
+        }
+
+        // =========================================================
+        // FIXED GLOBAL HANDLERS — tap on whole cell + preventDefault
+        // =========================================================
+        function wireGlobalHandlers() {
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { closeQrOverlay(); closeVoiceWizard(); }
+            });
+
+            // -----------------------------------------------------
+            // FIX: tap anywhere inside a cell, and call preventDefault
+            // to stop Android's "Look up / Touch to Search" link bubble.
+            // -----------------------------------------------------
+            document.body.addEventListener('click', function (e) {
+                if (isTestMode) return;
+                const hit = e.target.closest ? e.target.closest('.ar, .grid-cell, .practice-cell') : null;
+                if (!hit) return;
+                e.preventDefault();                                  // stops Android look-up/link bubble
+                const ar = hit.querySelector ? (hit.querySelector('.ar') || hit) : hit;
+                handleArabicTap(ar);
+            });
+
+            if (window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = function () {
+                    cachedVoice = null;
+                    window.speechSynthesis.getVoices();
+                };
+            }
+        }
+
+        // =========================================================
+        // INIT
+        // =========================================================
+
+        // =========================================================
+        // THEME — same moon / sun toggle and storage key as Recite
+        // =========================================================
+        let theme = 'dark';
+        try { theme = localStorage.getItem('qc.theme') === 'light' ? 'light' : 'dark'; } catch (e) {}
+        function applyTheme() {
+            const isLight = theme === 'light';
+            document.body.setAttribute('data-theme', isLight ? 'emerald' : 'midnight');
+            document.body.classList.toggle('light-mode', isLight);
+            const btn = document.getElementById('theme-btn');
+            if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', isLight ? '#f5f7fb' : '#0d1119');
+        }
+        function flipTheme() {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            try { localStorage.setItem('qc.theme', theme); } catch (e) {}
+            applyTheme();
+        }
+        function openReadInfoModal() {
+            if (document.getElementById('read-info-modal-bg')) return;
+            const bg = document.createElement('div');
+            bg.className = 'modal-bg';
+            bg.id = 'read-info-modal-bg';
+            bg.innerHTML = '<div class="modal info-modal" role="dialog" aria-modal="true" aria-label="About Read Arabic">' +
+                '<div class="grabber"></div>' +
+                '<h2>ℹ️ Read Arabic</h2>' +
+                '<p>How the Read Arabic trainer works — the lessons, tapping to listen, the scored tests and what you need for the microphone and voice.</p>' +
+                '<div class="feature"><h3><span class="fnum">1</span> 🚀 Getting started</h3><ul>' +
+                    '<li>Pick a lesson from the tabs at the top — <b>Lesson 1</b> to <b>Lesson 14</b> — and work through them in order.</li>' +
+                    '<li><b>Tap any Arabic letter or word</b> to hear it read aloud.</li>' +
+                    '<li>Use the <b>🌙 / ☀️</b> button to switch between dark and light mode (shared with Recite).</li>' +
+                    '<li>Tap <b>Back</b> (top left) to return to the Recite home screen.</li>' +
+                '</ul></div>' +
+                '<div class="feature"><h3><span class="fnum">2</span> 🎧 Listening mode (practice vs test)</h3><ul>' +
+                    '<li>When you tap a letter or word the app pronounces it aloud with the final Fat\'hah, Dhammah or Kasrah clearly audible. The microphone is <b>not</b> used on tap.</li>' +
+                    '<li>Press <b>Start Test</b> on <b>Lessons 12–14</b> to turn the microphone on and be scored. The mic is used <b>only</b> while a test is running.</li>' +
+                    '<li><b>Lessons 1–11</b> are <b>practice-only</b> — tap any Arabic text to hear it.</li>' +
+                    '<li><b>Lessons 3–11</b> use the Tajweed stopping rule (<b>Madd al-\'Iwad</b>) so the last vowel is lengthened for teaching clarity.</li>' +
+                    '<li><b>Lesson 14</b> (Recite Ayah) covers Surahs 112, 113 and 114.</li>' +
+                    '<li>When a phrase has more than one word, <b>every word must be spoken</b> before it counts.</li>' +
+                '</ul></div>' +
+                '<div class="feature"><h3><span class="fnum">3</span> ⏱ Per-word time window</h3><ul>' +
+                    '<li>Each word gets a fresh time window, tuned to your browser\'s speech recogniser. It calibrates silently from your first answers.</li>' +
+                    '<li>Correct → the cell turns <b style="color:var(--success)">green</b> and the test moves on.</li>' +
+                    '<li>Miss the window → the cell turns <b style="color:var(--danger)">red</b> and the test moves on automatically.</li>' +
+                    '<li>The bar turns red during the final seconds.</li>' +
+                '</ul></div>' +
+                '<div class="feature"><h3><span class="fnum">4</span> ⏸ Silence pause</h3><ul>' +
+                    '<li>If no speech is heard for <b>7 seconds</b>, the test pauses and the mic switches off.</li>' +
+                    '<li>Press <b>▶ Continue</b> to resume, or <b>■ Stop Test</b> to end.</li>' +
+                '</ul></div>' +
+                '<div class="feature"><h3><span class="fnum">5</span> 🌐 Browser requirements</h3><ul>' +
+                    '<li>Speech recognition needs <b>Google Chrome</b>, <b>Microsoft Edge</b> or <b>Safari</b>, served over <b>HTTPS</b> or localhost.</li>' +
+                    '<li>If you see a "Microphone blocked" warning, allow mic access in your browser settings.</li>' +
+                    '<li>Some phones sold in mainland China have no speech-recognition engine. The app then switches to <b>Practice Mode</b> — you can still tap any Arabic text to hear it.</li>' +
+                '</ul></div>' +
+                '<div class="feature"><h3><span class="fnum">6</span> 🔊 Arabic voice setup</h3><ul>' +
+                    '<li>If tapping a letter makes no sound, your device may be missing an Arabic Text-to-Speech voice. The app detects this and shows a setup guide.</li>' +
+                '</ul></div>' +
+                '<div class="footer-note">Your scores and progress stay on your device.</div>' +
+                '<div class="btn-group"><button class="secondary" id="read-info-voice" type="button">Open Arabic Voice Setup</button>' +
+                '<button class="primary" id="read-info-close" type="button">Got it</button></div></div>';
+            document.body.appendChild(bg);
+            const close = function () { bg.remove(); document.removeEventListener('keydown', onKey); };
+            function onKey(e) { if (e.key === 'Escape') close(); }
+            document.addEventListener('keydown', onKey);
+            bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+            bg.querySelector('#read-info-close').addEventListener('click', close);
+            bg.querySelector('#read-info-voice').addEventListener('click', function () { close(); showVoiceWizard(); });
+        }
+        function wireHeader() {
+            const back = document.getElementById('back-btn');
+            if (back) back.addEventListener('click', function () { window.location.href = 'index.html'; });
+            const tb = document.getElementById('theme-btn');
+            if (tb) tb.addEventListener('click', flipTheme);
+            const ib = document.getElementById('info-btn');
+            if (ib) ib.addEventListener('click', openReadInfoModal);
+        }
+        // apply saved theme immediately to avoid a flash
+        document.body.setAttribute('data-theme', theme === 'light' ? 'emerald' : 'midnight');
+
+        function init() {
+            try {
+                applyTheme();
+                wireHeader();
+
+                const fixedIcon = document.getElementById('fixed-app-icon');
+                if (fixedIcon) fixedIcon.innerHTML = APP_ICON_SVG;
+
+                renderGrid('alphabet-grid', alphabet, alphabetTranslit);
+                renderPracticeGrid('joining-grid', joiningPractice);
+                renderPracticeGrid('hamza-grid', hamzaPractice);
+                renderPracticeGrid('sun-moon-grid', sunMoonPractice);
+                renderPracticeGrid('stopping-1-grid', stopping1);
+                renderPracticeGrid('stopping-2-grid', stopping2);
+                renderPracticeGrid('short-fat-ha-grid', shortFatHa);
+                renderPracticeGrid('short-dhammah-grid', shortDhammah);
+                renderPracticeGrid('short-kasrah-grid', shortKasrah);
+                renderPracticeGrid('short-practice-grid', shortPractice);
+                renderPracticeGrid('long-fat-ha-grid', longFatHa);
+                renderPracticeGrid('long-fat-ha-practice-grid', longFatHaPractice);
+                renderPracticeGrid('long-kasrah-grid', longKasrah);
+                renderPracticeGrid('long-kasrah-practice-grid', longKasrahPractice);
+                renderPracticeGrid('long-dhammah-grid', longDhammah);
+                renderPracticeGrid('long-dhammah-practice-grid', longDhammahPractice);
+                renderPracticeGrid('review-grid', reviewWords);
+                renderPracticeGrid('new-short-fat-ha-grid', imageFatHa);
+                renderPracticeGrid('new-short-kasrah-grid', imageKasrah);
+                renderPracticeGrid('dhammah-image-grid', imageDhammah);
+                renderPracticeGrid('surah-112-grid', surah112);
+                renderPracticeGrid('surah-113-grid', surah113);
+                renderPracticeGrid('surah-114-grid', surah114);
+                renderPracticeGrid('tanwin-fat-ha-grid', tanwinFatHa);
+                renderPracticeGrid('tanwin-dhammah-grid', tanwinDhammah);
+                renderPracticeGrid('tanwin-kasrah-grid', tanwinKasrah);
+
+                injectScoreUI();
+                populateCustomScores();
+                refreshAllBestScores();
+                wireGlobalHandlers();
+                if (window.speechSynthesis) window.speechSynthesis.getVoices();
+
+                if (!SpeechRecognition) {
+                    enterPracticeOnlyMode('Speech recognition is not available in this browser. Practice Mode only — tap any word to hear it read aloud.');
+                }
+
+                // If no Arabic voice exists, show the wizard once on first tap.
+                // (We don't nag on load; the first silent tap triggers it.)
+
+                updateInstallUI();
+                updateInstallPill();
+                setTimeout(function () { updateInstallUI(); updateInstallPill(); }, 500);
+                setTimeout(function () { updateInstallUI(); updateInstallPill(); }, 1500);
+                console.log("App Initialized Successfully");
+            } catch (e) {
+                console.error("Initialization error:", e);
+                showToast("An error occurred during setup. Some features may not work.");
+            }
+        }
+
+        // ---- Public API (exposed to global scope) ----
+        window.switchScreen = switchScreen;
+        window.handleTestButton = handleTestButton;
+        window.resumeTest = resumeTest;
+        window.stopTest = stopTest;
+        window.installFromPill = installFromPill;
+        window.dismissInstallPill = dismissInstallPill;
+        window.triggerInstall = triggerInstall;
+        window.resetApp = resetApp;
+        window.toggleMicTest = toggleMicTest;
+        window.closeQrOverlay = closeQrOverlay;
+        window.handleQrOverlayClick = handleQrOverlayClick;
+        window.showVoiceWizard = showVoiceWizard;
+        window.closeVoiceWizard = closeVoiceWizard;
+        window.openTtsSettings = openTtsSettings;
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
+</body>
+</html>

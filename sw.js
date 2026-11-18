@@ -1,47 +1,40 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.17 — Version bump to force clients to fetch the updated
-   index.html that ships the Tajweed rule-engine fixes.
+   v2.4.19 — Cache-invalidation bump for the new dashboard layout
+   and the reworked Read Arabic page, plus user-data protection.
 
-   Changes in index.html (this deployment):
+   User data that is NEVER deleted by this service worker:
+     • Downloaded surah / translation audio  (cache 'qc-audio')
+     • Progress, streaks, achievements, bookmarks, prayer-time
+       settings and alarms, theme and Read Arabic scores — these
+       live in localStorage, which a service worker cannot touch
+       and this file never does.
+     • Cached Quran / translation text — copied forward into the
+       new text cache on every update so offline reading survives.
 
-     • FIX (getTajweedRuleInfo): compound Ghunnah error kinds
-       (ghunnah-ikhfa, ghunnah-iqlab, ghunnah-idghaam_ghunnah)
-       now show the correct rule name AND description in the
-       mistake tooltip, rather than falling back to a generic
-       "Ghunnah — nasalisation held ~2 counts" explanation
-       for all of them.
+   Changes in this deployment:
 
-     • FIX (runStrict1Checks): the emphatic-letter check now
-       runs BEFORE the coachTajweedReady gate, so ص/ض/ط/ظ/ق/ح/خ/ع/غ
-       misuse is still detected when the Quran.com Tajweed
-       annotations fail to load. Previously every rule went
-       silent in that case.
+     index.html (Home / Dashboard):
+       • New "Read Arabic" tab on the Dashboard, next to Daily
+         streak, linking to ./read.html.
+       • Daily streak shrunk to the same size as the Hifz /
+         Tajweed tabs; all four tabs are equal width.
 
-     • FIX (strict1GhunnahOk): idghaam_ghunnah now has a
-       transcript-only fallback. If the microphone waveform is
-       unavailable AND the isolated ن/م still appears in the
-       ASR transcript, a yellow warning is raised. Previously
-       this rule had zero coverage in transcript-only mode.
+     read.html (Read Arabic page):
+       • Header: [Back] on the left (returns to ./index.html),
+         [i] info and moon/sun theme toggle on the right.
+       • Menu removed (Install, Share, Scan, Reset deleted).
+       • Theme toggle uses the same 'qc.theme' setting as Recite.
 
-     • IMPROVEMENT (updateTajweedStatusChip): the rule-ready
-       chip now enumerates the exact rules that are active and
-       disabled in transcript-only mode, so users know what the
-       engine is (and isn't) checking.
+     sw.js:
+       • CLEAR_CACHES now clears only the versioned app caches and
+         keeps the persistent audio downloads.
+       • Old text caches are migrated, not discarded, on update.
 
-     • IMPROVEMENT (startReciting): one-shot informational
-       feedback when the acoustic rules are disabled because
-       the browser cannot access the microphone waveform.
-
-   No functional SW logic changes in this deployment — all of
-   the fixes are client-side (index.html). This version bump
-   is purely to invalidate qc-shell-*, qc-text-*, qc-fonts-*
-   and qc-runtime-* caches so the new index.html and refreshed
-   Tajweed annotation fetches reach existing clients.
-
-   The persistent qc-audio cache is preserved across the bump —
-   users keep their downloaded surahs and translation audio.
+   Cache invalidation:
+     qc-shell-* / qc-fonts-* / qc-runtime-* are bumped so the new
+     index.html and read.html are fetched. qc-audio is preserved.
 
    Previously-retained features (unchanged):
 
@@ -66,7 +59,7 @@
 
 'use strict';
 
-const VERSION = '2.4.13';
+const VERSION = '2.4.19';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -77,7 +70,7 @@ const VERSIONED_CACHES = [SHELL_CACHE, TEXT_CACHE, FONTS_CACHE, RUNTIME_CACHE];
 
 /* Persistent caches — NEVER deleted on activation, regardless of
    version. Downloaded Quran audio (everyayah.com) and downloaded
-   translation audio (everyayah.com, Islamic Network, QuranEnc) 
+   translation audio (everyayah.com, Islamic Network, QuranEnc)
    all live here. */
 const AUDIO_CACHE = 'qc-audio';
 const PERSISTENT_CACHES = [AUDIO_CACHE];
@@ -85,10 +78,16 @@ const PERSISTENT_CACHES = [AUDIO_CACHE];
 const OWNED_PREFIXES = ['qc-shell-', 'qc-text-', 'qc-fonts-', 'qc-runtime-'];
 
 /* Pre-cache the shell, manifest, AND the real app icons so they
-   are available for the install prompt and offline usage. */
+   are available for the install prompt and offline usage.
+
+   Note: read.html is the new Read Arabic page. index.html is the
+   main dashboard; index_3.html is the previous dashboard copy
+   kept around for old links. */
 const SHELL_URLS = [
   './',
   './index.html',
+  './index_3.html',
+  './read.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -108,7 +107,9 @@ const TEXT_CACHE_MAX = 600;
 const RUNTIME_MAX    = 120;
 const MANIFEST_TIMEOUT_MS = 2000;
 
-/* The exact Google Fonts stylesheet URL used by <link> in index.html. */
+/* The exact Google Fonts stylesheet URL used by <link> in index.html
+   and read.html. Keep these identical so the pre-cached font CSS
+   hits both pages without a second network round-trip. */
 const FONT_CSS_URL = 'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Amiri+Quran&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap';
 const FONT_FETCH_TIMEOUT_MS   = 8000;
 const FONTS_PREFETCH_TOTAL_MS = 20000;
@@ -156,6 +157,7 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     try{
       const keys = await caches.keys();
+      await migrateTextCaches(keys);
       const toDelete = keys.filter(name => {
         if(VERSIONED_CACHES.includes(name)) return false;
         if(PERSISTENT_CACHES.includes(name)) return false;
@@ -173,6 +175,31 @@ self.addEventListener('activate', event => {
   })());
 });
 
+/* Copy cached Quran / translation text from older versioned text
+   caches into the current one, so an app update never wipes what
+   the user can already read offline. Best-effort, never throws. */
+async function migrateTextCaches(keys){
+  try{
+    const oldNames = keys.filter(k => k.startsWith('qc-text-') && k !== TEXT_CACHE);
+    if(!oldNames.length) return;
+    const target = await caches.open(TEXT_CACHE);
+    for(const name of oldNames){
+      try{
+        const src = await caches.open(name);
+        const reqs = await src.keys();
+        for(const r of reqs){
+          try{
+            if(await target.match(r, { ignoreVary: true })) continue;
+            const res = await src.match(r);
+            if(res) await target.put(r, res);
+          }catch(_){}
+        }
+      }catch(_){}
+    }
+    trimCache(TEXT_CACHE, TEXT_CACHE_MAX).catch(() => {});
+  }catch(_){}
+}
+
 /* ============================================================
    MESSAGES — SKIP_WAITING / CLEAR_CACHES / CLEAR_AUDIO_CACHE /
               REFRESH_MANIFEST
@@ -185,8 +212,11 @@ self.addEventListener('message', event => {
   }
   if(data.type === 'CLEAR_CACHES'){
     event.waitUntil((async () => {
+      // Clear app caches only — never the persistent user downloads.
       const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      await Promise.all(keys
+        .filter(k => !PERSISTENT_CACHES.includes(k))
+        .map(k => caches.delete(k)));
       if(event.source && event.source.postMessage) event.source.postMessage({ type: 'CACHES_CLEARED' });
     })());
     return;
@@ -205,6 +235,8 @@ self.addEventListener('message', event => {
         await Promise.all([
           cache.delete('./manifest.json', { ignoreSearch: true }),
           cache.delete('./index.html',    { ignoreSearch: true }),
+          cache.delete('./index_3.html',  { ignoreSearch: true }),
+          cache.delete('./read.html',     { ignoreSearch: true }),
           cache.delete('./',              { ignoreSearch: true })
         ]);
       }catch(_){}
@@ -515,12 +547,16 @@ async function shellNavigation(req){
     const res = await fetch(freshReq);
     if(res && res.ok && res.type === 'basic'){
       const clone = res.clone();
-      cache.put('./index.html', clone).catch(() => {});
+      // Cache the page that was actually requested (index.html,
+      // index_3.html or read.html) so each page works offline.
+      cache.put(req, clone).catch(() => {});
     }
     return res;
   }catch(_){
     let hit = null;
     try{
+      // Try the exact URL first (so /read.html serves read.html
+      // offline, not the dashboard), then fall back to index.html.
       hit = await cache.match(req, { ignoreSearch: true })
          || await cache.match('./index.html', { ignoreSearch: true })
          || await cache.match('./', { ignoreSearch: true });
