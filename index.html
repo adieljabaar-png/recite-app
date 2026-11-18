@@ -6091,9 +6091,9 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 }
 
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
-const FOLLOW_TAU_JUMP       = 0.90;
-const FOLLOW_TAU_EXIT       = 0.80;
-const FOLLOW_MAX_LOOKAHEAD  = 1;
+const FOLLOW_TAU_JUMP       = 0.85;
+const FOLLOW_TAU_EXIT       = 0.85;
+const FOLLOW_MAX_LOOKAHEAD  = 2;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
@@ -6448,19 +6448,6 @@ function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
   if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
   if(speechRecognition){ try{ speechRecognition.abort(); }catch(_){} speechRecognition = null; }
-
-async function setupOnDeviceArabic(rec) {
-  if (!('processLocally' in rec) || !SpeechRecognitionCtor.available) return false;
-  const opts = { langs: ['ar-SA'], processLocally: true };
-  let status = await SpeechRecognitionCtor.available(opts);   // 'available' | 'downloadable' | 'downloading' | 'unavailable'
-  if (status === 'downloadable') {
-    await SpeechRecognitionCtor.install(opts);                // must be triggered by a user gesture
-    status = await SpeechRecognitionCtor.available(opts);
-  }
-  if (status === 'available') { rec.processLocally = true; return true; }
-  return false;                                               // fall back to cloud
-}
-
   const rec = new SpeechRecognitionCtor();
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
@@ -6658,22 +6645,10 @@ function gradeFollowFast(tokens, startIdx){
       if (futureW.verse !== w.verse) break;
       if (futureW.isMuqattaat) break;
       const sim = followSimilarity(heard, hPhon, hPhonLoose, futureW);
-            if (sim >= FOLLOW_TAU_JUMP){
-        // Mark the jumped-over word(s) green, but as skipped, not as heard.
-        for (let j = ptr; j < ptr + k; j++){
-          markSkippedGreen(j);
-        }
+      if (sim >= FOLLOW_TAU_JUMP){
+        // Only the word actually matched by the recognizer is verified.
+        // Earlier words are left unmarked rather than falsely accepted.
         commitCorrect(ptr + k, null);
-
-function markSkippedGreen(i){
-  const w = words[i];
-  if (!w) return;
-  const el = w.el;
-  if (el.classList.contains('error')) return;
-  // green + visible in Hide Text: needs BOTH classes, see CSS below
-  el.className = 'w correct skipped-green' + ((hideText && followOnly) ? ' revealed' : '');
-}
-
         advancePast(k + 1);
         noteFollowProgress();
         pendingHeard.length = 0;
@@ -7718,18 +7693,6 @@ function applyMutexUI(){
   updateTajweedStatusChip();
   syncRevealButtons();
 
-body.hide-text-mode:not(.viewer-audio-mode) .w.skipped-green.revealed{
-  color: var(--good) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  text-decoration: none !important;
-}
-
-body.hide-text-mode:not(.viewer-audio-mode) .w.revealed{
-  color: var(--text) !important;
-  /* ... */
-}
-
 }
 
 function setRecitationMode(modeName){
@@ -7803,15 +7766,7 @@ function applyHideTextUI(){
   if(hideText && followOnly){
     document.body.classList.add('hide-text-mode');
     words.forEach(w => {
-
-if(w.el.classList.contains('skipped-green')){
-  w.el.classList.add('revealed');
-  // keep 'correct' + 'skipped-green' so the green CSS above still applies
-} else if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){
-  w.el.classList.add('revealed');
-  w.el.classList.remove('correct','corrected','warned');
-}
-
+      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){ w.el.classList.add('revealed'); w.el.classList.remove('correct','corrected','warned'); }
       else if(w.el.classList.contains('skipped')){ w.el.classList.add('revealed'); }
     });
   } else {
@@ -11198,8 +11153,8 @@ function openCoachInfoModal(){
             '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3><ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
- '<li>Follow uses a finite-state gate: <b>τ_plausible = 0.72</b> to advance, <b>τ_jump = 0.85</b> to move to the next recognised word, and <b>τ_exit = 0.85</b> to leave the current ayah.</li>' +
-'<li>Matching is kept locked to the current ayah — matches outside it are discarded.</li>' +
+      '<li>Follow uses a finite-state gate: <b>τ_plausible = 0.72</b> to advance, <b>τ_jump = 0.85</b> to skip 1–2 words forward, and <b>τ_exit = 0.85</b> to leave the current ayah. The pointer never jumps across an ayah boundary unless you fully complete the last word.</li>' +
+      '<li>Look-ahead is limited to <b>k ≤ 2</b> words — out-of-bounds matches are discarded, keeping the highlight locked to the current word.</li>' +
       '<li><b>Nothing is marked red and no mistakes are counted</b> in Follow mode.</li>' +
     '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">3</span> 🎵 Tajweed mode (error feedback)</h3><ul>' +
