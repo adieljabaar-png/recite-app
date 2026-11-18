@@ -920,6 +920,8 @@ text-align:center;line-height:1.4;
 }
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 body.light-mode .toast{background:rgba(255,255,255,.97);box-shadow:0 12px 36px rgba(0,0,0,.18)}
+.toast.sajdah-toast{background:rgba(20,105,58,.97);border:1px solid rgba(134,239,172,.9);color:#f0fff4;box-shadow:0 12px 36px rgba(0,40,20,.38)}
+body.light-mode .toast.sajdah-toast{background:rgba(20,120,65,.98);border-color:#86efac;color:#fff}
 
 .calendar-modal{max-width:480px;}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;}
@@ -2883,7 +2885,7 @@ body.light-mode .share-arabic{color:#1a2233;}
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
-    Tap the bell next to any prayer to toggle its alarm on / off.<br><br>Please note, for the Athaan alarm to sound, do not fully close the app and leave the media volume on.
+    Tap the bell next to any prayer to toggle its alarm on / off.<br><br>For the best chance of hearing alarms, keep Recite open, allow notifications, and disable battery restrictions for your browser. A browser cannot guarantee sound while the phone is locked, the app is suspended, or the browser is closed.
   </div>
 </div>
 
@@ -3710,6 +3712,39 @@ function phonLooseArCached(s){
   return v;
 }
 
+// Follow-only reading aid: a final Arabic letter with no short-vowel or
+// madd indication is not required for live word matching. The source text,
+// normalisation used by Tajweed, and displayed Quran text remain untouched.
+// Keep a final ي/و/ا when the preceding letter carries its matching long vowel.
+function followExpectedNorm(raw){
+  const chars = Array.from(String(raw || '').normalize('NFKC'));
+  const isArabicBase = ch => /[\u0621-\u064A\u066E-\u06D3]/.test(ch);
+  let last = -1;
+  for(let i = chars.length - 1; i >= 0; i--){ if(isArabicBase(chars[i])){ last = i; break; } }
+  if(last < 0) return normArCached(raw);
+  const marksAfter = chars.slice(last + 1).join('');
+  const shortVowelOrMadd = /[\u064B-\u0650\u0653-\u0655\u0670]/.test(marksAfter);
+  let longVowel = false;
+  if(last > 0){
+    let j = last - 1;
+    while(j >= 0 && !isArabicBase(chars[j])) j--;
+    if(j >= 0){
+      const between = chars.slice(j + 1, last).join('');
+      longVowel = (chars[last] === '\u064A' && /\u0650/.test(between)) ||
+                  (chars[last] === '\u0648' && /\u064F/.test(between)) ||
+                  (chars[last] === '\u0627' && /\u064E/.test(between));
+    }
+  }
+  if(!shortVowelOrMadd && !longVowel) chars.splice(last, 1);
+  return normArCached(chars.join(''));
+}
+function phonLooseExpected(raw){
+  const n = followExpectedNorm(raw);
+  let out = '';
+  for(let i = 0; i < n.length; i++) out += Object.prototype.hasOwnProperty.call(PHON_LOOSE, n[i]) ? PHON_LOOSE[n[i]] : n[i];
+  return out;
+}
+
 function gregorianToJDN(y, m, d){
   const a  = Math.floor((14 - m) / 12);
   const yy = y + 4800 - a;
@@ -3893,7 +3928,7 @@ function toleranceFor(L){
 function confidenceFloor(){ return followOnly ? 0.20 : 0.35; }
 
 function isMatchWord(hNorm, hPhon, hPhonLoose, w){
-  const wNorm = w.norm;
+  const wNorm = followOnly ? (w.followNorm || w.norm) : w.norm;
   const la = hNorm.length, lb = wNorm.length;
   if(Math.abs(la - lb) > 4) return false;
   if(hNorm === wNorm) return true;
@@ -3906,8 +3941,9 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   if(lev(hNorm, wNorm) <= tol) return true;
 
   const phonMinLen = followOnly ? 2 : 3;
-  if(hPhon.length >= phonMinLen && w.phon.length >= phonMinLen){
-    if(lev(hPhon, w.phon) <= tol) return true;
+  const targetPhon = followOnly ? (w.followPhon || w.phon) : w.phon;
+  if(hPhon.length >= phonMinLen && targetPhon.length >= phonMinLen){
+    if(lev(hPhon, targetPhon) <= tol) return true;
   }
 
   if(followOnly) {
@@ -3935,7 +3971,7 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
 function followAlPrefixMatch(heard, w){
   if(!followOnly) return false;
   if(!heard || !w || !w.norm) return false;
-  const wNorm = w.norm;
+  const wNorm = w.followNorm || w.norm;
   const hHasAl = heard.startsWith('ال');
   const wHasAl = wNorm.startsWith('ال');
   if(hHasAl === wHasAl) return false;
@@ -3949,7 +3985,8 @@ function followAlPrefixMatch(heard, w){
 function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(!w || !heard || !w.norm) return false;
   const heardLen  = heard.length;
-  const targetLen = w.norm.length;
+  const targetNorm = followOnly ? (w.followNorm || w.norm) : w.norm;
+  const targetLen = targetNorm.length;
   if(targetLen === 0) return false;
   if(heardLen < 2 && targetLen > 1) return false;
   const ratio = heardLen / targetLen;
@@ -3958,7 +3995,7 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(ratio < minRatio || ratio > maxRatio) return false;
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
-  if(lev(heard, w.norm) <= tol + (followOnly ? 2 : 3)) return true;
+  if(lev(heard, targetNorm) <= tol + (followOnly ? 2 : 3)) return true;
   if(hPhon.length >= 2 && w.phon.length >= 2 &&
      lev(hPhon, w.phon) <= tol + (followOnly ? 1 : 2)) return true;
   return false;
@@ -4447,8 +4484,9 @@ function saveHifzHistory(h){
 }
 
 let toastEl = null;
-function showToast(html, ms){
+function showToast(html, ms, variant){
   if(!toastEl){ toastEl = document.createElement('div'); toastEl.className = 'toast'; document.body.appendChild(toastEl); }
+  toastEl.classList.toggle('sajdah-toast', variant === 'sajdah');
   toastEl.innerHTML = html;
   toastEl.classList.add('visible');
   clearTimeout(toastEl._timer);
@@ -6276,13 +6314,14 @@ const FOLLOW_MAX_LOOKAHEAD  = 0;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
-  const wNorm   = w.norm;
+  const wNorm   = w.followNorm || w.norm;
   const maxLenN = Math.max(heard.length, wNorm.length, 1);
   const simN    = Math.max(0, 1 - lev(heard, wNorm) / maxLenN);
   let best = simN;
-  if (hPhon && hPhon.length >= 2 && w.phon && w.phon.length >= 2){
-    const maxP = Math.max(hPhon.length, w.phon.length);
-    const simP = Math.max(0, 1 - lev(hPhon, w.phon) / maxP);
+  const targetPhon = w.followPhon || w.phon;
+  if (hPhon && hPhon.length >= 2 && targetPhon && targetPhon.length >= 2){
+    const maxP = Math.max(hPhon.length, targetPhon.length);
+    const simP = Math.max(0, 1 - lev(hPhon, targetPhon) / maxP);
     if (simP > best) best = simP;
   }
   if (followOnly && hPhonLoose && hPhonLoose.length >= 2 && w.phonLoose && w.phonLoose.length >= 2){
@@ -6295,8 +6334,8 @@ function followSimilarity(heard, hPhon, hPhonLoose, w){
 
 function followExitConfidence(heard, hPhon, hPhonLoose, w){
   if (!w) return 0;
-  if (heard === w.norm) return 1.0;
-  if (hPhon === w.phon) return 0.95;
+  if (heard === (w.followNorm || w.norm)) return 1.0;
+  if (hPhon === (w.followPhon || w.phon)) return 0.95;
   if (followOnly && hPhonLoose === w.phonLoose) return 0.92;
   return followSimilarity(heard, hPhon, hPhonLoose, w);
 }
@@ -6336,11 +6375,13 @@ function noteFollowWrongToken(){
 
 function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
   if (!w || !heard) return false;
-  if (heard === w.norm) return true;
-  const L = Math.max(heard.length, w.norm.length);
-  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
-  if (lev(heard, w.norm) <= tol) return true;
-  if (w.phon.length >= 2 && hPhon.length >= 2 && lev(hPhon, w.phon) <= tol) return true;
+  const targetNorm = w.followNorm || w.norm;
+  if (heard === targetNorm) return true;
+  const L = Math.max(heard.length, targetNorm.length);
+  const tol = (targetNorm.length === 3) ? 0 : (toleranceFor(L) + 1);
+  if (lev(heard, targetNorm) <= tol) return true;
+  const targetPhon = w.followPhon || w.phon;
+  if (targetPhon.length >= 2 && hPhon.length >= 2 && lev(hPhon, targetPhon) <= tol) return true;
   if (hPhonLoose && w.phonLoose && hPhonLoose.length >= 2 && w.phonLoose.length >= 2 && lev(hPhonLoose, w.phonLoose) <= tol) return true;
   return false;
 }
@@ -6348,14 +6389,15 @@ function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
 function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
   if (!w || !heard || !w.norm) return false;
   const heardLen  = heard.length;
-  const targetLen = w.norm.length;
+  const targetNorm = w.followNorm || w.norm;
+  const targetLen = targetNorm.length;
   if (targetLen === 0) return false;
   if (heardLen < 1 && targetLen > 1) return false;
   const ratio = heardLen / targetLen;
   if (ratio < 0.20 || ratio > 4.0) return false;
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
-  if (lev(heard, w.norm) <= tol) return true;
+  if (lev(heard, targetNorm) <= tol) return true;
   if (hPhon.length >= 2 && w.phon.length >= 2 && lev(hPhon, w.phon) <= tol) return true;
   if (hPhonLoose && w.phonLoose && hPhonLoose.length >= 2 && w.phonLoose.length >= 2 && lev(hPhonLoose, w.phonLoose) <= tol) return true;
   return false;
@@ -8107,7 +8149,8 @@ function renderVerses(ayahs, translations){
     span.dataset.idx = String(myIndex);
     parent.appendChild(span);
     const nrm = normArCached(tok);
-    const w = { raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
+    const followNorm = followExpectedNorm(tok);
+    const w = { raw: tok, norm: nrm, followNorm, phon: phonArCached(tok), followPhon: phonArCached(followNorm), phonLoose: phonLooseExpected(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
     const muq = detectMuqattaat(surahId, ayahNum, nrm);
     if(muq){ w.isMuqattaat = true; w.muqattaatLetters = muq; w.muqattaatCursor = 0; }
     words.push(w);
@@ -9905,7 +9948,7 @@ function renderReaderPage(pageNumber, token){
   if(surahsOnPage.length === 1) qvTitle.textContent = surahsOnPage[0].surahEnglishName + ' · ' + surahsOnPage[0].surahName;
   else if(surahsOnPage.length > 1) qvTitle.textContent = surahsOnPage.map(a => a.surahEnglishName).join(' · ');
   else qvTitle.textContent = 'Page ' + pageNumber;
-  if(sajdahRefs.length){ setTimeout(() => showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000), 420); }
+  if(sajdahRefs.length){ setTimeout(() => showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000, 'sajdah'), 420); }
   if(token === readerState.token && readerState.highlightVerse){
     const key = readerState.highlightVerse;
     readerState.highlightVerse = null;
@@ -10750,6 +10793,10 @@ function requestNotificationPermission(){
   if(Notification.permission === 'default'){ try{ Notification.requestPermission(); }catch(e){} }
 }
 function startPrayerAlarmScheduler(){ if(prayerAlarmTimer) return; prayerAlarmTimer = setInterval(checkPrayerAlarms, 15000); checkPrayerAlarms(); }
+// Browsers throttle timers in the background. Re-check immediately when the page resumes.
+document.addEventListener('visibilitychange', () => { if(!document.hidden) checkPrayerAlarms(); });
+window.addEventListener('pageshow', () => checkPrayerAlarms());
+window.addEventListener('focus', () => checkPrayerAlarms());
 function checkPrayerAlarms(){
   const now = new Date();
   const dayKey = now.toDateString();
