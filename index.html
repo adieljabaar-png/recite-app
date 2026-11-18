@@ -3433,6 +3433,7 @@ const IS_IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|What
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 const SPEECH_SUPPORTED = !!SpeechRecognitionCtor;
+// Arabic (Saudi Arabia) is retained for Quran recitation on browser speech services.
 const SPEECH_LANG = 'ar-SA';
 
 const TASHKEEL = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\uFEFF\u0640]/g;
@@ -6090,9 +6091,9 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 }
 
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
-const FOLLOW_TAU_JUMP       = 0.85;
-const FOLLOW_TAU_EXIT       = 0.85;
-const FOLLOW_MAX_LOOKAHEAD  = 2;
+const FOLLOW_TAU_JUMP       = 0.90;
+const FOLLOW_TAU_EXIT       = 0.80;
+const FOLLOW_MAX_LOOKAHEAD  = 1;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
@@ -6338,7 +6339,7 @@ async function runSpeechResultProcessing(snap) {
     }
 
   }
-  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
+  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
     buildPhraseObjects(speechRecognition);
   }
 }
@@ -6347,7 +6348,7 @@ function scoreAlternativeToks(toks, startPtr){
   if(!toks || !toks.length) return 0;
   if(!words.length || startPtr >= words.length) return 0;
   let score = 0, ti = 0, wi = startPtr;
-  const maxAhead = followOnly ? 3 : Math.min(6, words.length - startPtr);
+  const maxAhead = followOnly ? 5 : Math.min(6, words.length - startPtr);
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
     const heard = normArCached(rawTok);
@@ -6355,11 +6356,13 @@ function scoreAlternativeToks(toks, startPtr){
     const hPhon = phonArCached(rawTok);
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w = words[wi];
-    if(heard === w.norm || isMatchWord(heard, hPhon, hPhonLoose, w)){ score += 3; ti++; wi++; continue; }
+    if(heard === w.norm){ score += 8; ti++; wi++; continue; }
+    if(isMatchWord(heard, hPhon, hPhonLoose, w)){ score += 3; ti++; wi++; continue; }
     let matched = false;
     for(let k = 1; k <= 2 && wi + k < startPtr + maxAhead; k++){
       const target = words[wi + k];
-      if(heard === target.norm || isMatchWord(heard, hPhon, hPhonLoose, target)){ score += 1; wi = wi + k + 1; ti++; matched = true; break; }
+      if(heard === target.norm){ score += 2; wi = wi + k + 1; ti++; matched = true; break; }
+      if(isMatchWord(heard, hPhon, hPhonLoose, target)){ score += 0.75; wi = wi + k + 1; ti++; matched = true; break; }
     }
     if(!matched){ ti++; }
   }
@@ -6388,21 +6391,90 @@ function buildPhraseObjects(rec) {
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
 
+// Build a very small grammar window: the remaining words in the current
+// verse, followed by only the next three words from the following verse.
+function currentSpeechGrammarWindow(){
+  if(!words || !words.length || ptr >= words.length) return [];
+  const currentVerse = words[ptr] && words[ptr].verse;
+  let verseEnd = ptr;
+  while(verseEnd < words.length && words[verseEnd] && words[verseEnd].verse === currentVerse){
+    verseEnd++;
+  }
+  const windowEnd = Math.min(words.length, verseEnd + 3);
+  return words.slice(ptr, windowEnd);
+}
+
+// SpeechGrammarList is optional and is ignored by some browser speech engines.
+// Keep the grammar deliberately narrow to avoid adding decoding overhead.
+function updateSpeechGrammar(currentWindowWords, recOverride){
+  const rec = recOverride || speechRecognition;
+  const GrammarListCtor = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+  if(!rec || !GrammarListCtor || !Array.isArray(currentWindowWords) || !currentWindowWords.length) return false;
+
+  const seen = new Set();
+  const grammarWords = [];
+  for(const item of currentWindowWords){
+    const raw = (typeof item === 'string') ? item : (item && item.raw) || '';
+    const clean = String(raw).normalize('NFKC')
+      .replace(TASHKEEL, '')
+      .replace(/[^\u0621-\u064A]/g, '')
+      .trim();
+    if(clean && !seen.has(clean)){
+      seen.add(clean);
+      grammarWords.push(clean);
+    }
+  }
+  if(!grammarWords.length) return false;
+
+  // Single-word alternatives keep the recognizer free to decode natural speech.
+  const alternatives = grammarWords.map(w => '"' + w.replace(/["\\]/g, '') + '"').join(' | ');
+  const grammar = '#JSGF V1.0; grammar quran_window; public <quran> = ' + alternatives + ' ;';
+
+  try{
+    const list = new GrammarListCtor();
+    list.addFromString(grammar, 1.0);
+    rec.grammars = list;
+    rec.__lastGrammarPtr = ptr;
+    rec.__grammarWordCount = grammarWords.length;
+    return true;
+  }catch(e){
+    // A rejected hint must never interrupt live recitation.
+    console.warn('[Speech] Arabic grammar hint unavailable:', e);
+    return false;
+  }
+}
+
 function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
   if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
   if(speechRecognition){ try{ speechRecognition.abort(); }catch(_){} speechRecognition = null; }
+
+async function setupOnDeviceArabic(rec) {
+  if (!('processLocally' in rec) || !SpeechRecognitionCtor.available) return false;
+  const opts = { langs: ['ar-SA'], processLocally: true };
+  let status = await SpeechRecognitionCtor.available(opts);   // 'available' | 'downloadable' | 'downloading' | 'unavailable'
+  if (status === 'downloadable') {
+    await SpeechRecognitionCtor.install(opts);                // must be triggered by a user gesture
+    status = await SpeechRecognitionCtor.available(opts);
+  }
+  if (status === 'available') { rec.processLocally = true; return true; }
+  return false;                                               // fall back to cloud
+}
+
   const rec = new SpeechRecognitionCtor();
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
   rec.interimResults   = true;
+  // Request several hypotheses so the Quran-aware scorer can choose the best one.
+  // Browsers that do not support multiple alternatives simply return fewer.
+  rec.maxAlternatives  = 5;
   const phrasesAttached = forceNoPhrases ? false : buildPhraseObjects(rec);
   rec.__hasPhrases = phrasesAttached;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
+    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -6444,7 +6516,7 @@ function createSpeechRecognition(forceNoPhrases){
     setTimeout(() => {
       if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
-      try{ speechStarting = true; speechRecognition.start(); }
+      try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
       catch(e){ speechStarting = false; if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e); }
     }, 180);
   };
@@ -6586,8 +6658,22 @@ function gradeFollowFast(tokens, startIdx){
       if (futureW.verse !== w.verse) break;
       if (futureW.isMuqattaat) break;
       const sim = followSimilarity(heard, hPhon, hPhonLoose, futureW);
-      if (sim >= FOLLOW_TAU_JUMP){
-        commitManyCorrect(ptr, ptr + k + 1, null);
+            if (sim >= FOLLOW_TAU_JUMP){
+        // Mark the jumped-over word(s) green, but as skipped, not as heard.
+        for (let j = ptr; j < ptr + k; j++){
+          markSkippedGreen(j);
+        }
+        commitCorrect(ptr + k, null);
+
+function markSkippedGreen(i){
+  const w = words[i];
+  if (!w) return;
+  const el = w.el;
+  if (el.classList.contains('error')) return;
+  // green + visible in Hide Text: needs BOTH classes, see CSS below
+  el.className = 'w correct skipped-green' + ((hideText && followOnly) ? ' revealed' : '');
+}
+
         advancePast(k + 1);
         noteFollowProgress();
         pendingHeard.length = 0;
@@ -7208,7 +7294,7 @@ function handleMicTrackIssue(kind){
         micDiagnosedWorking = false;
         startMicDiagnostic();
         if(!recRunning && !speechStarting && speechRecognition){
-          try{ speechStarting = true; speechRecognition.start(); }
+          try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
           catch(e){ speechStarting = false; }
         }
       } else {
@@ -7237,7 +7323,7 @@ function retrySpeechWithoutPhrases(){
     speechRecognition = createSpeechRecognition(true);
     if(!speechRecognition) return false;
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
-    try{ speechRecognition.start(); }catch(_){ return false; }
+    try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechRecognition.start(); }catch(_){ return false; }
     recRunning = true;
     lastResultAt = performance.now();
     setStatus('Listening', 'listening', contextLabel() + ' (retry)');
@@ -7632,6 +7718,18 @@ function applyMutexUI(){
   updateTajweedStatusChip();
   syncRevealButtons();
 
+body.hide-text-mode:not(.viewer-audio-mode) .w.skipped-green.revealed{
+  color: var(--good) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+body.hide-text-mode:not(.viewer-audio-mode) .w.revealed{
+  color: var(--text) !important;
+  /* ... */
+}
+
 }
 
 function setRecitationMode(modeName){
@@ -7662,7 +7760,7 @@ function setRecitationMode(modeName){
 
       const restartRecognizer = () => {
         if(wasRunning && wantMic && !fsPaused && !micPaused){
-          try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
+          try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition && speechRecognition.start(); }
           catch(_){ speechStarting = false; }
         }
       };
@@ -7705,7 +7803,15 @@ function applyHideTextUI(){
   if(hideText && followOnly){
     document.body.classList.add('hide-text-mode');
     words.forEach(w => {
-      if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){ w.el.classList.add('revealed'); w.el.classList.remove('correct','corrected','warned'); }
+
+if(w.el.classList.contains('skipped-green')){
+  w.el.classList.add('revealed');
+  // keep 'correct' + 'skipped-green' so the green CSS above still applies
+} else if(w.el.classList.contains('correct') || w.el.classList.contains('corrected') || w.el.classList.contains('warned')){
+  w.el.classList.add('revealed');
+  w.el.classList.remove('correct','corrected','warned');
+}
+
       else if(w.el.classList.contains('skipped')){ w.el.classList.add('revealed'); }
     });
   } else {
@@ -7979,6 +8085,7 @@ function advancePast(n){
   const leaving = new Set();
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
+  updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
@@ -8189,7 +8296,7 @@ async function startReciting(){
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
-    else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
+    else { try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
@@ -8245,7 +8352,7 @@ function resumeMic(){
     recRunning = true; speechFatalError = false;
     lastResultAt = performance.now();
     startMicDiagnostic(); armSpeechKeepalive();
-    try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
+    try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition && speechRecognition.start(); }
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
   }
@@ -11091,8 +11198,8 @@ function openCoachInfoModal(){
             '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">2</span> 👂 Follow mode (memorisation aid)</h3><ul>' +
       '<li><b>Follow</b> is designed to assist you with <b>memorisation of the Holy Qur\'an</b>. The highlight moves forward with you as you recite.</li>' +
-      '<li>Follow uses a finite-state gate: <b>τ_plausible = 0.72</b> to advance, <b>τ_jump = 0.85</b> to skip 1–2 words forward, and <b>τ_exit = 0.85</b> to leave the current ayah. The pointer never jumps across an ayah boundary unless you fully complete the last word.</li>' +
-      '<li>Look-ahead is limited to <b>k ≤ 2</b> words — out-of-bounds matches are discarded, keeping the highlight locked to the current word.</li>' +
+ '<li>Follow uses a finite-state gate: <b>τ_plausible = 0.72</b> to advance, <b>τ_jump = 0.85</b> to move to the next recognised word, and <b>τ_exit = 0.85</b> to leave the current ayah.</li>' +
+'<li>Matching is kept locked to the current ayah — matches outside it are discarded.</li>' +
       '<li><b>Nothing is marked red and no mistakes are counted</b> in Follow mode.</li>' +
     '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">3</span> 🎵 Tajweed mode (error feedback)</h3><ul>' +
