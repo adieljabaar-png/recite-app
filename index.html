@@ -68,9 +68,7 @@
 </script>
 <script defer="" src="/my-analytics/script.js"></script>
 <style>
-  /* Text size: 12px base ONLY on phones. PCs / laptops / TVs keep the
-     browser default (auto scaling) so rem sizes scale with the display. */
-  @media (max-width:768px){ html{font-size:12px;} }
+  html{font-size:12px;}
   :root{
     --bg:#0d1119;--panel:#151c2b;--panel-2:#1b2436;--line:#28334a;
     --text:#e8edf7;--muted:#8f9bb3;--accent:#4f8cff;
@@ -2881,7 +2879,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">18 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">15:21</span>
+    <span class="pdr-item pdr-time" id="pdrTime">16:53</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -3392,7 +3390,19 @@ const BISMILLAH_WORDS_NORM = ['بسم', 'الله', 'الرحمن', 'الرحي�
 
 function shouldShowBismillah(surahNumber){
   const n = Number(surahNumber);
-  return n !== 1 && n !== 9;
+  return n !== 9;
+}
+// Bismillah is NEVER verse 1: it is verse 0 (preamble), and the verse
+// following it is verse 1. Applies to every surah, including Al-Fatiha
+// (Madani counting): Bismillah = 0, Alhamdu = 1. For surahs 2-114 the API
+// already bundles Bismillah into verse 1's text, which is split off, so
+// display == API there. Only Surah 1 needs shifting, because the API
+// returns Bismillah as its own verse 1.
+function displayAyahNumber(surah, apiAyah){
+  return (Number(surah) === 1) ? (Number(apiAyah) - 1) : Number(apiAyah);
+}
+function apiAyahNumber(surah, displayAyah){
+  return (Number(surah) === 1) ? (Number(displayAyah) + 1) : Number(displayAyah);
 }
 
 function splitBismillah(rawText){
@@ -4951,7 +4961,7 @@ function renderHifzMushaf(){
     });
     const num = document.createElement('span');
     num.className = 'ayah-num';
-    num.textContent = toAr(a.numberInSurah);
+    num.textContent = toAr(displayAyahNumber(hifzState.surah, a.numberInSurah));
     line.appendChild(num);
     inner.appendChild(line);
   });
@@ -5331,7 +5341,13 @@ async function applyTajweedColorsToCoach(){
   if (followOnly) return;
   const tajMap = new Map();
   verses.forEach(v => {
-    const verseKey = v.verse_key || (surahNum + ':' + v.verse_number);
+    let verseKey = v.verse_key || (surahNum + ':' + v.verse_number);
+    // Bismillah is never verse 1: shift Al-Fatiha Tajweed keys down by 1
+    // so they line up with the coach's display numbering (Bismillah 0, Alhamdu 1).
+    if (Number(surahNum) === 1){
+      const _n = parseInt(String(verseKey).split(':')[1], 10);
+      if (Number.isFinite(_n)) verseKey = surahNum + ':' + (_n - 1);
+    }
     const tajWords = splitTajweedIntoWords(v.text_uthmani_tajweed || '');
     if (tajWords.length) tajMap.set(verseKey, tajWords);
   });
@@ -5615,7 +5631,7 @@ function buildRuleTooltip(rules, sep){
 
 function parseTajweedWordRules(decoratedHtml){
   const rules = {
-    madd: null, ghunnahLetters: [], ghunnahTypes: [], silentLetters: [],
+    madd: null, ghunnahLetters: [], silentLetters: [],
     hasGhunnah: false, hasSilent: false, ghunnahType: null, hasGhunnahContext: false,
     normNoSilent: null, laamShamsiyyahPositions: [], hamWasl: false,
     silentPositionsInNorm: [], allRules: [],
@@ -5625,14 +5641,10 @@ function parseTajweedWordRules(decoratedHtml){
   if (decoratedHtml.indexOf('tj-madda_necessary') !== -1) rules.madd = 'necessary';
   else if (decoratedHtml.indexOf('tj-madda_permissible') !== -1) rules.madd = 'permissible';
   else if (decoratedHtml.indexOf('tj-madda_normal') !== -1) rules.madd = 'normal';
-  // FIX: a word can carry several ghunnah-family rules at once
-  // (e.g. Ikhfa + Iqlab). The old else-if kept only one and dropped the rest.
-  rules.ghunnahTypes = [];
-  if (decoratedHtml.indexOf('tj-idghaam_ghunnah') !== -1) rules.ghunnahTypes.push('idghaam_ghunnah');
-  if (decoratedHtml.indexOf('tj-ikhfa') !== -1)             rules.ghunnahTypes.push('ikhfa');
-  if (decoratedHtml.indexOf('tj-iqlab') !== -1)             rules.ghunnahTypes.push('iqlab');
-  if (decoratedHtml.indexOf('tj-ghunnah') !== -1)           rules.ghunnahTypes.push('ghunnah');
-  rules.ghunnahType = rules.ghunnahTypes[0] || null;
+  if      (decoratedHtml.indexOf('tj-idghaam_ghunnah') !== -1)   rules.ghunnahType = 'idghaam_ghunnah';
+  else if (decoratedHtml.indexOf('tj-ikhfa') !== -1)             rules.ghunnahType = 'ikhfa';
+  else if (decoratedHtml.indexOf('tj-iqlab') !== -1)             rules.ghunnahType = 'iqlab';
+  else if (decoratedHtml.indexOf('tj-ghunnah') !== -1)           rules.ghunnahType = 'ghunnah';
   rules.hasGhunnahContext = !!rules.ghunnahType;
   if (decoratedHtml.indexOf('tj-ghunnah') !== -1) {
     const gRe = /<span[^>]*class="(?:[^"]*\s)?tj-ghunnah(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g;
@@ -5642,17 +5654,6 @@ function parseTajweedWordRules(decoratedHtml){
       if (n){ rules.ghunnahLetters.push(n); rules.hasGhunnah = true; }
     }
   }
-  // FIX: also collect nasal spans annotated as ikhfa / iqlab / idghaam_ghunnah,
-  // otherwise those types fell back to a weak whole-word ن/م check.
-  ['tj-ikhfa','tj-iqlab','tj-idghaam_ghunnah'].forEach(function(cls){
-    if (decoratedHtml.indexOf(cls) === -1) return;
-    const re = new RegExp('<span[^>]*class="(?:[^"]*\\s)?' + cls + '(?:\\s[^"]*)?"[^>]*>([\\s\\S]*?)<\\/span>', 'g');
-    let mm;
-    while ((mm = re.exec(decoratedHtml)) !== null){
-      const nn = normArCached(mm[1]);
-      if (nn){ rules.ghunnahLetters.push(nn); rules.hasGhunnah = true; }
-    }
-  });
   if (decoratedHtml.indexOf('tj-silent') !== -1) {
     const sRe = /<span[^>]*class="(?:[^"]*\s)?tj-silent(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g;
     let m;
@@ -5732,12 +5733,7 @@ function strict1GhunnahOk(w, heard){
 
   let textOk = true;
   if (textCheckApplicable){
-    // FIX: Iqlab must be tested as a CONVERSION (ن -> م), not just as
-    // "some ن/م is present". Checked BEFORE ghunnahLetters so a letter
-    // span cannot mask a missed conversion.
-    if (gType === 'iqlab'){
-      textOk = heard.indexOf(M) !== -1;
-    } else if (w.tjRules.ghunnahLetters.length){
+    if (w.tjRules.ghunnahLetters.length){
       const required = w.tjRules.ghunnahLetters.join('');
       for (let i = 0; i < required.length; i++){
         const ch = required[i];
@@ -5979,15 +5975,6 @@ const TAJWEED_ERROR_NAMES = {
   'madd-normal-batch':      'Madd (normal) — too short (fast batch)',
   'madd-permissible-batch': 'Madd (permissible) — too short (fast batch)',
   'madd-necessary-batch':   'Madd (necessary) — too short (fast batch)',
-  'madd-normal-long':           'Madd (normal) — too long',
-  'madd-permissible-long':      'Madd (permissible) — too long',
-  'madd-necessary-long':        'Madd (necessary) — too long',
-  'madd-normal-end-long':       'Madd (normal) — end-of-ayah too long',
-  'madd-permissible-end-long':  'Madd (permissible) — end-of-ayah too long',
-  'madd-necessary-end-long':    'Madd (necessary) — end-of-ayah too long',
-  'madd-normal-timing-long':      'Madd (normal) — too long (timing)',
-  'madd-permissible-timing-long': 'Madd (permissible) — too long (timing)',
-  'madd-necessary-timing-long':   'Madd (necessary) — too long (timing)',
   'ghunnah-ghunnah':         'Ghunnah — nasal missing',
   'ghunnah-ikhfa':           'Ikhfa — nasal missing',
   'ghunnah-idghaam_ghunnah': 'Idghaam (with ghunnah) — nasal missing',
@@ -6153,7 +6140,7 @@ function runStrict1Checks(idx, heard, opts){
       const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
       const vowelMs = vr.durationMs;
       const required = isEndOfAyah
-        ? (T_mora !== null ? Math.round(T_mora * (MADD_MIN_HARAKAT[kind] || MADD_MIN_HARAKAT.normal)) : END_OF_AYAH_MADD_MIN_MS)
+        ? (T_mora !== null ? Math.round(T_mora * MADD_MIN_HARAKAT.normal) : END_OF_AYAH_MADD_MIN_MS)
         : (T_mora !== null ? Math.round(T_mora * (MADD_MIN_HARAKAT[kind] || 1.7))
                             : (MADD_MIN_DELTA_MS[kind] || 0));
       const minSegMs = w.norm.length * (T_mora !== null ? T_mora : 100) * 0.6;
@@ -6162,26 +6149,15 @@ function runStrict1Checks(idx, heard, opts){
         markStrict1Error(w, tag, 'vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
           (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : ''));
       }
-      // Over-long Madd: previously never flagged (maddMaxMs was dead code).
-      if (w.audio.durationMs >= minSegMs){
-        const maxMs = maddMaxMs(kind);
-        if (vowelMs > maxMs){
-          const tag = 'madd-' + kind + (isEndOfAyah ? '-end' : '') + '-long';
-          markStrict1Error(w, tag, 'vowel-run ' + Math.round(vowelMs) + ' ms > ' + Math.round(maxMs) + ' ms max' +
-            (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : ''));
-        }
-      }
     }
 
     if (hasSeg && w.tjRules && w.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
-      const gTypes = (w.tjRules.ghunnahTypes && w.tjRules.ghunnahTypes.length) ? w.tjRules.ghunnahTypes : [w.tjRules.ghunnahType || 'ghunnah'];
-      gTypes.forEach(function(gType){
-        const required = ghunnahRequiredMs(gType);
-        const effectiveMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
-        if (effectiveMs < required){
-          markStrict1Error(w, 'ghunnah-length-' + gType, 'voice nasalisation ' + effectiveMs + ' ms < ' + Math.round(required) + ' ms');
-        }
-      });
+      const gType = w.tjRules.ghunnahType || 'ghunnah';
+      const required = ghunnahRequiredMs(gType);
+      const effectiveMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
+      if (effectiveMs < required){
+        markStrict1Error(w, 'ghunnah-length-' + gType, 'voice nasalisation ' + effectiveMs + ' ms < ' + Math.round(required) + ' ms');
+      }
     }
 
     if (opts.timingReliable && hasSeg && lastDirectCommitIdx >= 0 && idx === lastDirectCommitIdx + 1){
@@ -6200,18 +6176,14 @@ function runStrict1Checks(idx, heard, opts){
         const required = maddRequiredMs(w.tjRules.madd);
         if (asrMs < required){
           markStrict1Error(w, 'madd-' + w.tjRules.madd + '-timing', 'timing ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
-        } else if (asrMs > maddMaxMs(w.tjRules.madd)){
-          markStrict1Error(w, 'madd-' + w.tjRules.madd + '-timing-long', 'timing ' + Math.round(asrMs) + ' ms > ' + Math.round(maddMaxMs(w.tjRules.madd)) + ' ms max');
         }
       }
       if (w.tjRules && w.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
-        const gTypes = (w.tjRules.ghunnahTypes && w.tjRules.ghunnahTypes.length) ? w.tjRules.ghunnahTypes : [w.tjRules.ghunnahType || 'ghunnah'];
-        gTypes.forEach(function(gType){
-          const required = ghunnahRequiredMs(gType);
-          if (asrMs < required){
-            markStrict1Error(w, 'ghunnah-length-' + gType, 'timing nasalisation ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
-          }
-        });
+        const gType = w.tjRules.ghunnahType || 'ghunnah';
+        const required = ghunnahRequiredMs(gType);
+        if (asrMs < required){
+          markStrict1Error(w, 'ghunnah-length-' + gType, 'timing nasalisation ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
+        }
       }
     }
   }
@@ -6225,34 +6197,23 @@ function runStrict1Checks(idx, heard, opts){
         if (req > 0){ batchTimingCtx.cumulativeRequired += req; batchTimingCtx.contributions.push({ idx: lastDirectCommitIdx, rule: 'madd', need: req }); }
       }
       if (prevW.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
-        const gTypes = (prevW.tjRules.ghunnahTypes && prevW.tjRules.ghunnahTypes.length) ? prevW.tjRules.ghunnahTypes : [prevW.tjRules.ghunnahType || 'ghunnah'];
-        gTypes.forEach(function(gType){
-          const req = ghunnahRequiredMs(gType);
-          if (req > 0){ batchTimingCtx.cumulativeRequired += req; batchTimingCtx.contributions.push({ idx: lastDirectCommitIdx, rule: 'ghunnah', need: req }); }
-        });
+        const gType = prevW.tjRules.ghunnahType || 'ghunnah';
+        const req = ghunnahRequiredMs(gType);
+        if (req > 0){ batchTimingCtx.cumulativeRequired += req; batchTimingCtx.contributions.push({ idx: lastDirectCommitIdx, rule: 'ghunnah', need: req }); }
       }
     }
   }
 
-  // FIX: check EVERY ghunnah-family type on the word, not just the first one.
-  // Temporarily swap w.tjRules.ghunnahType per type; restored afterwards.
-  if (w.tjRules && w.tjRules.hasGhunnahContext && w.tjRules.ghunnahTypes && w.tjRules.ghunnahTypes.length > 1){
-    const _savedGType = w.tjRules.ghunnahType;
-    w.tjRules.ghunnahTypes.forEach(function(_gt){ w.tjRules.ghunnahType = _gt; strict1GhunnahOk(w, heard); });
-    w.tjRules.ghunnahType = _savedGType;
-  } else {
-    strict1GhunnahOk(w, heard);
-  }
+  strict1GhunnahOk(w, heard);
   if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w);
   if (STRICT_FEATURES.hamWasl() && w.tjRules && w.tjRules.hamWasl && prevWordAudio && w.audio){
     const gap = w.audio.start - prevWordAudio.end;
     if (gap > 45){ markStrict1Warning(w, 'hamzat-al-wasl', 'glottal re-attack (gap ' + Math.round(gap) + ' ms)'); }
   }
-  // FIX: main Silent check now respects its toggle (was always on).
-  if (STRICT_FEATURES.silent() && !strict1SilentOk(w, heard)){ markStrict1Error(w, 'silent', 'silent letter pronounced'); }
+  if (!strict1SilentOk(w, heard)){ markStrict1Error(w, 'silent', 'silent letter pronounced'); }
   if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
   checkQalqalah(w, heard);
-  if (STRICT_FEATURES.ghunnah()) checkIdghaamNoGhunnah(w, heard);
+  checkIdghaamNoGhunnah(w, heard);
 
   prevWordAudio = w.audio || prevWordAudio;
 
@@ -8123,27 +8084,34 @@ function renderVerses(ayahs, translations){
       else {
         const nt = normAr(text);
         const nb = normAr(BISMILLAH_TEXT);
-        if(nt !== nb && !nt.startsWith(nb)) bisTokens = BISMILLAH_TEXT.split(/\s+/);
+        // Bismillah-only ayah (Al-Fatiha 1:1 in the API): the whole ayah IS Bismillah.
+        if(nt === nb){ bisTokens = text.split(/\s+/).filter(Boolean); text = ''; }
+        else if(nt !== nb && !nt.startsWith(nb)) bisTokens = BISMILLAH_TEXT.split(/\s+/);
       }
       if(bisTokens){
         const bl = document.createElement('div');
         bl.className = 'ayah bismillah-line';
         bl.dataset.surah = surahId; bl.dataset.ayah = '0';
+        if(JUZ_START_VERSE[surahId + ':' + ayahNum]) bl.classList.add('juz-start');
         bisTokens.forEach(tok => pushWord(tok, surahId, 0, bl));
         inner.appendChild(bl);
       }
     }
+    // Bismillah is never verse 1: Al-Fatiha's Bismillah-only ayah was
+    // consumed above as verse 0, so skip its (now empty) ayah line.
+    if(!text) return;
+    const displayAyah = displayAyahNumber(surahId, ayahNum);
     const line=document.createElement('div');
     line.className='ayah';
-    line.dataset.surah = surahId; line.dataset.ayah = ayahNum;
+    line.dataset.surah = surahId; line.dataset.ayah = displayAyah;
     if(JUZ_START_VERSE[surahId + ':' + ayahNum]) line.classList.add('juz-start');
     const toks = text.split(/\s+/).filter(Boolean);
     toks.forEach(tok => {
       if(!normArCached(tok)){ pushDecoration(tok, line); return; }
-      pushWord(tok, surahId, ayahNum, line);
+      pushWord(tok, surahId, displayAyah, line);
     });
     const num=document.createElement('span');
-    num.className='ayah-num'; num.textContent = toAr(ayahNum);
+    num.className='ayah-num'; num.textContent = toAr(displayAyah);
     line.appendChild(num);
     if(translations && translations[i]){
       const t = document.createElement('div');
@@ -9859,16 +9827,20 @@ function renderReaderPage(pageNumber, token){
     }
     let text = String(a.text == null ? '' : a.text);
     if(a.numberInSurah === 1 && shouldShowBismillah(a.surah)){ const r = splitBismillah(text); if(r) text = r.rest; }
-    const verseKey = a.surah + ':' + a.numberInSurah;
+    // Bismillah is never verse 1: in Al-Fatiha the API's ayah 1 IS Bismillah
+    // alone, already shown as the preamble line above — skip it here.
+    if (Number(a.surah) === 1 && a.numberInSurah === 1 && normAr(text) === normAr(BISMILLAH_TEXT)) return;
+    const displayAyah = displayAyahNumber(a.surah, a.numberInSurah);
+    const verseKey = a.surah + ':' + displayAyah;
     const isSajdah = (a.sajda === true) || SAJDAH_VERSES.has(verseKey);
     const span = document.createElement('span'); span.className = 'ayah';
-    span.dataset.surah = String(a.surah); span.dataset.ayah = String(a.numberInSurah);
+    span.dataset.surah = String(a.surah); span.dataset.ayah = String(displayAyah);
     span.dataset.verse = verseKey; span.dataset.page = String(pageNumber);
     if(typeof a.ruku === 'number') span.dataset.ruku = String(a.ruku);
     if(a.surahNumberOfAyahs) span.dataset.surahAyahs = String(a.surahNumberOfAyahs);
     if(JUZ_START_VERSE[verseKey]) span.classList.add('juz-start');
     span.appendChild(document.createTextNode(text + ' '));
-    const mark = document.createElement('span'); mark.className = 'mushaf-ayah-mark'; mark.textContent = toAr(a.numberInSurah);
+    const mark = document.createElement('span'); mark.className = 'mushaf-ayah-mark'; mark.textContent = toAr(displayAyah);
     span.appendChild(mark);
     if(isSajdah){ const sj = document.createElement('span'); sj.className = 'mushaf-sajdah-mark'; sj.textContent = '۩'; sj.title = 'Sajidah verse'; span.appendChild(sj); sajdahRefs.push(verseKey); }
     if(a.translation){ const t = document.createElement('span'); t.className = 'translation'; t.textContent = a.translation; span.appendChild(t); }
@@ -9950,7 +9922,9 @@ function updateViewerTranslationsDOM(){
   pageEl.querySelectorAll('.ayah').forEach(el => {
     const ayahNum = parseInt(el.dataset.ayah, 10);
     if(!Number.isFinite(ayahNum)) return;
-    const idx = viewerAudio.ayahs.findIndex(x => x.numberInSurah === ayahNum);
+    // DOM ayah is display numbering; viewerAudio.ayahs use API numbering.
+    const apiNum = apiAyahNumber(viewerAudio.surah, ayahNum);
+    const idx = viewerAudio.ayahs.findIndex(x => x.numberInSurah === apiNum);
     if(idx === -1) return;
     const trans = viewerAudio.translations[idx] || '';
     let transEl = el.querySelector('.translation');
@@ -10260,11 +10234,14 @@ function viewerAudioStartFromCurrent(){
   playCurrentViewerAyah();
 }
 function findViewerAyahEl(surahNumber, ayahNumber){
+  // ayahNumber here is the API number; the Mushaf DOM uses display
+  // numbering (Bismillah = 0, following verse = 1), so convert first.
+  const displayAyah = displayAyahNumber(surahNumber, ayahNumber);
   const nodes = pageEl.querySelectorAll('.ayah');
   for(let i = 0; i < nodes.length; i++){
     const el = nodes[i];
     if(el.classList.contains('bismillah-line')) continue;
-    if(parseInt(el.dataset.surah, 10) === surahNumber && parseInt(el.dataset.ayah, 10) === ayahNumber) return el;
+    if(parseInt(el.dataset.surah, 10) === surahNumber && parseInt(el.dataset.ayah, 10) === displayAyah) return el;
   }
   return null;
 }
