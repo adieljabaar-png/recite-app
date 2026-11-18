@@ -3605,7 +3605,7 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   '\u0638':'\u0630', // ظ -> ذ  CHANGED: was ز. Closer than ز, keeps ظ / ذ merged
   '\u0630':'\u0632', // ذ -> ز (kept)
   '\u062B':'\u0633', // ث -> س (kept; ث -> ت left to lev())
-  '\u0642':'\u0621', // ق -> ء  CHANGED: was ك. Gulf/Egyptian ق dropped to hamza
+  '\u0642':'\u0627', // ق -> ا: retain a weak glottal-stop trace when standalone ء is ignored
   // Variant / Uthmani / ASR forms — also in VARIANT_MAP so they
   // survive normAr(); listed here so PHON_LOOSE works standalone too
   '\u06BE':'\u0647', // ھ -> ه
@@ -6362,7 +6362,7 @@ let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
 const speechQueue = [];
-const SPEECH_THROTTLE_MS = 25;
+const SPEECH_THROTTLE_MS = 15;
 
 function resetSpeechPipeline(){
   speechQueue.length = 0;
@@ -6386,6 +6386,37 @@ function buildConsensusSet(alternatives){
   }
 }
 
+function speechSnapshotHasFinal(snap){
+  return !!(snap && snap.results && snap.results.some(r => r && r.isFinal));
+}
+
+// Keep every final result, but coalesce queued interim snapshots. Browsers can
+// emit many revisions of the same partial phrase; processing stale revisions
+// only builds a backlog and makes the pointer feel slow.
+function enqueueSpeechSnapshot(snap){
+  if(!snap || !snap.results || !snap.results.length) return;
+  if(speechSnapshotHasFinal(snap)){
+    speechQueue.push(snap); // final transcripts are never discarded
+  } else {
+    let lastFinal = -1;
+    for(let i = speechQueue.length - 1; i >= 0; i--){
+      if(speechSnapshotHasFinal(speechQueue[i])){ lastFinal = i; break; }
+    }
+    let replaceAt = -1;
+    for(let i = speechQueue.length - 1; i > lastFinal; i--){
+      if(!speechSnapshotHasFinal(speechQueue[i])){ replaceAt = i; break; }
+    }
+    if(replaceAt >= 0) speechQueue[replaceAt] = snap;
+    else speechQueue.push(snap);
+  }
+  // Bound interim backlog on slower phones. Never remove a final result.
+  while(speechQueue.length > 12){
+    const staleInterim = speechQueue.findIndex(item => !speechSnapshotHasFinal(item));
+    if(staleInterim < 0) break;
+    speechQueue.splice(staleInterim, 1);
+  }
+}
+
 function scheduleSpeechResult(event) {
   if (!event || !wantMic || fsPaused || micPaused) return;
   let hasFinal = false;
@@ -6404,9 +6435,9 @@ function scheduleSpeechResult(event) {
   if (!snapshot.length) return;
   const snap = { resultIndex: event.resultIndex, results: snapshot };
   if (hasFinal) {
-    if (pendingSpeechEvent) { speechQueue.push(pendingSpeechEvent); pendingSpeechEvent = null; }
+    if (pendingSpeechEvent) { enqueueSpeechSnapshot(pendingSpeechEvent); pendingSpeechEvent = null; }
     if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
-    speechQueue.push(snap);
+    enqueueSpeechSnapshot(snap);
     processSpeechQueue();
     return;
   }
@@ -6417,7 +6448,7 @@ function scheduleSpeechResult(event) {
     const ev = pendingSpeechEvent;
     pendingSpeechEvent = null;
     if (!ev || !wantMic || fsPaused || micPaused) return;
-    speechQueue.push(ev);
+    enqueueSpeechSnapshot(ev);
     processSpeechQueue();
   }, SPEECH_THROTTLE_MS);
 }
@@ -6484,7 +6515,8 @@ async function runSpeechResultProcessing(snap) {
       const newToks = toks.slice(already);
       if (!newToks.length) continue;
       recPush(newToks);
-      const used = await grade(recTokens, recCursor);
+      const gradeResult = grade(recTokens, recCursor);
+      const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
       scheduleHUD();
@@ -6515,7 +6547,8 @@ async function runSpeechResultProcessing(snap) {
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
         recPush(newToks);
-        const used = await grade(recTokens, recCursor);
+        const gradeResult = grade(recTokens, recCursor);
+        const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
         recCursor = Math.min(recCursor + used, recTokens.length);
         if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
         scheduleHUD();
@@ -6534,7 +6567,7 @@ function scoreAlternativeToks(toks, startPtr){
   if(!toks || !toks.length) return 0;
   if(!words.length || startPtr >= words.length) return 0;
   let score = 0, ti = 0, wi = startPtr;
-  const maxAhead = followOnly ? 5 : Math.min(6, words.length - startPtr);
+  const maxAhead = followOnly ? 3 : Math.min(6, words.length - startPtr);
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
     const heard = normArCached(rawTok);
@@ -6729,11 +6762,11 @@ function armSpeechKeepalive(){
 }
 function disarmSpeechKeepalive(){ clearTimeout(speechKeepaliveTimer); speechKeepaliveTimer = null; }
 
-async function grade(tokens, startIdx){
+function grade(tokens, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
   if(followOnly) return gradeFollowFast(tokens, start);
-  return await gradeFull(tokens, start);
+  return gradeFull(tokens, start);
 }
 
 function isAcousticWordShapeMatch(w, seg) {
@@ -8246,12 +8279,15 @@ function completeVerse(verseKey){
 }
 function advancePast(n){
   if(n <= 0 || ptr >= words.length) return;
+  const previousPtr = ptr;
   const endPtr = Math.min(words.length, ptr + n);
   const advanced = endPtr - ptr;
   const leaving = new Set();
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
-  updateSpeechGrammar(currentSpeechGrammarWindow());
+  const crossedVerse = !!(words[previousPtr] && words[ptr] && words[previousPtr].verse !== words[ptr].verse);
+  const lastGrammarPtr = speechRecognition ? (speechRecognition.__lastGrammarPtr || 0) : 0;
+  if(crossedVerse || ptr - lastGrammarPtr >= 3) updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
