@@ -3594,7 +3594,10 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   '\u062D':'\u0647', // ح -> ه
   '\u062E':'\u0647', // خ -> ه
   '\u063A':'\u0647', // غ -> ه (غ / خ already merged via ه)
-  '\u0639':'\u0627', // ع -> ا (same as ء -> ا, so ع / ء merge)
+  '\u0639':'\u0627', // ع -> ا
+  // Follow-only equivalences requested for more tolerant live recognition:
+  '\u0645':'\u0646', // م -> ن (same loose matching class)
+  '\u0621':'',       // ء is pronounced but does not count as a separate letter
   // Emphatics -> their light counterpart, dialect form
   '\u0637':'\u062A', // ط -> ت
   '\u0635':'\u0633', // ص -> س (inherited, listed for clarity)
@@ -3617,9 +3620,8 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   '\u0686':'\u062C', // چ -> ج
   '\u067E':'\u0628', // پ -> ب
   '\u0698':'\u0632'  // ژ -> ز
-  // DELIBERATELY NOT ADDED:
-  // ج -> ز, ه -> ء, ب -> م, م -> ن, ر -> ل — too broad, would cause
-  // false-positive word matches in Follow mode.
+  // Other broad equivalences remain excluded to limit false-positive matches:
+  // ج -> ز, ه -> ء, ب -> م, ر -> ل.
 });
 
 const EMPHATIC_FAMILY = {
@@ -3647,7 +3649,7 @@ class PhonemeClass {
     const msa = normMsa(pre);
     let res = '';
     for (let i = 0; i < msa.length; i++) {
-      res += this.dialectMap[msa[i]] || msa[i];
+      res += Object.prototype.hasOwnProperty.call(this.dialectMap, msa[i]) ? this.dialectMap[msa[i]] : msa[i];
     }
     return res;
   }
@@ -3670,7 +3672,7 @@ function phonNormLooseAr(s){
   raw = mapVariantLetters(raw); // گ / چ / پ / ھ / etc. -> canonical, before normAr()
   const n = normArCached(raw);
   let out = '';
-  for(let i = 0; i < n.length; i++) out += PHON_LOOSE[n[i]] || n[i];
+  for(let i = 0; i < n.length; i++) out += Object.prototype.hasOwnProperty.call(PHON_LOOSE, n[i]) ? PHON_LOOSE[n[i]] : n[i];
   return out;
 }
 
