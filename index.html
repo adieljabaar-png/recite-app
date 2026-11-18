@@ -6489,15 +6489,25 @@ async function runSpeechResultProcessing(snap) {
 
 } else {
       const already = interimProgress.get(i) || 0;
+      // Interim results normally hold back their final token because browsers
+      // often revise that token while the speaker is still talking.  The old
+      // length/consensus heuristic could both delay a genuine match and release
+      // a token that did not correspond to the current Quran word.  Release the
+      // tail immediately only when the existing Follow matcher says it matches
+      // the current target.  grade() still performs the normal commit checks;
+      // this is not an automatic/unchecked acceptance.
       let safeEnd = Math.max(already, toks.length - 1);
-      if (followOnly && toks.length > already && safeEnd < toks.length) {
-        const tailNorm = normArCached(toks[toks.length - 1]);
-        const currentTarget = (ptr < words.length) ? words[ptr].norm : '';
-        const isConsensusTail = currentConsensusSet.has(tailNorm);
-        const isSafeTail =
-          isConsensusTail ||
-          (tailNorm.length >= 3 && !(currentTarget && currentTarget.startsWith(tailNorm)));
-        if (isSafeTail) safeEnd = toks.length;
+      if (followOnly && toks.length > already && safeEnd < toks.length && ptr < words.length) {
+        const tailRaw = toks[toks.length - 1];
+        const tailNorm = normArCached(tailRaw);
+        const targetWord = words[ptr];
+        if (tailNorm && targetWord) {
+          const tailPhon = phonArCached(tailRaw);
+          const tailPhonLoose = phonLooseArCached(tailRaw);
+          const tailMatchesCurrent = tailNorm === targetWord.norm ||
+            isMatchWord(tailNorm, tailPhon, tailPhonLoose, targetWord);
+          if (tailMatchesCurrent) safeEnd = toks.length;
+        }
       }
       const newToks = toks.slice(already, safeEnd);
       if (newToks.length) {
@@ -11393,19 +11403,45 @@ function openInfoModal(){
   bg.className = 'modal-bg';
   bg.innerHTML = '<div class="modal info-modal">' +
     '<div class="grabber"></div>' +
-    '<h2>ℹ️ About this app</h2>' +
-    '<div class="coach-note"><b>Looking for the Quran Recitation Coach rules?</b><br>The Recitation Coach has its own Info tab on the <b>Quran Recitation Coach</b> page.</div>' +
-    '<div class="feature"><h3><span class="fnum">1</span> Hijri date &amp; calendar</h3><ul><li>Today\'s <b>Hijri date</b> is computed from the same arithmetic algorithm used by the calendar.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">2</span> Reader with swipeable pages</h3><ul><li><b>Swipe right</b> to turn to the next page; <b>swipe left</b> to go back.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">3</span> Book-form mushaf layout</h3><ul><li>Every page is laid out like a printed <b>IndoPak mushaf</b>.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">4</span> 📖 Multi-language translations</h3><ul><li>English (Yusuf Ali &amp; Saheeh International) and Türkçe (Diyanet). Choose the language on the <b>Surah index</b>, <b>Juz index</b>, or <b>Play audio</b> screen — the choice applies to the reader and to audio playback.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">5</span> 🎙️ ' + RECITER_ORDER.length + ' Qari reciters</h3><ul><li><b>Default:</b> Mishary Rashid Alafasy.</li></ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
-    '<div class="feature"><h3><span class="fnum">6</span> Bookmarks</h3><ul><li><b>Hold any verse for 3 seconds</b> to bookmark it.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">7</span> Play audio, translation &amp; offline downloads</h3><ul><li>Tap <b>⬇</b> to download a surah for offline.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">8</span> Prayer Times &amp; Qibla</h3><ul><li>Alarms + Qibla compass.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">9</span> Hifz Test &amp; Tajweed Colors</h3><ul><li>Three memorisation modes.</li></ul></div>' +
-    '<div class="feature"><h3><span class="fnum">10</span> 🔥 Streak &amp; Achievements</h3><ul><li>10 achievements to unlock.</li></ul></div>' +
-    '<div class="footer-note">All learning progress, prayer adjustments and downloads stay on your device.</div>' +
+    '<h2>ℹ️ About Recite</h2>' +
+    '<p style="color:var(--muted);font-size:.84rem;line-height:1.6;margin:0 0 12px">Recite brings Quran reading, recitation practice, Arabic learning and everyday Islamic tools together in one place. Choose a feature from the Home screen or Dashboard to get started.</p>' +
+    '<div class="feature"><h3><span class="fnum">1</span> 📊 Dashboard — learning and daily progress</h3><ul>' +
+      '<li><b>Daily streak:</b> see your current and best practice streak, with achievement badges and milestones.</li>' +
+      '<li><b>Read Arabic:</b> open the dedicated voice-powered Arabic trainer to practise Arabic letters and reading, and learn Tajweed through guided voice practice. This opens the separate <b>read.html</b> trainer.</li>' +
+      '<li><b>Hifz Test:</b> practise memorisation and test how well you remember Quran passages.</li>' +
+      '<li><b>Tajweed Colors:</b> view Quran text with colour-coded Tajweed annotations to help identify recitation rules.</li>' +
+      '<li><b>Daily share card:</b> view the selected city and date, daily prayer times, Duah of the Day with translation and reference, Tafsir of the Duah, Hadith of the Day with reference, and its explanation. Share the card as an image or as text.</li>' +
+    '</ul></div>' +
+    '<div class="feature"><h3><span class="fnum">2</span> 📖 Quran reader and indexes</h3><ul>' +
+      '<li><b>Surah index:</b> browse all 114 surahs.</li>' +
+      '<li><b>Juz index:</b> browse all 30 ajza.</li>' +
+      '<li><b>Reader:</b> read Quran text in a book-style mushaf layout with swipeable pages.</li>' +
+      '<li><b>Bookmarks:</b> save a verse by pressing and holding it for 3 seconds.</li>' +
+      '<li><b>Translations:</b> English translations (Yusuf Ali and Saheeh International) and Türkçe (Diyanet) are available from the relevant reading and audio screens.</li>' +
+    '</ul></div>' +
+    '<div class="feature"><h3><span class="fnum">3</span> 🎙️ Quran Recitation Coach</h3><ul>' +
+      '<li><b>Follow mode:</b> follow your recitation word by word with live highlighting and progress tracking.</li>' +
+      '<li><b>Tajweed mode:</b> receive recitation feedback and available Tajweed rule checks while practising.</li>' +
+      '<li><b>Hide text / Reveal text:</b> practise from memory and reveal words as you recite.</li>' +
+      '<li><b>Saved progress:</b> resume from your last saved surah, ayah and word. Use the Coach Info tab for the detailed mode guide and device-support notes.</li>' +
+    '</ul></div>' +
+    '<div class="feature"><h3><span class="fnum">4</span> ▶️ Audio and Qari reciters</h3><ul>' +
+      '<li>Play Arabic Quran audio and available translations, choose a reciter, and download surahs for offline listening.</li>' +
+      '<li><b>Default reciter:</b> Mishary Rashid Alafasy. The app offers ' + RECITER_ORDER.length + ' Qari reciters:</li>' +
+    '</ul><div style="margin-top:8px;background:rgba(0,0,0,.20);border:1px solid rgba(79,140,255,.25);border-radius:10px;padding:9px 12px"><ul style="margin:0;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">' + reciterListHtml + '</ul></div></div>' +
+    '<div class="feature"><h3><span class="fnum">5</span> 🕌 Prayer Times, Qibla and calendar</h3><ul>' +
+      '<li>View the five daily prayer times for your selected location, adjust calculation settings and prayer offsets, and configure prayer alarms.</li>' +
+      '<li>Use the Qibla compass to find the direction of the Kaaba.</li>' +
+      '<li>See the Hijri date and important Islamic dates.</li>' +
+    '</ul></div>' +
+    '<div class="feature"><h3><span class="fnum">6</span> 📲 App tools</h3><ul>' +
+      '<li><b>Install on device:</b> add Recite to your Home Screen for quick access and an app-like full-screen experience.</li>' +
+      '<li><b>Notifications:</b> enable supported app notifications.</li>' +
+      '<li><b>Microphone test:</b> check microphone access before voice-recognition practice.</li>' +
+      '<li><b>Share app, Scan barcode and Feedback:</b> share the app link, open a barcode scanner, or send feedback from the ☰ menu.</li>' +
+      '<li><b>Theme:</b> switch between dark and light appearance.</li>' +
+    '</ul></div>' +
+    '<div class="footer-note">Your bookmarks and learning progress are stored on your device. Internet access may be needed for online Quran resources, audio, translations and updated content.</div>' +
     '<div class="btn-group"><button class="primary" id="infoClose">Got it</button><button class="danger" id="infoReset">Reset app</button></div></div>';
   document.body.appendChild(bg);
   const close = () => bg.remove();
