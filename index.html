@@ -3601,9 +3601,12 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   // Emphatics -> their light counterpart, dialect form
   '\u0637':'\u062A', // ط -> ت
   '\u0635':'\u0633', // ص -> س (inherited, listed for clarity)
-  '\u0636':'\u062F', // ض -> د  CHANGED: was ز. Egyptian/Levantine ASR hears ض as د
-  '\u0638':'\u0630', // ظ -> ذ  CHANGED: was ز. Closer than ز, keeps ظ / ذ merged
-  '\u0630':'\u0632', // ذ -> ز (kept)
+  // Follow-only pronunciation class: ض / ذ / ظ all normalize to ز.
+  // This lets different regional pronunciations match the same expected
+  // Quran word without changing the displayed Uthmani text or Tajweed grading.
+  '\u0636':'\u0632', // ض -> ز
+  '\u0638':'\u0632', // ظ -> ز
+  '\u0630':'\u0632', // ذ -> ز
   '\u062B':'\u0633', // ث -> س (kept; ث -> ت left to lev())
   '\u0642':'\u0627', // ق -> ا: retain a weak glottal-stop trace when standalone ء is ignored
   // Variant / Uthmani / ASR forms — also in VARIANT_MAP so they
