@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.19 — Cache-invalidation bump for the new dashboard layout
+   v2.4.20 — Cache-invalidation bump for the new dashboard layout
    and the reworked Read Arabic page, plus user-data protection.
 
    User data that is NEVER deleted by this service worker:
