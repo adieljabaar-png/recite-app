@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0d1119">
+    <meta name="referrer" content="no-referrer">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="READ">
@@ -918,20 +919,23 @@
 
     <div id="voice-wizard-overlay" class="voice-wizard-overlay" onclick="if(event.target===this)closeVoiceWizard()">
         <div class="voice-wizard-card">
-            <h3>🔊 Set Up Arabic Voice</h3>
-            <p style="font-size:0.9rem;color:var(--text-light);">Your device does not currently have an Arabic Text‑to‑Speech voice installed. Without it, tapping Arabic letters will produce no sound.</p>
-            <ol>
-                <li>Open your phone's <strong>Settings</strong> app.</li>
-                <li>Go to <strong>System → Languages &amp; input → Text‑to‑speech output</strong> (on Samsung: <strong>General management → Language and input → Text‑to‑speech</strong>).</li>
-                <li>Tap the <strong>⚙️ gear icon</strong> next to <strong>Speech Services by Google</strong> (or your preferred TTS engine).</li>
-                <li>Tap <strong>Install voice data</strong>.</li>
-                <li>Select <strong>العربية (Arabic)</strong> and download it.</li>
-                <li>Return to the app and tap any Arabic letter — you should now hear the pronunciation.</li>
-            </ol>
-            <p style="font-size:0.85rem;color:var(--text-light);">On some devices the path may differ slightly. If you cannot find the TTS settings, try the button below to jump directly to the system TTS screen.</p>
+            <h3>🔊 Arabic Voice Setup</h3>
+            <div id="voice-wizard-body"></div>
             <div class="wizard-actions">
-                <button class="btn" onclick="openTtsSettings()">Open TTS Settings</button>
+                <button class="btn" onclick="testArabicVoice()">▶ Test voice</button>
+                <button class="btn" id="voice-wizard-tts-btn" onclick="openTtsSettings()" style="display:none">Open TTS Settings</button>
                 <button class="btn btn-secondary" onclick="closeVoiceWizard()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mic-help-overlay" class="voice-wizard-overlay" onclick="if(event.target===this)closeMicHelp()">
+        <div class="voice-wizard-card">
+            <h3>🎙 Microphone Access</h3>
+            <div id="mic-help-body"></div>
+            <div class="wizard-actions">
+                <button class="btn" onclick="retryMic()">Try again</button>
+                <button class="btn btn-secondary" onclick="closeMicHelp()">Close</button>
             </div>
         </div>
     </div>
@@ -1161,41 +1165,104 @@
         // =========================================================
         let cachedVoice = null;
 
-        /**
-         * Returns an Arabic voice ONLY if one exists.
-         * Never falls back to an English or other voice.
-         */
+        function normLang(l) { return (l || '').toLowerCase().replace(/_/g, '-'); }
+        function getVoicesSafe() {
+            try { return (window.speechSynthesis && window.speechSynthesis.getVoices()) || []; }
+            catch (e) { return []; }
+        }
+
+        /** Returns an installed Arabic voice (ar-SA preferred), or null. Handles "ar_SA" (Android). */
         function pickArabicVoice() {
             if (!window.speechSynthesis) return null;
-            let voices = [];
-            try { voices = window.speechSynthesis.getVoices() || []; } catch (e) { return null; }
-
+            const voices = getVoicesSafe();
             let arSA = null, arAny = null;
             for (let i = 0; i < voices.length; i++) {
-                const lang = (voices[i].lang || '').toLowerCase();
-                if (lang.indexOf('ar') !== 0) continue;
-                if (!arSA && lang.indexOf('ar-sa') === 0) arSA = voices[i];
-                if (!arAny) arAny = voices[i];
+                const v = voices[i];
+                const lang = normLang(v.lang);
+                const name = (v.name || '').toLowerCase();
+                const isAr = lang === 'ar' || lang.indexOf('ar-') === 0 || /arabic|عرب/.test(name);
+                if (!isAr) continue;
+                if (!arSA && lang.indexOf('ar-sa') === 0) arSA = v;
+                if (!arAny) arAny = v;
             }
             return arSA || arAny || null;
         }
+        function hasArabicVoice() { return !!pickArabicVoice(); }
 
-        function hasArabicVoice() {
-            return !!pickArabicVoice();
+        // Desktop browsers load their voice list asynchronously — wait for it (max 1.5 s).
+        let voicesReadyPromise = null;
+        function whenVoicesReady() {
+            if (getVoicesSafe().length) return Promise.resolve();
+            if (voicesReadyPromise) return voicesReadyPromise;
+            voicesReadyPromise = new Promise(function (resolve) {
+                const t = setTimeout(finish, 1500);
+                function onChange() { if (getVoicesSafe().length) finish(); }
+                function finish() {
+                    clearTimeout(t);
+                    try { window.speechSynthesis.removeEventListener('voiceschanged', onChange); } catch (e) {}
+                    voicesReadyPromise = null;
+                    resolve();
+                }
+                try { window.speechSynthesis.addEventListener('voiceschanged', onChange); } catch (e) {}
+            });
+            return voicesReadyPromise;
         }
 
-        /**
-         * Shows the voice‑setup wizard when no Arabic voice exists.
-         * Called automatically on the first failed tap, or manually from the menu.
-         */
+        // ---------- Platform-aware voice setup guide ----------
+        function detectPlatform() {
+            const ua = navigator.userAgent || '';
+            if (/Android/i.test(ua)) return 'android';
+            if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+            if (/Windows/i.test(ua)) return 'windows';
+            if (/Macintosh|Mac OS X/i.test(ua)) return 'mac';
+            if (/Linux|X11|CrOS/i.test(ua)) return 'linux';
+            return 'other';
+        }
+        const VOICE_STEPS = {
+            windows: ['Open <strong>Settings → Time &amp; language → Speech</strong>.',
+                      'Under <strong>Manage voices</strong> choose <strong>Add voices</strong>, pick <strong>Arabic (Saudi Arabia)</strong> and install it. (Or <strong>Language &amp; region → Add a language → Arabic</strong>, tick <em>Text‑to‑speech</em>.)',
+                      'Fully close and reopen your browser, then tap any Arabic letter.',
+                      '<strong>Tip:</strong> Microsoft Edge also includes built‑in online Arabic voices.'],
+            mac:     ['Open <strong>System Settings → Accessibility → Spoken Content</strong>.',
+                      'Click <strong>System voice → Manage Voices…</strong>, open <strong>Arabic</strong> and download a voice (e.g. Majed or Tarik).',
+                      'Fully quit and reopen your browser, then tap any Arabic letter.'],
+            ios:     ['Open <strong>Settings → Accessibility → Spoken Content → Voices → Arabic</strong>.',
+                      'Download a voice (e.g. Majed), then come back and tap any Arabic letter.',
+                      'Make sure the side <strong>silent switch</strong> is off and the volume is up.'],
+            android: ['Open <strong>Settings → System → Languages &amp; input → Text‑to‑speech output</strong> (Samsung: <strong>General management → Language and input → Text‑to‑speech</strong>).',
+                      'Tap the <strong>⚙️</strong> next to <strong>Speech Services by Google</strong> → <strong>Install voice data</strong>.',
+                      'Choose <strong>العربية (Arabic)</strong> and download it, then return and tap any Arabic letter.'],
+            linux:   ['Use <strong>Google Chrome</strong> or <strong>Chromium</strong> — they provide Arabic voices online.',
+                      'Or install <code>speech-dispatcher</code> and <code>espeak-ng</code> (it includes Arabic) and restart the browser.'],
+            other:   ['Install an Arabic text‑to‑speech voice in your operating system settings, then restart your browser.',
+                      'Or open this page in Chrome, Edge or Safari.']
+        };
+        function buildVoiceWizardBody() {
+            const plat = detectPlatform();
+            const steps = VOICE_STEPS[plat] || VOICE_STEPS.other;
+            const online = navigator.onLine !== false;
+            let h = '<p style="font-size:0.9rem;color:var(--text-light);">' +
+                    (hasArabicVoice()
+                        ? 'An Arabic voice is installed, but it did not play. Try the test button below, restart your browser, or install another voice.'
+                        : 'No Arabic voice is installed on this device. The app tries a free <strong>online Arabic voice</strong> automatically' +
+                          (online ? '' : ' — but you appear to be <strong>offline</strong>, so there is no sound right now') +
+                          '. For offline use and best quality, install one:') + '</p><ol>';
+            for (let i = 0; i < steps.length; i++) h += '<li>' + steps[i] + '</li>';
+            h += '</ol><p style="font-size:0.85rem;color:var(--text-light);">Also check that your device volume is up and the tab is not muted.</p>';
+            return h;
+        }
+
         let voiceWizardShown = false;
         function maybeShowVoiceWizard() {
             if (voiceWizardShown) return;
-            if (hasArabicVoice()) return;
             voiceWizardShown = true;
             showVoiceWizard();
         }
         function showVoiceWizard() {
+            const body = document.getElementById('voice-wizard-body');
+            if (body) body.innerHTML = buildVoiceWizardBody();
+            const ts = document.getElementById('voice-wizard-tts-btn');
+            if (ts) ts.style.display = detectPlatform() === 'android' ? '' : 'none';
             const overlay = document.getElementById('voice-wizard-overlay');
             if (overlay) overlay.classList.add('show');
         }
@@ -1203,16 +1270,35 @@
             const overlay = document.getElementById('voice-wizard-overlay');
             if (overlay) overlay.classList.remove('show');
         }
+        function testArabicVoice() { speakArabic('أَ', null, false); }
         function openTtsSettings() {
-            // Attempt to open the system TTS settings on Android.
-            // There is no universal web API, but the intent URI below
-            // is recognised by many Android builds.
-            const intentUri = 'intent:#Intent;action=com.android.settings.TTS_SETTINGS;end';
+            try { window.location.href = 'intent:#Intent;action=com.android.settings.TTS_SETTINGS;end'; }
+            catch (e) { showToast('Could not open TTS settings automatically. Follow the steps above.'); }
+        }
+
+        // ---------- Online Arabic voice (fallback when the device has none / is silent) ----------
+        let onlineAudio = null;
+        function stopOnlineAudio() {
+            try { if (onlineAudio) { onlineAudio.pause(); onlineAudio.onended = null; onlineAudio.onerror = null; onlineAudio = null; } } catch (e) {}
+        }
+        function speakOnline(text, onDone, onFail) {
+            let settled = false;
+            function ok() { if (settled) return; settled = true; if (onDone) onDone(); }
+            function bad() { if (settled) return; settled = true; if (onFail) onFail(); }
             try {
-                window.location.href = intentUri;
-            } catch (e) {
-                showToast('Could not open TTS settings automatically. Follow the steps above.');
-            }
+                stopOnlineAudio();
+                const q = (text || '').replace(/ـ/g, '');
+                const a = new Audio();
+                onlineAudio = a;
+                a.preload = 'auto';
+                a.onended = ok;
+                a.onerror = bad;
+                a.src = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ar&q=' + encodeURIComponent(q);
+                try { a.playbackRate = 0.9; } catch (e) {}
+                const p = a.play();
+                if (p && p.catch) p.catch(bad);
+                setTimeout(function () { ok(); }, 12000);   // never leave the caller hanging
+            } catch (e) { bad(); }
         }
 
 
@@ -1264,68 +1350,73 @@
         }
 
         /**
-         * FIXED speakArabic:
-         *  - guards against missing speechSynthesis
-         *  - delays speak() after cancel() for Android
-         *  - uses pickArabicVoice() (never a non‑Arabic voice)
-         *  - reports real errors via toast
-         *  - triggers the voice‑setup wizard when no Arabic voice exists
+         * speakArabic — works on every browser/OS:
+         *  1. waits for the voice list (desktop loads it late)
+         *  2. uses an installed Arabic voice if there is one
+         *  3. if none, errors, or stays silent → plays an online Arabic voice instead
+         *  4. only if both fail does it show the setup guide
          */
         function speakArabic(text, onDone, forceFinalTajweed) {
             let finished = false;
             function done() { if (finished) return; finished = true; if (typeof onDone === 'function') onDone(); }
 
-            if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance === 'undefined') {
-                showToast('🔇 No speech engine found. Enable Text‑to‑speech in Android settings.');
-                done(); return;
-            }
-
             const prepared = letterNameFor(text) || ((forceFinalTajweed || needsClearSyllable(text)) ? forceFinalTajweedVowel(text) : addFinalVowelCarrier(text));
+            const synth = window.speechSynthesis;
+            const hasSynth = !!synth && typeof window.SpeechSynthesisUtterance !== 'undefined';
 
-            function speakNow() {
-                const u = new SpeechSynthesisUtterance(prepared);
-                u.lang = 'ar-SA';                 // keep this unless a real Arabic voice is found
-                u.rate = 0.8;
+            stopOnlineAudio();
+            if (hasSynth) { try { synth.cancel(); } catch (e) {} }
 
+            function bothFailed() {
+                done();
+                showToast(navigator.onLine === false
+                    ? '🔇 No Arabic voice on this device and you are offline — see the voice setup guide.'
+                    : '🔇 Could not play Arabic audio — see the voice setup guide.');
+                maybeShowVoiceWizard();
+            }
+            function goOnline() { speakOnline(prepared, done, bothFailed); }
+
+            function speakLocal() {
+                const voices = getVoicesSafe();
                 const voice = pickArabicVoice();
-                if (voice) {
-                    u.voice = voice;
-                    if (voice.lang) u.lang = voice.lang;
-                } else {
-                    // No Arabic voice — leave u.lang = 'ar-SA' so the engine can
-                    // report 'language-unavailable' via onerror instead of failing silently.
-                }
+                // Voice list loaded but no Arabic in it → straight to the online voice.
+                if (!hasSynth || (voices.length && !voice)) { goOnline(); return; }
 
-                u.onend = done;
+                const u = new SpeechSynthesisUtterance(prepared);
+                u.lang = 'ar-SA';
+                u.rate = 0.8;
+                if (voice) { u.voice = voice; if (voice.lang) u.lang = voice.lang; }
+
+                let started = false, fellBack = false;
+                function fallBack() {
+                    if (fellBack || finished) return;
+                    fellBack = true;
+                    try { synth.cancel(); } catch (e) {}
+                    goOnline();
+                }
+                u.onstart = function () { started = true; };
+                u.onend = function () { if (!fellBack) done(); };
                 u.onerror = function (ev) {
                     const err = ev && ev.error;
-                    if (err === 'language-unavailable' || err === 'voice-unavailable') {
-                        showToast('🔇 No Arabic voice installed — opening setup guide.');
-                        maybeShowVoiceWizard();
-                    } else if (err === 'synthesis-failed' || err === 'synthesis-unavailable') {
-                        showToast('🔇 Speech engine failed. Install or restart Google Text‑to‑Speech.');
-                    } else if (err === 'not-allowed') {
-                        showToast('🔇 Speech blocked — tap the page once, then retry.');
-                    }
-                    done();
+                    if (err === 'canceled' || err === 'interrupted') { if (!fellBack) done(); return; }
+                    fallBack();
                 };
-
-                try { window.speechSynthesis.speak(u); }
-                catch (e) { showToast('🔇 Could not speak: ' + (e.name || 'error')); done(); return; }
-
-                // Safety net: if onend never fires, resolve after a timeout.
+                // Some engines accept the request and then never produce sound.
                 setTimeout(function () {
-                    if (finished) return;
-                    const poll = setInterval(function () {
-                        if (!window.speechSynthesis.speaking) { clearInterval(poll); done(); }
-                    }, 150);
-                    setTimeout(function () { clearInterval(poll); done(); }, 12000);
-                }, 700);
+                    if (finished || fellBack || started) return;
+                    let speaking = false;
+                    try { speaking = synth.speaking; } catch (e) {}
+                    if (!speaking) fallBack();
+                }, 2500);
+                setTimeout(function () { if (!fellBack) done(); }, 15000);
+
+                try { synth.resume(); synth.speak(u); }   // resume(): Chrome can get stuck "paused"
+                catch (e) { fallBack(); }
             }
 
-            try { window.speechSynthesis.cancel(); } catch (e) {}
-            // Android ignores cancel()+speak() in the same tick.
-            setTimeout(speakNow, 60);
+            if (!hasSynth) { goOnline(); return; }
+            if (!getVoicesSafe().length) { whenVoicesReady().then(function () { setTimeout(speakLocal, 60); }); return; }
+            setTimeout(speakLocal, 60);   // gives cancel() time to settle
         }
 
         // =========================================================
@@ -2028,8 +2119,19 @@
         }
 
         function startTest(screenId, gridId, scoreKey, btnEl) {
-            if (!micAvailable) { showToast('🎧 Practice Mode — microphone unavailable on this device.'); return; }
+            if (!micAvailable) { showToast('🎧 Practice Mode — speech recognition is unavailable in this browser.'); return; }
             if (!recognition) { enterPracticeOnlyMode('Speech recognition is not available in this browser.'); return; }
+            if (micChecking) return;
+            micChecking = true;
+            showToast('🎙 Please click “Allow” if your browser asks to use the microphone.');
+            ensureMicPermission().then(function (r) {
+                micChecking = false;
+                if (r !== 'ok') { showMicHelp(r, function () { startTest(screenId, gridId, scoreKey, btnEl); }); return; }
+                startTestCore(screenId, gridId, scoreKey, btnEl);
+            });
+        }
+
+        function startTestCore(screenId, gridId, scoreKey, btnEl) {
             stopTest();
 
             currentScreenId = screenId;
@@ -2381,13 +2483,18 @@
             recognition.onerror = function (e) {
                 if (e.error === 'aborted' || e.error === 'no-speech') return;
                 if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                    if (isTestMode) { updateStatus('⚠️ Microphone blocked. Allow mic access in your browser settings.'); stopTest(); }
-                    enterPracticeOnlyMode('Microphone blocked — Practice Mode only. Tap any word to hear it read aloud.');
+                    const was = currentStartBtn, sid = currentScreenId, gid = currentGridId, sk = currentScoreKey;
+                    if (isTestMode) stopTest();
+                    showMicHelp('blocked', function () { startTest(sid, gid, sk, was); });
                 } else if (e.error === 'audio-capture') {
-                    if (isTestMode) { updateStatus('⚠️ No microphone found.'); stopTest(); }
-                    enterPracticeOnlyMode('No microphone found — Practice Mode only.');
+                    const was = currentStartBtn, sid = currentScreenId, gid = currentGridId, sk = currentScoreKey;
+                    if (isTestMode) stopTest();
+                    showMicHelp('nomic', function () { startTest(sid, gid, sk, was); });
                 } else if (e.error === 'network') {
-                    if (isTestMode) updateStatus('⚠️ Speech service unreachable — check internet.');
+                    if (isTestMode) updateStatus('⚠️ Speech service unreachable — check your internet connection.');
+                    showToast('⚠️ Speech recognition needs an internet connection.');
+                } else if (e.error === 'language-not-supported') {
+                    showToast('⚠️ Arabic speech recognition is not available in this browser.');
                 }
             };
             recognition.onend = function () {
@@ -2400,6 +2507,85 @@
                     if (isTestMode && !isTransitioning && !pendingAdvance && !isRecognizing && !isPaused) startListening();
                 }, 200);
             };
+        }
+
+        // =========================================================
+        // MICROPHONE PERMISSION — explicit prompt + helpful guidance
+        // =========================================================
+        function detectBrowserLabel() {
+            const n = engineProfile.name;
+            return { chrome: 'Chrome', edge: 'Edge', opera: 'Opera', safari: 'Safari', firefox: 'Firefox' }[n] || 'your browser';
+        }
+        function buildMicHelpBody(reason) {
+            const plat = detectPlatform();
+            const br = detectBrowserLabel();
+            let intro, steps = [];
+            if (reason === 'insecure') {
+                intro = 'Browsers only allow the microphone on a <strong>secure (https://)</strong> page.';
+                steps = ['Open this app using its <strong>https://</strong> address (or <strong>localhost</strong>).'];
+            } else if (reason === 'nomic') {
+                intro = 'No microphone was found on this device.';
+                steps = ['Plug in or enable a microphone / headset.',
+                         plat === 'windows' ? 'Windows: <strong>Settings → System → Sound → Input</strong> — make sure a device is listed and not disabled.' :
+                         plat === 'mac' ? 'Mac: <strong>System Settings → Sound → Input</strong> — select your microphone.' : 'Check your system sound input settings.',
+                         'Then tap <strong>Try again</strong>.'];
+            } else if (reason === 'busy') {
+                intro = 'The microphone could not be opened — another app may be using it.';
+                steps = ['Close other apps using the mic (Zoom, Teams, Meet, Discord, other browser tabs).', 'Then tap <strong>Try again</strong>.'];
+            } else {
+                intro = 'Microphone access is <strong>blocked</strong> for this page, so the test cannot hear you.';
+                if (plat === 'ios') {
+                    steps = ['Tap the <strong>AA</strong> / <strong>ⓘ</strong> icon in Safari’s address bar → <strong>Website Settings → Microphone → Allow</strong>.',
+                             'If it is still blocked: <strong>Settings → Safari → Microphone → Allow</strong>.'];
+                } else if (plat === 'android') {
+                    steps = ['Tap the <strong>🔒 / ⚙️ icon</strong> left of the address bar → <strong>Permissions → Microphone → Allow</strong>.',
+                             'If it is still blocked: <strong>Android Settings → Apps → ' + br + ' → Permissions → Microphone → Allow</strong>.'];
+                } else {
+                    steps = ['Click the <strong>🔒 / tune icon</strong> at the left of the address bar.',
+                             'Set <strong>Microphone</strong> to <strong>Allow</strong> (in Safari: <strong>Safari → Settings for This Website → Microphone → Allow</strong>).',
+                             'Reload the page if asked, then tap <strong>Try again</strong>.'];
+                    if (plat === 'windows') steps.push('Still blocked? <strong>Windows Settings → Privacy &amp; security → Microphone</strong> — turn on <em>Microphone access</em> and <em>Let apps access your microphone</em> (and allow ' + br + ').');
+                    if (plat === 'mac') steps.push('Still blocked? <strong>System Settings → Privacy &amp; Security → Microphone</strong> — switch ' + br + ' on.');
+                }
+            }
+            let h = '<p style="font-size:0.9rem;color:var(--text-light);">' + intro + '</p><ol>';
+            for (let i = 0; i < steps.length; i++) h += '<li>' + steps[i] + '</li>';
+            return h + '</ol>';
+        }
+        let micHelpRetry = null;
+        function showMicHelp(reason, retryFn) {
+            micHelpRetry = retryFn || null;
+            const body = document.getElementById('mic-help-body');
+            if (body) body.innerHTML = buildMicHelpBody(reason);
+            const ov = document.getElementById('mic-help-overlay');
+            if (ov) ov.classList.add('show');
+        }
+        function closeMicHelp() {
+            const ov = document.getElementById('mic-help-overlay');
+            if (ov) ov.classList.remove('show');
+        }
+        function retryMic() {
+            const fn = micHelpRetry;
+            closeMicHelp();
+            if (typeof fn === 'function') fn();
+        }
+        let micChecking = false;
+        /** Asks the browser for mic permission (shows the Allow prompt) and releases the mic again. */
+        function ensureMicPermission() {
+            return new Promise(function (resolve) {
+                if (window.isSecureContext === false) { resolve('insecure'); return; }
+                const md = navigator.mediaDevices;
+                if (!md || !md.getUserMedia) { resolve('ok'); return; }   // let the recogniser ask by itself
+                md.getUserMedia({ audio: true }).then(function (stream) {
+                    try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+                    setTimeout(function () { resolve('ok'); }, 200);       // let the device release
+                }).catch(function (err) {
+                    const n = err && err.name;
+                    if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') resolve('nomic');
+                    else if (n === 'NotReadableError' || n === 'TrackStartError' || n === 'AbortError') resolve('busy');
+                    else resolve('blocked');
+                });
+            });
         }
 
         // ---- Mic test (unchanged) ----
@@ -2445,6 +2631,19 @@
 
         function startMicTest() {
             if (!SpeechRecognition) { showToast('🎙 Speech recognition not available in this browser.'); return; }
+            if (micChecking) return;
+            micChecking = true;
+            const b0 = document.getElementById('mic-test-btn');
+            if (b0) b0.textContent = '🎙 Click “Allow” in the browser prompt…';
+            ensureMicPermission().then(function (r) {
+                micChecking = false;
+                if (b0) b0.textContent = '🎙 Start Mic Test';
+                if (r !== 'ok') { showMicHelp(r, startMicTest); return; }
+                startMicTestCore();
+            });
+        }
+
+        function startMicTestCore() {
             micTestActive = true;
             micTestHeard = '';
             const btn = document.getElementById('mic-test-btn');
@@ -2506,6 +2705,8 @@
                     const v = document.getElementById('mic-test-verdict');
                     if (v) { v.style.display = 'block'; v.className = 'mic-test-verdict bad'; v.textContent = '❌ Error: ' + e.error; }
                     stopMicTest();
+                    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showMicHelp('blocked', startMicTest);
+                    else if (e.error === 'audio-capture') showMicHelp('nomic', startMicTest);
                 };
                 micTestRecog.onend = function () {
                     if (!micTestActive) return;
@@ -2565,7 +2766,7 @@
         // =========================================================
         function wireGlobalHandlers() {
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { closeQrOverlay(); closeVoiceWizard(); }
+                if (e.key === 'Escape') { closeQrOverlay(); closeVoiceWizard(); closeMicHelp(); }
             });
 
             // -----------------------------------------------------
@@ -2646,12 +2847,13 @@
                     '<li>Press <b>▶ Continue</b> to resume, or <b>■ Stop Test</b> to end.</li>' +
                 '</ul></div>' +
                 '<div class="feature"><h3><span class="fnum">5</span> 🌐 Browser requirements</h3><ul>' +
-                    '<li>Speech recognition needs <b>Google Chrome</b>, <b>Microsoft Edge</b> or <b>Safari</b>, served over <b>HTTPS</b> or localhost.</li>' +
-                    '<li>If you see a "Microphone blocked" warning, allow mic access in your browser settings.</li>' +
+                    '<li>Speech recognition (the scored tests) needs <b>Google Chrome</b>, <b>Microsoft Edge</b> or <b>Safari</b>, served over <b>HTTPS</b> or localhost. <b>Firefox</b> has no speech recognition, so it is Practice Mode only.</li>' +
+                    '<li>When you press <b>Start Test</b> your browser asks to use the microphone — click <b>Allow</b>. If it was blocked, the app shows step-by-step help to unblock it.</li>' +
                     '<li>Some phones sold in mainland China have no speech-recognition engine. The app then switches to <b>Practice Mode</b> — you can still tap any Arabic text to hear it.</li>' +
                 '</ul></div>' +
                 '<div class="feature"><h3><span class="fnum">6</span> 🔊 Arabic voice setup</h3><ul>' +
-                    '<li>If tapping a letter makes no sound, your device may be missing an Arabic Text-to-Speech voice. The app detects this and shows a setup guide.</li>' +
+                    '<li>Letters and words are read with your device\'s Arabic voice. If there is none, the app automatically uses a free <b>online Arabic voice</b> (internet needed).</li>' +
+                    '<li>If you still hear nothing, a setup guide for your device opens. Check that the volume is up and the tab is not muted.</li>' +
                 '</ul></div>' +
                 '<div class="footer-note">Your scores and progress stay on your device.</div>' +
                 '<div class="btn-group"><button class="secondary" id="read-info-voice" type="button">Open Arabic Voice Setup</button>' +
@@ -2717,7 +2919,7 @@
                 if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
                 if (!SpeechRecognition) {
-                    enterPracticeOnlyMode('Speech recognition is not available in this browser. Practice Mode only — tap any word to hear it read aloud.');
+                    enterPracticeOnlyMode('Speech recognition is not available in this browser (e.g. Firefox). Open the app in Chrome, Edge or Safari for the scored tests — you can still tap any word to hear it.');
                 }
 
                 // If no Arabic voice exists, show the wizard once on first tap.
@@ -2749,6 +2951,9 @@
         window.showVoiceWizard = showVoiceWizard;
         window.closeVoiceWizard = closeVoiceWizard;
         window.openTtsSettings = openTtsSettings;
+        window.testArabicVoice = testArabicVoice;
+        window.closeMicHelp = closeMicHelp;
+        window.retryMic = retryMic;
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
