@@ -5563,40 +5563,48 @@ function updateTajweedStatusChip(){
   if(!chip) return;
   if(followOnly){ chip.hidden = true; return; }
   chip.hidden = false;
+  const liveTrack = !!(micStream && micStream.getAudioTracks &&
+    micStream.getAudioTracks().some(t => t.readyState === 'live' && t.enabled));
+  const acousticReady = !!(liveTrack && rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 3);
   if(coachTajweedMicFailed){
     chip.className = 'toggle tj-status-error';
-    chip.innerHTML = '<span class="tj-status-dot"></span>Rules not ready';
-    chip.title = 'Tajweed rules require microphone access for real-time acoustic analysis. The microphone could not be accessed on this device. Try updating Chrome, checking Settings → Apps → Chrome → Permissions → Microphone, or switching to Follow mode.';
-    chip.setAttribute('aria-label', 'Tajweed rules not ready — microphone unavailable');
+    chip.innerHTML = '<span class="tj-status-dot"></span>Mic unavailable';
+    chip.title = 'The 12 Tajweed categories are loaded, but microphone waveform access is unavailable. Acoustic checks cannot be performed on this device until microphone permission and getUserMedia work.';
+    chip.setAttribute('aria-label', 'Tajweed acoustic checks unavailable — microphone access failed');
     return;
   }
   if(coachTajweedDegraded){
     chip.className = 'toggle tj-status-error';
-    chip.innerHTML = '<span class="tj-status-dot"></span>Rules unavailable';
-    chip.title = 'Tajweed annotations could not be fully aligned — some rule checks may be disabled. Check your connection, then switch surahs or reload.';
-    chip.setAttribute('aria-label', 'Tajweed rule checks partially unavailable');
-  } else if(coachTajweedReady){
-    if(!isRmsSupported() || (wantMic && !rmsAnalyser.isRunning())){
-      chip.className = 'toggle tj-status-ready';
-      chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready · transcript-only';
-      chip.title =
-        'ACTIVE (transcript): madd (ASR timing), ghunnah, ikhfa, iqlab, silent letters, emphatic letters, qalqalah letter-presence.\n\n' +
-        'DISABLED — need microphone waveform: laam shamsiyyah, idghaam_ghunnah, idghaam_no_ghunnah, ham_wasl, qalqalah plosive-echo.\n\n' +
-        'Enable the microphone and reload to arm the acoustic rules.';
-      chip.setAttribute('aria-label', 'Tajweed transcript-only — 5 acoustic rules disabled');
-    } else {
-      chip.className = 'toggle tj-status-ready';
-      chip.innerHTML = '<span class="tj-status-dot"></span>Rules ready';
-      chip.title = 'All 12 Tajweed rules active: madd length, ghunnah length & letters, qalqalah echo, laam shamsiyyah, hamzat al-wasl, idghaam (with & without ghunnah), iqlab, silent letters, emphatics.';
-      chip.setAttribute('aria-label', 'All Tajweed rule checks active');
-    }
-  } else {
+    chip.innerHTML = '<span class="tj-status-dot"></span>Annotations incomplete';
+    chip.title = 'Quran Tajweed annotations could not be fully aligned. Some words may not have rule metadata, so all 12 categories cannot be guaranteed for this surah.';
+    chip.setAttribute('aria-label', 'Tajweed annotations incomplete');
+    return;
+  }
+  if(!coachTajweedReady){
     chip.className = 'toggle tj-status-loading';
     chip.innerHTML = '<span class="tj-status-dot"></span>Loading rules…';
-    chip.title = 'Fetching Tajweed annotations from Quran.com…';
+    chip.title = 'Fetching and aligning Tajweed annotations for the selected Quran text.';
     chip.setAttribute('aria-label', 'Loading Tajweed rule checks');
+    return;
+  }
+  if(acousticReady){
+    chip.className = 'toggle tj-status-ready';
+    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · acoustic active';
+    chip.title = 'All 12 Tajweed categories are enabled. ASR aligns the heard words with Quran text; the live microphone stream supplies RMS timing and spectral evidence for Madd, Ghunnah, Ikhfa, Idgham, Iqlab, Qalqalah, Laam Shamsiyyah, Hamzat al-Wasl and silent-letter checks. Some acoustic outcomes remain estimates and are reported as warnings when confidence is limited.';
+    chip.setAttribute('aria-label', 'All 12 Tajweed categories enabled with microphone acoustic analysis');
+  } else if(wantMic){
+    chip.className = 'toggle tj-status-error';
+    chip.innerHTML = '<span class="tj-status-dot"></span>ASR only · audio unavailable';
+    chip.title = 'ASR is listening, but a live getUserMedia/RMS stream is not available. Word alignment and limited transcript checks can continue; waveform-dependent Tajweed checks are not verified.';
+    chip.setAttribute('aria-label', 'ASR active but microphone waveform analysis unavailable');
+  } else {
+    chip.className = 'toggle tj-status-loading';
+    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules ready · start mic';
+    chip.title = 'All 12 rule categories and Quran annotations are loaded. Start Tajweed listening to request microphone access and activate RMS acoustic analysis.';
+    chip.setAttribute('aria-label', '12 Tajweed categories loaded; microphone analysis starts with recitation');
   }
 }
+
 let _rmsSupportedCached = null;
 function isRmsSupported(){
   if (_rmsSupportedCached !== null) return _rmsSupportedCached;
@@ -6009,12 +6017,63 @@ function checkQalqalah(w, heard){
 function checkIdghaamNoGhunnah(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasIdghaamNoGhunnah) return true;
   if (!w.audio || w.audio.durationMs < 100 || !rmsAnalyser.isRunning()) return true;
+  const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
   const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
   const T = getBaseMsPerLetter();
   const limit = T !== null ? Math.round(T * 2.8) : 600;
-  if (vr.durationMs > limit){
+  const nasal = samples && samples.length >= 4 ? nasalPresent(samples) : null;
+  if (nasal === true){
     markStrict1Warning(w, 'idghaam-no-ghunnah-nasalised',
-      'vowel-run ' + Math.round(vr.durationMs) + ' ms > ' + limit + ' ms (nasalisation suspected)');
+      'nasal-band energy detected during a no-ghunnah merge');
+  } else if (vr.durationMs > limit){
+    markStrict1Warning(w, 'idghaam-no-ghunnah-nasalised',
+      'vowel-run ' + Math.round(vr.durationMs) + ' ms > ' + limit + ' ms (possible nasalisation)');
+  }
+  return true;
+}
+
+/* Rule-specific acoustic pass. These are evidence-based warnings, not a
+   claim that phone RMS can replace a trained Tajweed teacher. ASR supplies
+   the lexical alignment; the RMS segment supplies timing/spectral evidence. */
+function checkIndependentNasalRules(w, heard){
+  if (!w || !w.tjRules || !w.audio || !rmsAnalyser.isRunning()) return;
+  const rules = w.tjRules.allRules || [];
+  const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
+  if (!samples || samples.length < 4) return;
+  const hasNasalRule = rules.indexOf('ghunnah') !== -1 ||
+    rules.indexOf('ikhfa') !== -1 || rules.indexOf('idghaam_ghunnah') !== -1 ||
+    rules.indexOf('iqlab') !== -1;
+  if (!hasNasalRule) return;
+  const nasal = nasalPresent(samples);
+  const gType = rules.indexOf('iqlab') !== -1 ? 'iqlab' :
+    rules.indexOf('ikhfa') !== -1 ? 'ikhfa' :
+    rules.indexOf('idghaam_ghunnah') !== -1 ? 'idghaam_ghunnah' : 'ghunnah';
+  const requiredMs = ghunnahRequiredMs(gType);
+  const measuredMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
+  if (!nasal){
+    markStrict1Warning(w, 'ghunnah-' + gType,
+      'nasal resonance was not confidently detected in the audio segment');
+  } else if (measuredMs > 0 && measuredMs < requiredMs){
+    markStrict1Warning(w, 'ghunnah-length-' + gType,
+      'nasal segment estimate ' + measuredMs + ' ms; target approximately ' + Math.round(requiredMs) + ' ms');
+  }
+  if (gType === 'iqlab' && heard && heard.indexOf('م') === -1 && nasal){
+    markStrict1Warning(w, 'ghunnah-asr', 'nasal resonance detected although ASR did not return the expected م');
+  }
+}
+
+function checkTajweedAudioAlignment(w, heard){
+  if (!w || !w.audio || !rmsAnalyser.isRunning()) return false;
+  const duration = Number(w.audio.durationMs) || (w.audio.end - w.audio.start);
+  if (!(duration >= 40) || !isFinite(w.audio.start) || !isFinite(w.audio.end)) return false;
+  const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
+  const signalOk = !!(samples && samples.length >= 3 && rmsAnalyser.hasSignal());
+  if (!signalOk) return false;
+  /* MFA-style word/segment alignment confidence using the app's existing
+     phonetic + duration inference. It is not a remote forced-aligner model. */
+  if (heard && typeof runMFAInference === 'function' && !runMFAInference(w, w.audio, heard)){
+    markStrict1Warning(w, 'tajweed-alignment-low-confidence',
+      'ASR word and microphone segment timing did not align confidently; acoustic rule result is provisional');
   }
   return true;
 }
@@ -6076,6 +6135,7 @@ const TAJWEED_ERROR_NAMES = {
   'qalqalah-missing':           'Qalqalah — plosive bounce missing',
   'qalqalah-letter-dropped':    'Qalqalah — letter dropped in transcript',
   'idghaam-no-ghunnah-nasalised': 'Idghaam (no ghunnah) — nasalisation detected',
+  'tajweed-alignment-low-confidence': 'Tajweed audio alignment — low confidence',
   'hamzat-al-wasl':   'Hamzat al-Wasl — re-attacked (glottal stop inserted)',
   'nasal-dropped':    'Nasal letter dropped in transcript',
   'emphatic-ص': 'Ṣād (ص) sounded as Sīn (س)',
@@ -6290,6 +6350,8 @@ function runStrict1Checks(idx, heard, opts){
   }
 
   strict1GhunnahOk(w, heard);
+  if (checkTajweedAudioAlignment(w, heard)) checkIndependentNasalRules(w, heard);
+  updateTajweedStatusChip();
   if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w);
   if (STRICT_FEATURES.hamWasl() && w.tjRules && w.tjRules.hamWasl && prevWordAudio && w.audio){
     const gap = w.audio.start - prevWordAudio.end;
@@ -8511,9 +8573,7 @@ async function startReciting(){
     if (!followOnly && !rmsAnalyser.isRunning() && !_rmsUnavailableNotified){
       _rmsUnavailableNotified = true;
       addFeedback(
-        'ℹ️ <b>Acoustic Tajweed rules are off</b> — this browser cannot access the microphone waveform. ' +
-        'Active: madd, ghunnah, ikhfa, iqlab, silent, emphatics, qalqalah letters. ' +
-        'Disabled: laam shamsiyyah, idghaam_ghunnah, idghaam_no_ghunnah, ham_wasl, qalqalah echo.',
+        'ℹ️ <b>Audio waveform analysis is unavailable.</b> ASR word alignment can continue, but waveform-dependent checks for Madd duration, Ghunnah resonance, Ikhfa, Idgham, Iqlab, Qalqalah echo, Laam Shamsiyyah and Hamzat al-Wasl cannot be verified reliably. The app will not label these acoustic checks as passed.',
         false, true
       );
     }
