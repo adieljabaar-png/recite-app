@@ -5164,11 +5164,14 @@ function startHifzSpeech(){
   }
 }
 function stopHifzSpeech(){
+  // Clear active state before abort: onend must never restart after Stop.
   hifzState.speechActive = false;
-  if(hifzState.recognizer){
-    try{ hifzState.recognizer.stop(); }catch(_){}
-    try{ hifzState.recognizer.abort(); }catch(_){}
-    hifzState.recognizer = null;
+  const rec = hifzState.recognizer;
+  hifzState.recognizer = null;
+  if(rec){
+    try{ rec.onstart = null; rec.onresult = null; rec.onerror = null; rec.onend = null; }catch(_){}
+    try{ rec.abort(); }catch(_){}
+    try{ rec.stop(); }catch(_){}
   }
 }
 function checkAyahComplete(aIdx){
@@ -8585,22 +8588,53 @@ async function startReciting(){
   }
 }
 
+function abortCoachSpeechRecognition(){
+  const rec = speechRecognition;
+  // Detach callbacks before aborting so Safari cannot trigger a late onend
+  // callback that attempts to restart the microphone after Stop was pressed.
+  speechRecognition = null;
+  if(rec){
+    try{ rec.onstart = null; rec.onresult = null; rec.onerror = null; rec.onend = null; }catch(_){}
+    try{ rec.abort(); }catch(_){}
+    try{ rec.stop(); }catch(_){}
+  }
+  speechStarting = false;
+  recRunning = false;
+}
+
 function stopReciting(silent){
   if(wantMic && !suppressProgressSave) saveProgressNow();
-  wantMic=false; micPaused = false;
-  resetSpeechPipeline();
-  disarmSpeechKeepalive(); pendingJumpTarget = -1;
+
+  // Set the shutdown flags FIRST. Every asynchronous restart path checks these.
+  wantMic = false;
+  micPaused = false;
+  fsPaused = false;
+  speechFatalError = true;
+
+  disarmSpeechKeepalive();
+  clearSilenceTimer();
   cancelFollowPinTimer();
+  stopMicDiagnostic();
+  resetSpeechPipeline();
+  abortCoachSpeechRecognition();
+
+  pendingJumpTarget = -1;
   _phrasesRetryDone = false;
   pendingHeard.length = 0;
-  lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
+  lastDirectCommitIdx = -1;
+  lastDirectCommitAt = 0;
+  lastCommitBatchId = -1;
   prevWordAudio = null;
-  setMicButton(); recRunning = false; speechStarting = false;
-  if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
-  releaseWakeLock(); clearSilenceTimer(); stopMicDiagnostic();
+
+  // Stop every track, not merely mute it, and disconnect the RMS graph.
   releaseMicStream();
+  releaseWakeLock();
+
+  setMicButton();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
-  updateFsMicBtn(); syncFsButtons();
+  updateTajweedStatusChip();
+  updateFsMicBtn();
+  syncFsButtons();
 }
 function pauseMic(){
   micPaused = true; recRunning = false;
@@ -8622,14 +8656,23 @@ function resumeMic(){
     setStatus('Listening', 'listening', contextLabel());
   }
 }
-function stopEverything(silent){ stopPlayback(); stopReciting(true); if(!silent) setStatus('Ready','idle'); }
+function stopEverything(silent){
+  // Master Stop: stop playback plus every speech/microphone mode.
+  stopPlayback();
+  try{ if(viewerAudio && viewerAudio.active) viewerAudioStop(); }catch(_){}
+  try{ if(hifzState && (hifzState.speechActive || hifzState.active)) stopHifzTest(true); }catch(_){}
+  stopReciting(true);
+  try{ releaseMicStream(); }catch(_){}
+  if(!silent) setStatus('Ready','idle');
+}
 function finish(){
-  finished=true; wantMic=false;
+  finished=true; wantMic=false; micPaused=false; speechFatalError=true;
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer(); stopMicDiagnostic();
   cancelFollowPinTimer();
+  abortCoachSpeechRecognition();
   releaseMicStream();
-  if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} try{ speechRecognition.abort(); }catch(e){} }
+  updateTajweedStatusChip();
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;
   const acc = total ? Math.max(0,Math.round(((total-errors)/total)*100)) : 100;
