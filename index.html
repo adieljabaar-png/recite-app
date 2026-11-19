@@ -2900,7 +2900,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">07:23</span>
+    <span class="pdr-item pdr-time" id="pdrTime">07:56</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -4313,6 +4313,7 @@ let recCursor = 0;
 let pendingHeard = [];
 let consecutiveReds = 0;
 const interimProgress = new Map();
+let lastInterimKeyByResult = new Map(); // (2) skip re-grading an unchanged interim transcript
 let currentConsensusSet = new Set();
 
 let speechRecognition = null;
@@ -4859,10 +4860,7 @@ async function openCoachScreen(){
   try{
     await loadSurah(STORE.surah, true);
     coachLoaded = true;
-    // FOLLOW-ONLY CUT: no Tajweed prefetch. Follow never applies
-    // Tajweed colours/rules, so fetching + parsing them here was
-    // pure background work (network + build) on every coach open.
-    if(!followOnly) fetchCoachTajweed(surahNum).catch(() => {});
+    fetchCoachTajweed(surahNum).catch(() => {});
   } finally { coachLoading = false; }
 }
 
@@ -6594,9 +6592,26 @@ async function runSpeechResultProcessing(snap) {
     const alternatives = result.alternatives;
     if (!alternatives || !alternatives.length) continue;
     const floor = confidenceFloor();
-    const useScoring = alternatives.length > 1;
+    // (1) FAST PATH (Follow): if the top alternative already contains an
+    // EXACT match for the current word, grade it immediately. Do not pay
+    // for scoreAlternativeToks() over all alternatives in the common case.
     let bestAlt = null, bestTranscript = '', bestWeighted = -1;
-    for (let ai = 0; ai < alternatives.length; ai++) {
+    if (followOnly && alternatives.length && ptr < words.length) {
+      const w0 = words[ptr];
+      const c0 = alternatives[0];
+      const conf0 = (typeof c0.confidence === 'number') ? c0.confidence : 0;
+      const floorOk = !(isFinal && conf0 > 0 && conf0 < floor);
+      if (floorOk && c0 && c0.transcript) {
+        const toks0 = String(c0.transcript).trim().split(/\s+/).filter(Boolean);
+        for (const tok0 of toks0) {
+          const n0 = normArCached(tok0);
+          if (!n0) continue;
+          if (n0 === w0.norm || phonArCached(tok0) === w0.phon || phonLooseArCached(tok0) === w0.phonLoose) { bestAlt = c0; bestTranscript = String(c0.transcript).trim(); break; }
+        }
+      }
+    }
+    const useScoring = !bestAlt && alternatives.length > 1;
+    for (let ai = 0; ai < alternatives.length && !bestAlt; ai++) {
       const cand = alternatives[ai];
       const tr = (cand.transcript || '').trim();
       if (!tr) continue;
@@ -6629,8 +6644,12 @@ async function runSpeechResultProcessing(snap) {
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
       scheduleHUD();
 
-} else {
+    } else {
       const already = interimProgress.get(i) || 0;
+      // (2) DEDUP: same result index + same transcript as last time = nothing new to grade.
+      const interimKey = i + '|' + toks.join(' ');
+      const interimSeen = lastInterimKeyByResult.get(i) === interimKey;
+      lastInterimKeyByResult.set(i, interimKey);
       // Interim results normally hold back their final token because browsers
       // often revise that token while the speaker is still talking.  The old
       // length/consensus heuristic could both delay a genuine match and release
@@ -6654,9 +6673,26 @@ async function runSpeechResultProcessing(snap) {
           const tailMatchesCurrent = tailNorm === targetWord.norm ||
             isMatchWord(tailNorm, tailPhon, tailPhonLoose, targetWord);
           if (tailMatchesCurrent) safeEnd = toks.length;
+          // (2) NEXT-WORD release, guarded: only release a tail token that
+          // matches the NEXT word when the CURRENT word is already matched
+          // somewhere in the released part of this same transcript.
+          // This never releases a next-word token while the current word
+          // is still unheard, so it cannot jump an unheard word.
+          else if (ptr + 1 < words.length) {
+            const nxt = words[ptr + 1];
+            const sameVerse = nxt && nxt.verse === targetWord.verse && !nxt.isMuqattaat && !targetWord.isMuqattaat;
+            const currentMatchedInTranscript = toks.slice(already, safeEnd).some(tk => {
+              const nk = normArCached(tk);
+              return nk && (nk === targetWord.norm || phonArCached(tk) === targetWord.phon || phonLooseArCached(tk) === targetWord.phonLoose);
+            });
+            if (sameVerse && currentMatchedInTranscript) {
+              const tailMatchesNext = tailNorm === nxt.norm || isMatchWord(tailNorm, tailPhon, tailPhonLoose, nxt);
+              if (tailMatchesNext) safeEnd = toks.length;
+            }
+          }
         }
       }
-      const newToks = toks.slice(already, safeEnd);
+      const newToks = (!interimSeen) ? toks.slice(already, safeEnd) : [];
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
         recPush(newToks);
@@ -6737,58 +6773,7 @@ function buildPhraseObjects(rec) {
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
 
-// Build a very small grammar window: the remaining words in the current
-// verse, followed by only the next three words from the following verse.
-function currentSpeechGrammarWindow(){
-  if(!words || !words.length || ptr >= words.length) return [];
-  const currentVerse = words[ptr] && words[ptr].verse;
-  let verseEnd = ptr;
-  while(verseEnd < words.length && words[verseEnd] && words[verseEnd].verse === currentVerse){
-    verseEnd++;
-  }
-  const windowEnd = Math.min(words.length, verseEnd + 3);
-  return words.slice(ptr, windowEnd);
-}
-
-// SpeechGrammarList is optional and is ignored by some browser speech engines.
-// Keep the grammar deliberately narrow to avoid adding decoding overhead.
-function updateSpeechGrammar(currentWindowWords, recOverride){
-  const rec = recOverride || speechRecognition;
-  const GrammarListCtor = window.SpeechGrammarList || window.webkitSpeechGrammarList;
-  if(!rec || !GrammarListCtor || !Array.isArray(currentWindowWords) || !currentWindowWords.length) return false;
-
-  const seen = new Set();
-  const grammarWords = [];
-  for(const item of currentWindowWords){
-    const raw = (typeof item === 'string') ? item : (item && item.raw) || '';
-    const clean = String(raw).normalize('NFKC')
-      .replace(TASHKEEL, '')
-      .replace(/[^\u0621-\u064A]/g, '')
-      .trim();
-    if(clean && !seen.has(clean)){
-      seen.add(clean);
-      grammarWords.push(clean);
-    }
-  }
-  if(!grammarWords.length) return false;
-
-  // Single-word alternatives keep the recognizer free to decode natural speech.
-  const alternatives = grammarWords.map(w => '"' + w.replace(/["\\]/g, '') + '"').join(' | ');
-  const grammar = '#JSGF V1.0; grammar quran_window; public <quran> = ' + alternatives + ' ;';
-
-  try{
-    const list = new GrammarListCtor();
-    list.addFromString(grammar, 1.0);
-    rec.grammars = list;
-    rec.__lastGrammarPtr = ptr;
-    rec.__grammarWordCount = grammarWords.length;
-    return true;
-  }catch(e){
-    // A rejected hint must never interrupt live recitation.
-    console.warn('[Speech] Arabic grammar hint unavailable:', e);
-    return false;
-  }
-}
+// SpeechGrammarList removed: weak, often-ignored hint; rebuilding it mid-recitation cost time. Phrase hints (buildPhraseObjects) are kept.
 
 function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
@@ -6862,7 +6847,7 @@ async function setupOnDeviceArabic(rec) {
     setTimeout(() => {
       if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
-      try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
+      try{ speechStarting = true; speechRecognition.start(); }
       catch(e){ speechStarting = false; if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e); }
     }, 180);
   };
@@ -7089,6 +7074,30 @@ function gradeFollowFast(tokens, startIdx){
       }
     }
     if (jumped){ used++; continue; }
+
+    // (4) GUARDED CATCH-UP — NEVER jumps an unheard / totally wrong word.
+    // Allowed ONLY when BOTH of the next two tokens in THIS batch are
+    // EXACT matches (norm / phon / phonLoose) for the next TWO words,
+    // in order, same verse, no Muqattaat. The current word is left
+    // UNMARKED; only the two words actually heard are committed.
+    if (followOnly && ti + 1 < tokens.length && ptr + 2 < words.length) {
+      const w1 = words[ptr + 1], w2 = words[ptr + 2];
+      const sameVerse2 = w1 && w2 && w1.verse === w.verse && w2.verse === w.verse && !w.isMuqattaat && !w1.isMuqattaat && !w2.isMuqattaat;
+      if (sameVerse2) {
+        const a1 = normArCached(tokens[ti]), a2 = normArCached(tokens[ti + 1]);
+        const m1 = a1 && (a1 === w1.norm || phonArCached(tokens[ti]) === w1.phon || phonLooseArCached(tokens[ti]) === w1.phonLoose);
+        const m2 = a2 && (a2 === w2.norm || phonArCached(tokens[ti + 1]) === w2.phon || phonLooseArCached(tokens[ti + 1]) === w2.phonLoose);
+        if (m1 && m2) {
+          commitCorrect(ptr + 1, null);
+          commitCorrect(ptr + 2, null);
+          advancePast(3);
+          noteFollowProgress();
+          pendingHeard.length = 0;
+          used += 2; ti += 1;
+          continue;
+        }
+      }
+    }
 
     if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)){
       commitCorrect(ptr, null);
@@ -7715,7 +7724,7 @@ function handleMicTrackIssue(kind){
         micDiagnosedWorking = false;
         startMicDiagnostic();
         if(!recRunning && !speechStarting && speechRecognition){
-          try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
+          try{ speechStarting = true; speechRecognition.start(); }
           catch(e){ speechStarting = false; }
         }
       } else {
@@ -7744,7 +7753,7 @@ function retrySpeechWithoutPhrases(){
     speechRecognition = createSpeechRecognition(true);
     if(!speechRecognition) return false;
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
-    try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechRecognition.start(); }catch(_){ return false; }
+    try{ speechRecognition.start(); }catch(_){ return false; }
     recRunning = true;
     lastResultAt = performance.now();
     setStatus('Listening', 'listening', contextLabel() + ' (retry)');
@@ -7755,12 +7764,6 @@ function retrySpeechWithoutPhrases(){
 }
 
 function startMicDiagnostic(){
-  // FOLLOW-ONLY CUT: no mic-diagnostic interval. Follow uses none
-  // of the diagnostic layers (track health + RMS silence are
-  // already Tajweed-only inside micDiagTick); the ASR silence
-  // timer still watches for silence in Follow mode. Tajweed mode
-  // still runs the full diagnostic.
-  if(followOnly) return;
   if(micDiagnosedWorking) return;   // already verified — never re-run
   stopMicDiagnostic();
   resetMicDiagState();
@@ -8175,7 +8178,7 @@ function setRecitationMode(modeName){
 
       const restartRecognizer = () => {
         if(wasRunning && wantMic && !fsPaused && !micPaused){
-          try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition && speechRecognition.start(); }
+          try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
           catch(_){ speechStarting = false; }
         }
       };
@@ -8290,11 +8293,7 @@ async function loadSurah(n, keepFeedback){
     setStatus('Ready', 'idle', surahMeta.numberOfAyahs + ' ayahs · ' + (micPermission==='granted' ? 'Mic on' : 'Tap Start reciting to allow mic'));
     if(!keepFeedback) feedbackEl.innerHTML = '<div class="line"><b>' + surahMeta.englishName + '</b> <span class="ar">' + surahMeta.name + '</span> — loaded.</div>';
     if (!followOnly){ coachTajweedApplied = false; coachTajweedReady = false; applyTajweedColorsToCoach(); }
-    // FOLLOW-ONLY CUT: no Tajweed prefetch here either. In Follow
-    // mode the fetched annotations are never applied (applyTajweed-
-    // ColorsToCoach returns early on followOnly), so this was a
-    // wasted background fetch + parse + cache build per surah load.
-    // Tajweed mode still prefetches via applyTajweedColorsToCoach().
+    else { fetchCoachTajweed(surahNum).catch(() => {}); }
   }catch(e){ console.error('[QuranCoach] loadSurah failed:', e); showLoadError(e); }
 }
 function describeError(e){ if(!e) return 'Unknown error'; if(e.name === 'AbortError') return 'Request timed out after ' + (FETCH_TIMEOUT_MS/1000) + ' s'; if(e.message) return e.message; return String(e); }
@@ -8504,9 +8503,6 @@ function advancePast(n){
   const leaving = new Set();
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
-  const crossedVerse = !!(words[previousPtr] && words[ptr] && words[previousPtr].verse !== words[ptr].verse);
-  const lastGrammarPtr = speechRecognition ? (speechRecognition.__lastGrammarPtr || 0) : 0;
-  if(crossedVerse || ptr - lastGrammarPtr >= 3) updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
   // Bismillah -> Muqattaat handover: the next word must be listened
   // for immediately. Reset the silence clock, cancel any pin timer
@@ -8669,11 +8665,7 @@ function setMicButton(){
 }
 
 async function startReciting(){
-  // FOLLOW-ONLY CUT: no AudioContext / shared-audio build. Follow
-  // has beeps off and plays no audio; Web Speech Recognition does
-  // not need an AudioContext. Tajweed mode still unlocks audio
-  // (beeps + acoustic RMS analysis need it).
-  if(!followOnly) unlockAudio();
+  unlockAudio();
   if(!words.length){
     if(mode !== 'surah'){ await loadSurah(STORE.surah, true); }
     if(!words.length) return;
@@ -8732,7 +8724,7 @@ async function startReciting(){
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
-    else { try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
+    else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
@@ -8788,7 +8780,7 @@ function resumeMic(){
     recRunning = true; speechFatalError = false;
     lastResultAt = performance.now();
     startMicDiagnostic(); armSpeechKeepalive();
-    try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition && speechRecognition.start(); }
+    try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
   }
@@ -12595,7 +12587,7 @@ function showTextShareModal(text){
   }
   showScreen('home');
 })();
-</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
 <script>
 (function () {
   // The full Tajweed engine needs live speech input.
@@ -12617,4 +12609,4 @@ function showTextShareModal(text){
 })();
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><div class="modal-bg" id="installPromptBg"><div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don’t show this again</span></label></div></div></body></html>
