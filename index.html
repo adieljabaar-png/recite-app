@@ -961,6 +961,8 @@ box-shadow:0 12px 36px rgba(0,0,0,.55);
 text-align:center;line-height:1.4;
 }
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.sajdah-toast{background:rgba(22,130,65,.97);border:1px solid rgba(120,235,160,.75);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,.45)}
+body.light-mode .toast.sajdah-toast{background:rgba(22,130,65,.97);color:#fff}
 body.light-mode .toast{background:rgba(255,255,255,.97);box-shadow:0 12px 36px rgba(0,0,0,.18)}
 
 .calendar-modal{max-width:480px;}
@@ -4562,6 +4564,7 @@ let toastEl = null;
 function showToast(html, ms){
   if(!toastEl){ toastEl = document.createElement('div'); toastEl.className = 'toast'; document.body.appendChild(toastEl); }
   toastEl.innerHTML = html;
+  toastEl.classList.remove('sajdah-toast');
   toastEl.classList.add('visible');
   clearTimeout(toastEl._timer);
   toastEl._timer = setTimeout(() => toastEl.classList.remove('visible'), ms || 2600);
@@ -9906,7 +9909,7 @@ function renderReaderPage(pageNumber, token){
   if(surahsOnPage.length === 1) qvTitle.textContent = surahsOnPage[0].surahEnglishName + ' · ' + surahsOnPage[0].surahName;
   else if(surahsOnPage.length > 1) qvTitle.textContent = surahsOnPage.map(a => a.surahEnglishName).join(' · ');
   else qvTitle.textContent = 'Page ' + pageNumber;
-  if(sajdahRefs.length){ setTimeout(() => showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000), 420); }
+  if(sajdahRefs.length){ setTimeout(() => { showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2600); if(toastEl) toastEl.classList.add('sajdah-toast'); }, 420); }
   if(token === readerState.token && readerState.highlightVerse){
     const key = readerState.highlightVerse;
     readerState.highlightVerse = null;
@@ -11666,14 +11669,14 @@ document.addEventListener('visibilitychange',()=>{
     schedulePositionAudioOverlay();
     if(audioListRendered) refreshAudioRowStates();
   } else {
-    if(followOnly && wantMic){
+    // Backgrounding is a hard microphone shutdown for Follow and Tajweed.
+    if(wantMic){
       saveProgressNow();
       stopReciting(true);
       setStatus('Paused (background)', 'idle', 'Tap Start to resume');
-    } else {
-      if(recRunning) pauseMic();
-      if(wantMic) saveProgressNow();
     }
+    // Hifz speech recognition is also shut down while the app is backgrounded.
+    if(hifzState && hifzState.speechActive) stopHifzSpeech();
   }
 });
 let lastTouch=0;
@@ -11686,14 +11689,15 @@ document.addEventListener('touchend',e=>{
 },{passive:false});
 window.addEventListener('beforeunload',()=>{
   if(wantMic) saveProgressNow();
-  stopReciting(true); releaseMicStream(); viewerAudioStop();
+  stopReciting(true); try{ stopHifzSpeech(); stopHifzTimer(); }catch(_){} releaseMicStream(); viewerAudioStop();
   if(currentAudio){
     try{ currentAudio.onended = null; currentAudio.onerror = null; if(currentAudio._playingHandler){ currentAudio.removeEventListener('playing', currentAudio._playingHandler); currentAudio._playingHandler = null; } currentAudio.pause(); try{ currentAudio.removeAttribute('src'); currentAudio.load(); }catch(_){} }catch(e){}
     currentAudio = null;
   }
 });
 window.addEventListener('pagehide', () => {
-  try{ if(followOnly && wantMic) stopReciting(true); }catch(_){}
+  try{ if(wantMic) stopReciting(true); }catch(_){}
+  try{ if(hifzState && hifzState.speechActive) stopHifzSpeech(); }catch(_){}
   try{ if(speechRecognition){ speechRecognition.onend=null; speechRecognition.onerror=null; speechRecognition.onresult=null; speechRecognition.abort(); } }catch(_){}
   try{ releaseMicStream(); }catch(_){}
 });
