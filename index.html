@@ -1,4 +1,25 @@
-<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -2623,8 +2644,8 @@ body.light-mode .share-arabic{color:#1a2233;}
     </div>
     <button class="hijri-card" id="hijriCard" type="button" aria-label="Open Hijri and Gregorian calendar">
       <span class="hijri-sub">Today · Hijri</span>
-      <span class="hijri-main" id="hijriEn">7 Jumada al-Akhirah 1448 AH</span>
-      <span class="hijri-alt" id="hijriAr">7 جمادى الثانية 1448 هـ</span>
+      <span class="hijri-main" id="hijriEn">8 Jumada al-Akhirah 1448 AH</span>
+      <span class="hijri-alt" id="hijriAr">8 جمادى الثانية 1448 هـ</span>
     </button>
     <button id="homeThemeBtn" class="iconbtn" aria-label="Toggle dark / light theme">🌙</button>
   </div>
@@ -2676,7 +2697,7 @@ body.light-mode .share-arabic{color:#1a2233;}
       <span class="ico">🕌</span>
       <span>Important Islamic Dates</span>
     </div>
-    <ul class="islamic-dates-list" id="islamicDatesList"><li><span class="ico">✨</span><span class="info"><span class="name">Isra and Mi'raj</span><span class="hijri">27 Raj 1448</span></span><span class="greg">Jan 6, 2027<small>in 49d</small></span></li><li><span class="ico">🌟</span><span class="info"><span class="name">Mid-Sha'ban</span><span class="hijri">15 Sha 1448</span></span><span class="greg">Jan 24, 2027<small>in 67d</small></span></li><li><span class="ico">📿</span><span class="info"><span class="name">Ramadan begins</span><span class="hijri">1 Ram 1448</span></span><span class="greg">Feb 8, 2027<small>in 82d</small></span></li><li><span class="ico">🌌</span><span class="info"><span class="name">Laylat al-Qadr</span><span class="hijri">27 Ram 1448</span></span><span class="greg">Mar 6, 2027<small>in 108d</small></span></li><li><span class="ico">🎉</span><span class="info"><span class="name">Eid al-Fitr</span><span class="hijri">1 Shaw 1448</span></span><span class="greg">Mar 10, 2027<small>in 112d</small></span></li><li><span class="ico">🏔️</span><span class="info"><span class="name">Day of Arafah</span><span class="hijri">9 Dhul H 1448</span></span><span class="greg">May 16, 2027<small>in 179d</small></span></li><li><span class="ico">🐏</span><span class="info"><span class="name">Eid al-Adha</span><span class="hijri">10 Dhul H 1448</span></span><span class="greg">May 17, 2027<small>in 180d</small></span></li><li><span class="ico">🌙</span><span class="info"><span class="name">Islamic New Year</span><span class="hijri">1 Muh 1449</span></span><span class="greg">Jun 6, 2027<small>in 200d</small></span></li><li><span class="ico">🕯️</span><span class="info"><span class="name">Day of Ashura</span><span class="hijri">10 Muh 1449</span></span><span class="greg">Jun 15, 2027<small>in 209d</small></span></li><li><span class="ico">🕌</span><span class="info"><span class="name">Mawlid al-Nabi</span><span class="hijri">12 Rab I 1449</span></span><span class="greg">Aug 15, 2027<small>in 270d</small></span></li></ul>
+    <ul class="islamic-dates-list" id="islamicDatesList"><li><span class="ico">✨</span><span class="info"><span class="name">Isra and Mi'raj</span><span class="hijri">27 Raj 1448</span></span><span class="greg">Jan 6, 2027<small>in 48d</small></span></li><li><span class="ico">🌟</span><span class="info"><span class="name">Mid-Sha'ban</span><span class="hijri">15 Sha 1448</span></span><span class="greg">Jan 24, 2027<small>in 66d</small></span></li><li><span class="ico">📿</span><span class="info"><span class="name">Ramadan begins</span><span class="hijri">1 Ram 1448</span></span><span class="greg">Feb 8, 2027<small>in 81d</small></span></li><li><span class="ico">🌌</span><span class="info"><span class="name">Laylat al-Qadr</span><span class="hijri">27 Ram 1448</span></span><span class="greg">Mar 6, 2027<small>in 107d</small></span></li><li><span class="ico">🎉</span><span class="info"><span class="name">Eid al-Fitr</span><span class="hijri">1 Shaw 1448</span></span><span class="greg">Mar 10, 2027<small>in 111d</small></span></li><li><span class="ico">🏔️</span><span class="info"><span class="name">Day of Arafah</span><span class="hijri">9 Dhul H 1448</span></span><span class="greg">May 16, 2027<small>in 178d</small></span></li><li><span class="ico">🐏</span><span class="info"><span class="name">Eid al-Adha</span><span class="hijri">10 Dhul H 1448</span></span><span class="greg">May 17, 2027<small>in 179d</small></span></li><li><span class="ico">🌙</span><span class="info"><span class="name">Islamic New Year</span><span class="hijri">1 Muh 1449</span></span><span class="greg">Jun 6, 2027<small>in 199d</small></span></li><li><span class="ico">🕯️</span><span class="info"><span class="name">Day of Ashura</span><span class="hijri">10 Muh 1449</span></span><span class="greg">Jun 15, 2027<small>in 208d</small></span></li><li><span class="ico">🕌</span><span class="info"><span class="name">Mawlid al-Nabi</span><span class="hijri">12 Rab I 1449</span></span><span class="greg">Aug 15, 2027<small>in 269d</small></span></li></ul>
   </section>
 
 </div>
@@ -2735,41 +2756,41 @@ body.light-mode .share-arabic{color:#1a2233;}
 
       <div class="share-header">
         <div class="share-city" id="shareCityName">Makkah, SA</div>
-        <div class="share-dates" id="shareDates">7 Jumada al-Akhirah 1448 AH  ·  18 November 2026</div>
+        <div class="share-dates" id="shareDates">8 Jumada al-Akhirah 1448 AH  ·  19 November 2026</div>
       </div>
 
-      <div class="share-prayers" id="sharePrayers"><div class="share-prayer"><span class="sp-name">Fajr</span><span class="sp-time">04:14</span></div><div class="share-prayer is-sunrise"><span class="sp-name">Sunrise</span><span class="sp-time">05:33</span></div><div class="share-prayer"><span class="sp-name">Zohr</span><span class="sp-time">11:06</span></div><div class="share-prayer"><span class="sp-name">Asr</span><span class="sp-time">14:16</span></div><div class="share-prayer"><span class="sp-name">Maghrib</span><span class="sp-time">16:38</span></div><div class="share-prayer"><span class="sp-name">Isha</span><span class="sp-time">18:08</span></div></div>
+      <div class="share-prayers" id="sharePrayers"><div class="share-prayer"><span class="sp-name">Fajr</span><span class="sp-time">04:14</span></div><div class="share-prayer is-sunrise"><span class="sp-name">Sunrise</span><span class="sp-time">05:34</span></div><div class="share-prayer"><span class="sp-name">Zohr</span><span class="sp-time">11:06</span></div><div class="share-prayer"><span class="sp-name">Asr</span><span class="sp-time">14:16</span></div><div class="share-prayer"><span class="sp-name">Maghrib</span><span class="sp-time">16:38</span></div><div class="share-prayer"><span class="sp-name">Isha</span><span class="sp-time">18:08</span></div></div>
 
       <div class="share-divider" role="separator"></div>
 
       <div class="share-block">
         <div class="share-block-title">🤲 Duah of the Day</div>
-        <p class="share-arabic" id="shareDuahArabic" dir="rtl">رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ</p>
-        <p class="share-translation" id="shareDuahTranslation">Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.</p>
-        <p class="share-reference" id="shareDuahRef">Surah Al-Baqarah 2:201</p>
+        <p class="share-arabic" id="shareDuahArabic" dir="rtl">رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ</p>
+        <p class="share-translation" id="shareDuahTranslation">Our Lord, pour upon us patience and plant firmly our feet and give us victory over the disbelieving people.</p>
+        <p class="share-reference" id="shareDuahRef">Surah Al-Baqarah 2:250</p>
       </div>
 
       <div class="share-divider" role="separator"></div>
 
       <div class="share-block">
         <div class="share-block-title">📚 Tafsir of the Duah</div>
-        <p class="share-tafsir" id="shareTafsirText">This is the most balanced of all duas — seeking good in both this world and the Hereafter while being protected from the Fire.</p>
+        <p class="share-tafsir" id="shareTafsirText">Talut's believing army made this dua before facing Jalut's forces. They asked for patience, steadfast feet, and victory.</p>
       </div>
 
       <div class="share-divider" role="separator"></div>
 
       <div class="share-block">
         <div class="share-block-title">📜 Hadith of the Day</div>
-        <p class="share-arabic" id="shareHadithArabic" dir="rtl">وَمَنْ سَتَرَ مُسْلِمًا سَتَرَهُ اللَّهُ يَوْمَ الْقِيَامَةِ</p>
-        <p class="share-translation" id="shareHadithTranslation">Whoever conceals the faults of a Muslim, Allah will conceal his faults on the Day of Resurrection.</p>
-        <p class="share-reference" id="shareHadithRef">Sahih Muslim 2699</p>
+        <p class="share-arabic" id="shareHadithArabic" dir="rtl">الْمُؤْمِنُ الَّذِي يُخَالِطُ النَّاسَ وَيَصْبِرُ عَلَى أَذَاهُمْ أَعْظَمُ أَجْرًا مِنَ الْمُؤْمِنِ الَّذِي لاَ يُخَالِطُ النَّاسَ</p>
+        <p class="share-translation" id="shareHadithTranslation">The believer who mixes with people and bears their harm is greater in reward than the believer who does not mix with them.</p>
+        <p class="share-reference" id="shareHadithRef">Sunan at-Tirmidhi 2507</p>
       </div>
 
       <div class="share-divider" role="separator"></div>
 
       <div class="share-block">
         <div class="share-block-title">💡 Explanation of the Hadith</div>
-        <p class="share-tafsir" id="shareHadithExplanationText">The Prophet ﷺ teaches the virtue of protecting others' dignity. When you see a fault in someone, you conceal it rather than expose it. This is not about approving of sin — it is about not humiliating others. In return, Allah will conceal your faults on the Day of Judgment. This hadith encourages a culture of mercy, privacy and non-judgmental support among believers. The Prophet ﷺ said: 'Whoever conceals the faults of a Muslim, Allah will conceal his faults in this world and the Hereafter.'</p>
+        <p class="share-tafsir" id="shareHadithExplanationText">The Prophet ﷺ identifies the believer who engages with society as having greater reward than one who isolates. Mixing with people is difficult — it requires patience with their faults, forgiveness and self-control. But this is the path of the Prophet ﷺ, who lived among people, endured their harm and continued to call them to good. This hadith encourages the believer not to abandon society but to engage with it patiently. The Prophet ﷺ said: 'The strong believer is better and more beloved to Allah than the weak believer.'</p>
       </div>
 
       <div class="share-footer">
@@ -2877,11 +2898,11 @@ body.light-mode .share-arabic{color:#1a2233;}
     <button class="prayer-settings-btn" id="prayerQiblaBtn" type="button" aria-label="Qibla direction">🧭</button>
   </div>
   <div class="prayer-date-row">
-    <span class="pdr-item pdr-hijri" id="pdrHijri">7 Jumada al-Akhirah 1448 AH</span>
+    <span class="pdr-item pdr-hijri" id="pdrHijri">8 Jumada al-Akhirah 1448 AH</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-greg" id="pdrGreg">18 November 2026</span>
+    <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">16:53</span>
+    <span class="pdr-item pdr-time" id="pdrTime">06:30</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -6426,14 +6447,28 @@ function noteFollowWrongToken(){
   const w = words[ptr];
   const label = w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '';
   addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 10 s…', false, true);
-  followPinTimer = setTimeout(() => {
+  const onPinTimeout = () => {
     followPinTimer = null;
     if(!wantMic) return;
     if(ptr !== followPinPtr) return;
-    addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
-    stopReciting(true);
-    setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
-  }, FOLLOW_PIN_STOP_MS);
+    followPinCycles++;
+    if(followPinCycles >= 3){
+      addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
+      stopReciting(true);
+      setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
+      return;
+    }
+    // First stalls are usually stale ASR bias, not silence: re-bias to the
+    // current word, clear the wrong-token count, and keep listening instead
+    // of stopping the mic after ~15 s.
+    followWrongTokens = 0;
+    rebuildFollowBiasIfNeeded(true);
+    addFeedback('🔄 Still listening on <b>' + label + '</b> — refreshed recognition…', false, true);
+    // Re-arm the pin check for another 10 s window.
+    followPinPtr = ptr;
+    followPinTimer = setTimeout(onPinTimeout, FOLLOW_PIN_STOP_MS);
+  };
+  followPinTimer = setTimeout(onPinTimeout, FOLLOW_PIN_STOP_MS);
 }
 
 function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
@@ -6630,6 +6665,7 @@ async function runSpeechResultProcessing(snap) {
       const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+      rebuildFollowBiasIfNeeded(false);
       scheduleHUD();
 
 } else {
@@ -6816,6 +6852,20 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
   }
 }
 
+// Follow mode: keep the ASR phrase/grammar bias aligned with the live pointer.
+// Previously the bias was only rebuilt when the recogniser restarted (onend),
+// so after ~15s of recitation it still favoured words from the start of the
+// session, ASR returned increasingly wrong words, and the 3-wrong pin timer
+// stopped the mic. Re-biasing as ptr advances keeps recognition on the
+// words actually being recited. Tab / text sizes are untouched.
+let followPinCycles = 0;
+function rebuildFollowBiasIfNeeded(force){
+  if(!followOnly || !speechRecognition) return;
+  const lastPtr = speechRecognition.__lastPhrasePtr || 0;
+  if(!force && Math.abs(ptr - lastPtr) < 4) return;
+  try{ buildPhraseObjects(speechRecognition); }catch(_){}
+  try{ updateSpeechGrammar(currentSpeechGrammarWindow()); }catch(_){}
+}
 function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
   if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
@@ -6846,7 +6896,9 @@ async function setupOnDeviceArabic(rec) {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear(); followFed.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (!followOnly && Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
+    followPinCycles = 0;
+    if (followOnly) rebuildFollowBiasIfNeeded(true);
+    else if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -12516,7 +12568,7 @@ function showTextShareModal(text){
   }
   showScreen('home');
 })();
-</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
 <script>
 (function () {
   // The full Tajweed engine needs live speech input.
@@ -12538,4 +12590,4 @@ function showTextShareModal(text){
 })();
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
-</body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><div class="modal-bg" id="installPromptBg"><div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don’t show this again</span></label></div></div></body></html>
