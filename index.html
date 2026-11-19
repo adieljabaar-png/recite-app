@@ -1632,8 +1632,7 @@ body.light-mode .qv-btn.qv-bookmark.bookmarked{background:rgba(31,154,90,.14);bo
 @keyframes bmFlash{0%{ transform:scale(1); }45%{ transform:scale(1.25);background:rgba(47,208,122,.42);border-color:var(--good); color:var(--good); }100%{ transform:scale(1); }}
 body.viewer-audio-mode .qv-btn.qv-bookmark{ display:none; }
 
-.install-prompt-modal{max-width:440px;position:relative;}
-.ip-close{position:absolute;top:10px;right:12px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(127,140,160,.12);color:var(--text);font-size:.85rem;line-height:1;cursor:pointer;z-index:2;}
+.install-prompt-modal{max-width:440px;}
 .install-prompt-modal h2{font-size:1.1rem;margin:0 0 8px;display:flex;align-items:center;gap:8px;}
 .install-prompt-modal p{margin:0 0 14px;font-size:.86rem;line-height:1.55;color:var(--muted);}
 .install-steps-mini{display:flex;flex-direction:column;gap:8px;margin:0 0 16px;}
@@ -2901,7 +2900,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">08:00</span>
+    <span class="pdr-item pdr-time" id="pdrTime">08:07</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -3608,42 +3607,14 @@ const PHON = {
   '\u06C0':'\u0647','\u06C1':'\u0647','\u06D5':'\u0647'
 };
 
-// LOOSE map — Follow mode ONLY (word detection, not Tajweed grading).
-// One char can only map to ONE target, so loose picks the most common
-// ASR / dialect hearing. The other hearing is left to lev() tolerance.
 const PHON_LOOSE = Object.assign({}, PHON, {
-  // Gutturals collapsed — ASR ar-SA routinely drops / weakens these
-  '\u062D':'\u0647', // ح -> ه
-  '\u062E':'\u0647', // خ -> ه
-  '\u063A':'\u0647', // غ -> ه (غ / خ already merged via ه)
-  '\u0639':'\u0627', // ع -> ا
-  // Follow-only equivalences requested for more tolerant live recognition:
-  '\u0645':'\u0646', // م -> ن (same loose matching class)
-  '\u0621':'',       // ء is pronounced but does not count as a separate letter
-  // Emphatics -> their light counterpart, dialect form
-  '\u0637':'\u062A', // ط -> ت
-  '\u0635':'\u0633', // ص -> س (inherited, listed for clarity)
-  '\u0636':'\u062F', // ض -> د  CHANGED: was ز. Egyptian/Levantine ASR hears ض as د
-  '\u0638':'\u0630', // ظ -> ذ  CHANGED: was ز. Closer than ز, keeps ظ / ذ merged
-  '\u0630':'\u0632', // ذ -> ز (kept)
-  '\u062B':'\u0633', // ث -> س (kept; ث -> ت left to lev())
-  '\u0642':'\u0627', // ق -> ا: retain a weak glottal-stop trace when standalone ء is ignored
-  // Variant / Uthmani / ASR forms — also in VARIANT_MAP so they
-  // survive normAr(); listed here so PHON_LOOSE works standalone too
-  '\u06BE':'\u0647', // ھ -> ه
-  '\u06C2':'\u0647', // ۂ -> ه
-  '\u06C3':'\u0647', // ۃ -> ه
-  '\u0620':'\u064A', // ؠ -> ي
-  '\u06D0':'\u064A', // ې -> ي
-  '\u06D1':'\u064A', // ۑ -> ي
-  '\u06D3':'\u064A', // ۓ -> ي
-  '\u06CB':'\u0648', // ۋ -> و
-  '\u06AF':'\u0643', // گ -> ك
-  '\u0686':'\u062C', // چ -> ج
-  '\u067E':'\u0628', // پ -> ب
-  '\u0698':'\u0632'  // ژ -> ز
-  // Other broad equivalences remain excluded to limit false-positive matches:
-  // ج -> ز, ه -> ء, ب -> م, ر -> ل.
+  '\u062D':'\u0647',
+  '\u062E':'\u0647',
+  '\u063A':'\u0647',
+  '\u0639':'\u0627',
+  '\u0637':'\u062A',
+  '\u0638':'\u0632',
+  '\u0630':'\u0632'
 });
 
 const EMPHATIC_FAMILY = {
@@ -3657,26 +3628,6 @@ const EMPHATIC_FAMILY = {
   '\u0639': '\u0621',
   '\u063A': '\u0642'
 };
-
-class PhonemeClass {
-  constructor() {
-    // Single source of truth — no more drift between dialectMap and PHON_LOOSE.
-    // PHON_LOOSE is defined above this class in the file.
-    this.dialectMap = PHON_LOOSE;
-  }
-  normalize(text) {
-    // Map variant letters BEFORE normMsa(), otherwise normMsa() deletes
-    // U+06xx letters with its [^\u0621-\u064A] filter.
-    const pre = mapVariantLetters(String(text || ''));
-    const msa = normMsa(pre);
-    let res = '';
-    for (let i = 0; i < msa.length; i++) {
-      res += Object.prototype.hasOwnProperty.call(this.dialectMap, msa[i]) ? this.dialectMap[msa[i]] : msa[i];
-    }
-    return res;
-  }
-}
-const phonemeEngine = new PhonemeClass();
 
 function phonNormAr(s){
   const n = normArCached(s);
@@ -3694,7 +3645,7 @@ function phonNormLooseAr(s){
   raw = mapVariantLetters(raw); // گ / چ / پ / ھ / etc. -> canonical, before normAr()
   const n = normArCached(raw);
   let out = '';
-  for(let i = 0; i < n.length; i++) out += Object.prototype.hasOwnProperty.call(PHON_LOOSE, n[i]) ? PHON_LOOSE[n[i]] : n[i];
+  for(let i = 0; i < n.length; i++) out += PHON_LOOSE[n[i]] || n[i];
   return out;
 }
 
@@ -3929,11 +3880,6 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
     if(lev(hPhon, w.phon) <= tol) return true;
   }
 
-  if(followOnly) {
-    const pHeard = phonemeEngine.normalize(hNorm);
-    const pTarget = phonemeEngine.normalize(wNorm);
-    if(pHeard === pTarget || lev(pHeard, pTarget) <= tol) return true;
-  }
   if(followOnly && hPhonLoose && w.phonLoose &&
      hPhonLoose.length >= 2 && w.phonLoose.length >= 2 &&
      lev(hPhonLoose, w.phonLoose) <= tol){
@@ -4834,7 +4780,7 @@ function recPush(newToks){
 }
 function recReset(){
   recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
-  interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); clearFollowDrop();
+  interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
   currentConsensusSet = new Set();
 }
 
@@ -6291,87 +6237,7 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.80;
-const FOLLOW_MAX_LOOKAHEAD  = 1;
-// --- Drop-token (second chance) state ---------------------------------
-// One missed word does not pin the pointer: the first non-matching FINAL
-// token drops the target word instead of counting it as wrong. The next
-// token is then tested as a REPEAT of the dropped word (same thresholds,
-// no loosening). If it matches, the dropped word is accepted as correct.
-// If it matches the NEXT word instead, the user moved on: the dropped
-// word is left unmarked and we advance to the matched word.
-let followDroppedIdx = -1;
-let followDroppedAttempts = 0;
-let followDroppedAt = 0;
-let followDropAllowed = false; // set per-result in runSpeechResultProcessing: true only for final results
-const FOLLOW_DROP_MAX_ATTEMPTS = 1;
-const FOLLOW_DROP_WINDOW_MS = 6000;
-function clearFollowDrop(){ followDroppedIdx = -1; followDroppedAttempts = 0; followDroppedAt = 0; }
-function followRepeatMatch(heard, hPhon, hPhonLoose, w){
-  if(!w || !heard) return false;
-  if(heard === w.norm) return true;
-  // Same bar as a first attempt: MFA, then plausible. Never looser.
-  if(isFollowMFAMatch(w, heard, hPhon, hPhonLoose)) return true;
-  if(isFollowPlausible(heard, hPhon, hPhonLoose, w)) return true;
-  return false;
-}
-// --- Muqattaat transliteration (Latin letter names) --------------------
-// ASR in ar-SA may return the letter names as Latin-script tokens
-// ("alif lam meem") when the user says them in transliteration, and
-// normAr() would strip Latin letters entirely. Match on the raw tokens.
-const MUQ_LATIN_NAMES = {
-  'ا': ['alif','alef','aliflam'], 'ل': ['lam','laam'], 'م': ['meem','mim','meem'],
-  'ص': ['sad','saad'], 'ر': ['ra','raa'], 'ك': ['kaf','kaaf'],
-  'ه': ['ha','haa','hah'], 'ح': ['haa','hah','ha'],
-  'ي': ['ya','yaa'], 'ع': ['ain','ayn'], 'ط': ['ta','tah','taa'],
-  'س': ['seen','sin','seem'], 'ق': ['qaf','qaaf','qaf'], 'ن': ['noon','nun']
-};
-function muqLatinToLetter(tok){
-  const s = String(tok||'').toLowerCase().replace(/[^a-z]/g,'');
-  if(!s) return null;
-  for(const [letter, names] of Object.entries(MUQ_LATIN_NAMES)){
-    if(names.includes(s)) return letter;
-  }
-  return null;
-}
-// Try to consume 1..N raw tokens starting at ti as transliterated
-// letter names for w.muqattaatLetters from w.muqattaatCursor.
-// Returns {consumed, result:'complete'|'partial'|'no-match'}.
-function tryMuqattaatTranslit(tokens, ti, w){
-  if(!w || !w.isMuqattaat) return {consumed:0, result:'no-match'};
-  const letters = w.muqattaatLetters || [];
-  let cursor = w.muqattaatCursor || 0;
-  if(cursor >= letters.length) return {consumed:0, result:'complete'};
-  let consumed = 0;
-  // (a) one Latin token per letter name, e.g. "alif" "lam" "meem"
-  for(let k = ti; k < tokens.length && cursor < letters.length; k++){
-    const letter = muqLatinToLetter(tokens[k]);
-    if(!letter) break;
-    if(letter !== letters[cursor]) break;
-    cursor++; consumed++;
-  }
-  if(consumed){
-    w.muqattaatCursor = cursor;
-    return {consumed, result: (cursor >= letters.length) ? 'complete' : 'partial'};
-  }
-  // (b) one token holding the whole phrase, e.g. "aliflammeem"
-  const joined = String(tokens[ti]||'').toLowerCase().replace(/[^a-z]/g,'');
-  if(joined.length >= 6){
-    // Greedy longest-name parse of the concatenated phrase.
-    let pos = 0, c2 = w.muqattaatCursor || 0, ok = true;
-    while(pos < joined.length && c2 < letters.length){
-      let matched = null;
-      const names = (MUQ_LATIN_NAMES[letters[c2]]||[]).slice().sort((a,b)=>b.length-a.length);
-      for(const nm of names){ if(joined.startsWith(nm, pos)){ matched = nm; break; } }
-      if(!matched){ ok = false; break; }
-      pos += matched.length; c2++;
-    }
-    if(ok && pos === joined.length && c2 > (w.muqattaatCursor||0)){
-      w.muqattaatCursor = c2;
-      return {consumed:1, result: (c2 >= letters.length) ? 'complete' : 'partial'};
-    }
-  }
-  return {consumed:0, result:'no-match'};
-}
+const FOLLOW_MAX_LOOKAHEAD  = 0;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
@@ -6414,9 +6280,6 @@ function cancelFollowPinTimer(){
 function noteFollowProgress(){
   followWrongTokens = 0;
   cancelFollowPinTimer();
-  // Do NOT clearFollowDrop() here: a successful commit inside the
-  // drop-repeat path clears it explicitly. Clearing here would also
-  // be safe, but the explicit path keeps the state machine auditable.
 }
 function noteFollowWrongToken(){
   followWrongTokens++;
@@ -6467,7 +6330,7 @@ let pendingSpeechEvent = null;
 let speechResultTimer = null;
 let speechInFlight = false;
 const speechQueue = [];
-const SPEECH_THROTTLE_MS = 15;
+const SPEECH_THROTTLE_MS = 25;
 
 function resetSpeechPipeline(){
   speechQueue.length = 0;
@@ -6491,37 +6354,6 @@ function buildConsensusSet(alternatives){
   }
 }
 
-function speechSnapshotHasFinal(snap){
-  return !!(snap && snap.results && snap.results.some(r => r && r.isFinal));
-}
-
-// Keep every final result, but coalesce queued interim snapshots. Browsers can
-// emit many revisions of the same partial phrase; processing stale revisions
-// only builds a backlog and makes the pointer feel slow.
-function enqueueSpeechSnapshot(snap){
-  if(!snap || !snap.results || !snap.results.length) return;
-  if(speechSnapshotHasFinal(snap)){
-    speechQueue.push(snap); // final transcripts are never discarded
-  } else {
-    let lastFinal = -1;
-    for(let i = speechQueue.length - 1; i >= 0; i--){
-      if(speechSnapshotHasFinal(speechQueue[i])){ lastFinal = i; break; }
-    }
-    let replaceAt = -1;
-    for(let i = speechQueue.length - 1; i > lastFinal; i--){
-      if(!speechSnapshotHasFinal(speechQueue[i])){ replaceAt = i; break; }
-    }
-    if(replaceAt >= 0) speechQueue[replaceAt] = snap;
-    else speechQueue.push(snap);
-  }
-  // Bound interim backlog on slower phones. Never remove a final result.
-  while(speechQueue.length > 12){
-    const staleInterim = speechQueue.findIndex(item => !speechSnapshotHasFinal(item));
-    if(staleInterim < 0) break;
-    speechQueue.splice(staleInterim, 1);
-  }
-}
-
 function scheduleSpeechResult(event) {
   if (!event || !wantMic || fsPaused || micPaused) return;
   let hasFinal = false;
@@ -6540,9 +6372,9 @@ function scheduleSpeechResult(event) {
   if (!snapshot.length) return;
   const snap = { resultIndex: event.resultIndex, results: snapshot };
   if (hasFinal) {
-    if (pendingSpeechEvent) { enqueueSpeechSnapshot(pendingSpeechEvent); pendingSpeechEvent = null; }
+    if (pendingSpeechEvent) { speechQueue.push(pendingSpeechEvent); pendingSpeechEvent = null; }
     if (speechResultTimer) { clearTimeout(speechResultTimer); speechResultTimer = null; }
-    enqueueSpeechSnapshot(snap);
+    speechQueue.push(snap);
     processSpeechQueue();
     return;
   }
@@ -6553,7 +6385,7 @@ function scheduleSpeechResult(event) {
     const ev = pendingSpeechEvent;
     pendingSpeechEvent = null;
     if (!ev || !wantMic || fsPaused || micPaused) return;
-    enqueueSpeechSnapshot(ev);
+    speechQueue.push(ev);
     processSpeechQueue();
   }, SPEECH_THROTTLE_MS);
 }
@@ -6588,7 +6420,6 @@ async function runSpeechResultProcessing(snap) {
     const result = snap.results[ri];
     const i = result.index;
     const isFinal = result.isFinal;
-    followDropAllowed = !!isFinal;
     const alternatives = result.alternatives;
     if (!alternatives || !alternatives.length) continue;
     const floor = confidenceFloor();
@@ -6621,45 +6452,28 @@ async function runSpeechResultProcessing(snap) {
       const newToks = toks.slice(already);
       if (!newToks.length) continue;
       recPush(newToks);
-      const gradeResult = grade(recTokens, recCursor);
-      const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
+      const used = await grade(recTokens, recCursor);
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
       scheduleHUD();
 
 } else {
       const already = interimProgress.get(i) || 0;
-      // Interim results normally hold back their final token because browsers
-      // often revise that token while the speaker is still talking.  The old
-      // length/consensus heuristic could both delay a genuine match and release
-      // a token that did not correspond to the current Quran word.  Release the
-      // tail immediately only when the existing Follow matcher says it matches
-      // the current target.  grade() still performs the normal commit checks;
-      // this is not an automatic/unchecked acceptance.
       let safeEnd = Math.max(already, toks.length - 1);
-      // Muqattaat immediately after Bismillah: do NOT hold back the
-      // tail token. The reciter says Bismillah -> Muqattaat with no
-      // pause, so waiting for a final result is exactly the delay
-      // reported. Release every interim token for Muqattaat.
-      if (followOnly && ptr < words.length && words[ptr] && words[ptr].isMuqattaat) safeEnd = toks.length;
-      if (followOnly && toks.length > already && safeEnd < toks.length && ptr < words.length) {
-        const tailRaw = toks[toks.length - 1];
-        const tailNorm = normArCached(tailRaw);
-        const targetWord = words[ptr];
-        if (tailNorm && targetWord) {
-          const tailPhon = phonArCached(tailRaw);
-          const tailPhonLoose = phonLooseArCached(tailRaw);
-          const tailMatchesCurrent = tailNorm === targetWord.norm ||
-            isMatchWord(tailNorm, tailPhon, tailPhonLoose, targetWord);
-          if (tailMatchesCurrent) safeEnd = toks.length;
-        }
+      if (followOnly && toks.length > already && safeEnd < toks.length) {
+        const tailNorm = normArCached(toks[toks.length - 1]);
+        const currentTarget = (ptr < words.length) ? words[ptr].norm : '';
+        const isConsensusTail = currentConsensusSet.has(tailNorm);
+        const isSafeTail =
+          isConsensusTail ||
+          (tailNorm.length >= 3 && !(currentTarget && currentTarget.startsWith(tailNorm)));
+        if (isSafeTail) safeEnd = toks.length;
       }
       const newToks = toks.slice(already, safeEnd);
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
         recPush(newToks);
-        const gradeResult = grade(recTokens, recCursor);
-        const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
+        const used = await grade(recTokens, recCursor);
         recCursor = Math.min(recCursor + used, recTokens.length);
         if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
         scheduleHUD();
@@ -6678,7 +6492,7 @@ function scoreAlternativeToks(toks, startPtr){
   if(!toks || !toks.length) return 0;
   if(!words.length || startPtr >= words.length) return 0;
   let score = 0, ti = 0, wi = startPtr;
-  const maxAhead = followOnly ? 3 : Math.min(6, words.length - startPtr);
+  const maxAhead = followOnly ? 5 : Math.min(6, words.length - startPtr);
   while(ti < toks.length && wi < startPtr + maxAhead){
     const rawTok = toks[ti];
     const heard = normArCached(rawTok);
@@ -6715,15 +6529,6 @@ function buildPhraseObjects(rec) {
     const distance = i - ptr;
     const boost = distance <= 3 ? 12.0 : distance <= 10 ? 6.0 : 2.0;
     try { phrases.push(new PhraseCtor(clean, boost)); } catch (_) {}
-    // Muqattaat: also hint the transliterated letter names, so the
-    // recognizer can return "alif lam meem" immediately after Bismillah.
-    if (words[i] && words[i].isMuqattaat && words[i].muqattaatLetters){
-      const latin = words[i].muqattaatLetters.map(l => (MUQ_LATIN_NAMES[l]||[''])[0]).filter(Boolean);
-      if (latin.length){
-        try { phrases.push(new PhraseCtor(latin.join(' '), 12.0)); } catch (_) {}
-        try { phrases.push(new PhraseCtor(latin.join(''), 6.0)); } catch (_) {}
-      }
-    }
   }
   if (!phrases.length) return false;
   try { 
@@ -6882,11 +6687,11 @@ function armSpeechKeepalive(){
 }
 function disarmSpeechKeepalive(){ clearTimeout(speechKeepaliveTimer); speechKeepaliveTimer = null; }
 
-function grade(tokens, startIdx){
+async function grade(tokens, startIdx){
   const start = startIdx || 0;
   if(!words.length || ptr >= words.length) return tokens.length - start;
   if(followOnly) return gradeFollowFast(tokens, start);
-  return gradeFull(tokens, start);
+  return await gradeFull(tokens, start);
 }
 
 function isAcousticWordShapeMatch(w, seg) {
@@ -6929,32 +6734,12 @@ function gradeFollowFast(tokens, startIdx){
     if (ptr >= words.length){ used++; continue; }
     const rawTok = tokens[ti];
     const heard  = normArCached(rawTok);
+    if (!heard){ used++; continue; }
     const hPhon      = phonArCached(rawTok);
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w          = words[ptr];
 
-    // --- Muqattaat: quick check, incl. transliteration phrases --------
     if (w && w.isMuqattaat) {
-      // (1) Latin transliteration: "alif lam meem" / "aliflammeem".
-      // normAr() strips Latin, so this must run on raw tokens, and
-      // it may consume several tokens at once. This is the fast path
-      // right after Bismillah: one batch can complete the whole word.
-      const tr = tryMuqattaatTranslit(tokens, ti, w);
-      if (tr.consumed > 0){
-        if (tr.result === 'complete'){
-          commitCorrect(ptr, null);
-          advancePast(1);
-          noteFollowProgress();
-          pendingHeard.length = 0;
-          used += tr.consumed; ti += tr.consumed - 1;
-          continue;
-        }
-        // Partial transliteration is PROGRESS, not a wrong token.
-        pendingHeard.length = 0;
-        used += tr.consumed; ti += tr.consumed - 1;
-        continue;
-      }
-      if (!heard){ used++; continue; }
       const mr = tryMuqattaatProgress(heard, hPhon, hPhonLoose, w);
       if (mr === 'complete') {
         commitCorrect(ptr, null);
@@ -6963,61 +6748,8 @@ function gradeFollowFast(tokens, startIdx){
         pendingHeard.length = 0;
         used++; continue;
       }
-      if (mr === 'partial') {
-        // Partial letter-name progress is NOT a wrong token. Counting
-        // it as wrong is what tripped the 3-wrong pin timer on
-        // "Alif ... Lam ..." and made Muqattaat look delayed/stuck.
-        pendingHeard.length = 0;
-        used++; continue;
-      }
-      // Genuine no-match on Muqattaat: do not start the pin timer
-      // from a single garbled token; wait for a repeat / next word.
-      // Only count it if we are NOT in the immediate post-Bismillah
-      // window (first ~6s after crossing verse 0).
-      pendingHeard.length = 0;
+      noteFollowWrongToken();
       used++; continue;
-    }
-
-    if (!heard){ used++; continue; }
-
-    // --- Drop-token: this token is a REPEAT / MOVE-ON test ------------
-    if (followDroppedIdx >= 0){
-      const droppedW = words[followDroppedIdx];
-      const expired = (performance.now() - followDroppedAt) > FOLLOW_DROP_WINDOW_MS;
-      if (!droppedW || ptr !== followDroppedIdx || expired){
-        clearFollowDrop();
-        // Fall through to normal matching for this token.
-      } else if (followRepeatMatch(heard, hPhon, hPhonLoose, droppedW)){
-        // Repeat, plausible at the SAME threshold: accept as correct.
-        commitCorrect(followDroppedIdx, null);
-        advancePast(1);
-        noteFollowProgress();
-        clearFollowDrop();
-        pendingHeard.length = 0;
-        used++; continue;
-      } else {
-        // Did the user move on to the next word instead of repeating?
-        const nxt = words[ptr + 1];
-        const movedOn = nxt && (followSimilarity(heard, hPhon, hPhonLoose, nxt) >= FOLLOW_TAU_JUMP ||
-                                isMatchWord(heard, hPhon, hPhonLoose, nxt));
-        if (movedOn){
-          // Leave the dropped word unmarked (never falsely accept it).
-          commitCorrect(ptr + 1, null);
-          advancePast(2);
-          noteFollowProgress();
-          clearFollowDrop();
-          pendingHeard.length = 0;
-          used++; continue;
-        }
-        // Neither repeat nor move-on: one more attempt allowed, then
-        // fall through to normal handling (which will count it wrong).
-        followDroppedAttempts++;
-        if (followDroppedAttempts <= FOLLOW_DROP_MAX_ATTEMPTS){
-          used++; continue;
-        }
-        clearFollowDrop();
-        // Fall through to normal matching below.
-      }
     }
 
     if (followOnly && w && currentConsensusSet.size > 0 && currentConsensusSet.has(w.norm)){
@@ -7104,21 +6836,7 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    // --- Drop-token: first non-matching FINAL token ------------------
-    // Drop the target instead of counting it wrong. The next token
-    // gets one chance to repeat it (same thresholds). Pin timer and
-    // wrong-token count stay untouched while waiting for the repeat.
-    if (followDropAllowed && followDroppedIdx < 0){
-      followDroppedIdx = ptr;
-      followDroppedAttempts = 0;
-      followDroppedAt = performance.now();
-      pendingHeard.length = 0;
-      used++; continue;
-    }
-    // Interim tokens (or a second miss after a drop): consume without
-    // tripping the pin timer on a revision that may be corrected by
-    // the final result. Only final results count as wrong.
-    if (followDropAllowed) noteFollowWrongToken();
+    noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if (pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
@@ -8486,27 +8204,13 @@ function completeVerse(verseKey){
 }
 function advancePast(n){
   if(n <= 0 || ptr >= words.length) return;
-  const previousPtr = ptr;
   const endPtr = Math.min(words.length, ptr + n);
   const advanced = endPtr - ptr;
   const leaving = new Set();
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
-  const crossedVerse = !!(words[previousPtr] && words[ptr] && words[previousPtr].verse !== words[ptr].verse);
-  const lastGrammarPtr = speechRecognition ? (speechRecognition.__lastGrammarPtr || 0) : 0;
-  if(crossedVerse || ptr - lastGrammarPtr >= 3) updateSpeechGrammar(currentSpeechGrammarWindow());
+  updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
-  // Bismillah -> Muqattaat handover: the next word must be listened
-  // for immediately. Reset the silence clock, cancel any pin timer
-  // started on a Bismillah word, drop any stale drop-token state, and
-  // reset the Muqattaat letter cursor so a fresh attempt starts clean.
-  if (ptr < words.length && words[ptr] && words[ptr].isMuqattaat &&
-      words[previousPtr] && String(words[previousPtr].verse||'').endsWith(':0')){
-    words[ptr].muqattaatCursor = 0;
-    clearFollowDrop();
-    cancelFollowPinTimer(); followWrongTokens = 0;
-    try{ resetSilenceTimer(true); }catch(_){}
-  }
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
 }
@@ -11238,7 +10942,6 @@ let deferredPrompt = null;
 let appInstalledFlag = false;
 function isInstallRecorded(){ try{ return localStorage.getItem(INSTALL_DONE_KEY) === '1'; }catch(e){ return false; } }
 function setInstallRecorded(){ try{ localStorage.setItem(INSTALL_DONE_KEY, '1'); }catch(e){} }
-function clearInstallRecorded(){ appInstalledFlag = false; try{ localStorage.removeItem(INSTALL_DONE_KEY); }catch(e){} }
 function detectStandalone(){
   if(window.navigator.standalone === true) return true;
   try{ return window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || window.matchMedia('(display-mode: window-controls-overlay)').matches; }
@@ -11271,16 +10974,7 @@ async function runNativeInstallPrompt(){
   if(!deferredPrompt) return false;
   const dp = deferredPrompt; deferredPrompt = null;
   let accepted = false;
-  try{
-    dp.prompt();
-    // The native prompt can fail to resolve in in-app browsers / when it is
-    // blocked. Never leave the caller (and the install popup) hanging.
-    const choice = await Promise.race([
-      Promise.resolve(dp.userChoice),
-      new Promise(r => setTimeout(() => r(null), 8000))
-    ]);
-    accepted = !!(choice && choice.outcome === 'accepted');
-  }
+  try{ dp.prompt(); const choice = await dp.userChoice; accepted = !!(choice && choice.outcome === 'accepted'); }
   catch(e){ accepted = false; }
   updateInstallMenuItem();
   return accepted;
@@ -11349,45 +11043,21 @@ function maybeShowInstallPrompt(){
 function showInstallPromptModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg'; bg.id = 'installPromptBg';
-  bg.innerHTML = '<div class="modal install-prompt-modal"><button class="ip-close" id="ipClose" type="button" aria-label="Close install prompt">✕</button><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipNotInstalled"><span>App is not yet installed</span></label><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don\u2019t show this again</span></label></div>';
+  bg.innerHTML = '<div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don\u2019t show this again</span></label></div>';
   document.body.appendChild(bg);
-  let closed = false;
   const close = (installed) => {
-    if(closed) return; closed = true;
-    document.removeEventListener('keydown', onEsc);
-    const notInstalled = document.getElementById('ipNotInstalled');
     const chk = document.getElementById('ipDontShow');
-    // "App is not yet installed" wins: clear any stale installed flag so the
-    // menu + future prompts stop claiming the app is installed, and do NOT
-    // record "don't show again" — the user explicitly wants to see it again.
-    if(notInstalled && notInstalled.checked){
-      clearInstallRecorded();
-      try{ localStorage.removeItem(INSTALL_PROMPT_DISMISSED_KEY); }catch(e){}
-      updateInstallMenuItem();
-    } else if((chk && chk.checked) || installed){
-      try{ localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1'); }catch(e){}
-    }
+    if((chk && chk.checked) || installed){ try{ localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1'); }catch(e){} }
     bg.remove();
   };
-  const onEsc = (e) => { if(e.key === 'Escape') close(false); };
-  document.addEventListener('keydown', onEsc);
   bg.addEventListener('click', e => { if(e.target === bg) close(false); });
-  bg.querySelector('#ipClose').addEventListener('click', () => close(false));
   bg.querySelector('#ipInstallLater').addEventListener('click', () => close(false));
   bg.querySelector('#ipInstallNow').addEventListener('click', async () => {
-    const btn = bg.querySelector('#ipInstallNow');
-    if(btn) { btn.disabled = true; btn.textContent = 'Opening install…'; }
-    try{
-      if(deferredPrompt){
-        const accepted = await runNativeInstallPrompt();
-        if(accepted){ setInstallRecorded(); updateInstallMenuItem(); close(true); showToast((IS_ANDROID || IS_IOS) ? '📲 Installing — look for the new icon on your Home Screen.' : '📲 Installing — look for the new icon on your desktop / taskbar.', 4200); }
-        else { close(false); showToast('Install cancelled — you can try again from the ☰ menu.'); }
-      } else { close(false); showInstallInstructions(); }
-    } finally {
-      // If the native prompt hung or threw, the popup must still close.
-      // close() is idempotent, so this is safe even after a normal close.
-      close(false);
-    }
+    if(deferredPrompt){
+      const accepted = await runNativeInstallPrompt();
+      if(accepted){ setInstallRecorded(); updateInstallMenuItem(); close(true); showToast((IS_ANDROID || IS_IOS) ? '📲 Installing — look for the new icon on your Home Screen.' : '📲 Installing — look for the new icon on your desktop / taskbar.', 4200); }
+      else { close(false); showToast('Install cancelled — you can try again from the ☰ menu.'); }
+    } else { close(false); showInstallInstructions(); }
   });
 }
 
