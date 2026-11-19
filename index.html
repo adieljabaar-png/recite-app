@@ -3563,7 +3563,7 @@ const STRICT_FEATURES = {
   ghunnah:   () => localStorage.getItem('qc.strictGhunnah')        !== '0',
   laam:      () => localStorage.getItem('qc.strictLaamShamsiyyah') !== '0',
   emphatics: () => localStorage.getItem('qc.strictEmphatics')      !== '0',
-  silent:    () => localStorage.getItem('qc.strictSilent')         === '1',
+  silent:    () => localStorage.getItem('qc.strictSilent')         !== '0',
   hamWasl:   () => localStorage.getItem('qc.strictHamWasl')        !== '0'
 };
 const VARIANT_MAP = {
@@ -5592,9 +5592,9 @@ function updateTajweedStatusChip(){
   }
   if(acousticReady){
     chip.className = 'toggle tj-status-ready';
-    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · acoustic active';
-    chip.title = 'All 12 Tajweed categories are enabled. ASR aligns the heard words with Quran text; the live microphone stream supplies RMS timing and spectral evidence for Madd, Ghunnah, Ikhfa, Idgham, Iqlab, Qalqalah, Laam Shamsiyyah, Hamzat al-Wasl and silent-letter checks. Some acoustic outcomes remain estimates and are reported as warnings when confidence is limited.';
-    chip.setAttribute('aria-label', 'All 12 Tajweed categories enabled with microphone acoustic analysis');
+    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · mic clues';
+    chip.title = 'All 12 annotated Tajweed categories are available. ASR aligns words with Quran text and the microphone supplies word-level RMS/spectral clues. Acoustic checks are provisional estimates, not phoneme-level Tajweed certification; uncertain findings are shown as yellow warnings for teacher/listener review.';
+    chip.setAttribute('aria-label', '12 annotated Tajweed categories available with provisional microphone evidence');
   } else if(wantMic){
     chip.className = 'toggle tj-status-error';
     chip.innerHTML = '<span class="tj-status-dot"></span>ASR only · audio unavailable';
@@ -5602,8 +5602,8 @@ function updateTajweedStatusChip(){
     chip.setAttribute('aria-label', 'ASR active but microphone waveform analysis unavailable');
   } else {
     chip.className = 'toggle tj-status-loading';
-    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules ready · start mic';
-    chip.title = 'All 12 rule categories and Quran annotations are loaded. Start Tajweed listening to request microphone access and activate RMS acoustic analysis.';
+    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · start mic';
+    chip.title = 'The 12 Tajweed categories are available from Quran annotations where present. Start listening to activate microphone analysis. Acoustic findings remain provisional and may require a teacher/listener review.';
     chip.setAttribute('aria-label', '12 Tajweed categories loaded; microphone analysis starts with recitation');
   }
 }
@@ -5890,7 +5890,7 @@ function strict1GhunnahOk(w, heard){
     spectralOk = nasalPresent(smp);
   }
   if (!spectralOk && !textOk){
-    markStrict1Error(w, 'ghunnah-' + gType, 'nasal murmur absent (text + spectrum)');
+    markStrict1Warning(w, 'ghunnah-' + gType, 'ASR and whole-word spectrum did not confirm the expected nasal; listen to the marked word before judging');
     return false;
   }
   if (!textOk && spectralOk){
@@ -5951,14 +5951,14 @@ function countPeaks(samples, threshold, minSepMs){
 
 function checkLaamShamsiyyah(w){
   if (!w || !w.tjRules || !w.tjRules.laamShamsiyyahPositions.length) return true;
-  if (!STRICT_FEATURES.laam()) return true;
-  const seg = w.audio;
-  if (!seg || seg.durationMs < 120) return true;
-  const onsetC = rmsAnalyser.onsetCentroid(seg.start, 60);
-  const overallC = rmsAnalyser.meanCentroid(seg.start, seg.end);
-  if (onsetC > 0 && onsetC < 1500 && overallC > onsetC * 1.6){
-    markStrict1Error(w, 'silent-laam-shamsiyyah', 'solar laam voiced: onset centroid ' + Math.round(onsetC) + ' Hz');
-    return false;
+  if (!STRICT_FEATURES.laam() || !w.audio || w.audio.durationMs < 140 || !rmsAnalyser.isRunning()) return true;
+  const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
+  if (!samples || samples.length < 6 || !rmsAnalyser.hasSignal()) return true;
+  const onsetC = rmsAnalyser.onsetCentroid(w.audio.start, 70);
+  const overallC = rmsAnalyser.meanCentroid(w.audio.start, w.audio.end);
+  if (onsetC > 0 && overallC > 0 && onsetC < 1500 && overallC > onsetC * 1.8){
+    markStrict1Warning(w, 'silent-laam-shamsiyyah',
+      'possible onset energy pattern; spectral centroid cannot by itself confirm solar-lām assimilation');
   }
   return true;
 }
@@ -5981,7 +5981,7 @@ function checkQalqalah(w, heard){
   if (w.tjRules.allRules.indexOf('qalqalah') === -1) return true;
 
   /* Segment-based burst detection (preferred) */
-  if (w.audio && w.audio.durationMs >= 100 && rmsAnalyser.isRunning()){
+  if (w.audio && w.audio.durationMs >= 100 && rmsAnalyser.isRunning() && rmsAnalyser.hasSignal()){
     const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
     if (samples && samples.length >= 6){
       const floor = rmsAnalyser.minRms();
@@ -6019,7 +6019,7 @@ function checkQalqalah(w, heard){
 
 function checkIdghaamNoGhunnah(w, heard){
   if (!w || !w.tjRules || !w.tjRules.hasIdghaamNoGhunnah) return true;
-  if (!w.audio || w.audio.durationMs < 100 || !rmsAnalyser.isRunning()) return true;
+  if (!w.audio || w.audio.durationMs < 100 || !rmsAnalyser.isRunning() || !rmsAnalyser.hasSignal()) return true;
   const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
   const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
   const T = getBaseMsPerLetter();
@@ -6042,27 +6042,32 @@ function checkIndependentNasalRules(w, heard){
   if (!w || !w.tjRules || !w.audio || !rmsAnalyser.isRunning()) return;
   const rules = w.tjRules.allRules || [];
   const samples = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
-  if (!samples || samples.length < 4) return;
-  const hasNasalRule = rules.indexOf('ghunnah') !== -1 ||
-    rules.indexOf('ikhfa') !== -1 || rules.indexOf('idghaam_ghunnah') !== -1 ||
-    rules.indexOf('iqlab') !== -1;
-  if (!hasNasalRule) return;
+  if (!samples || samples.length < 5 || !rmsAnalyser.hasSignal()) return;
+
+  // Do not collapse the four annotated nasal rules into one precedence choice.
+  // A single word may contain more than one annotated class; each is surfaced.
+  const nasalRules = [
+    ['ghunnah', 'ghunnah'],
+    ['ikhfa', 'ikhfa'],
+    ['idghaam_ghunnah', 'idghaam_ghunnah'],
+    ['iqlab', 'iqlab']
+  ];
   const nasal = nasalPresent(samples);
-  const gType = rules.indexOf('iqlab') !== -1 ? 'iqlab' :
-    rules.indexOf('ikhfa') !== -1 ? 'ikhfa' :
-    rules.indexOf('idghaam_ghunnah') !== -1 ? 'idghaam_ghunnah' : 'ghunnah';
-  const requiredMs = ghunnahRequiredMs(gType);
   const measuredMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
-  if (!nasal){
-    markStrict1Warning(w, 'ghunnah-' + gType,
-      'nasal resonance was not confidently detected in the audio segment');
-  } else if (measuredMs > 0 && measuredMs < requiredMs){
-    markStrict1Warning(w, 'ghunnah-length-' + gType,
-      'nasal segment estimate ' + measuredMs + ' ms; target approximately ' + Math.round(requiredMs) + ' ms');
-  }
-  if (gType === 'iqlab' && heard && heard.indexOf('م') === -1 && nasal){
-    markStrict1Warning(w, 'ghunnah-asr', 'nasal resonance detected although ASR did not return the expected م');
-  }
+  nasalRules.forEach(([annotation, type]) => {
+    if (!rules.includes(annotation)) return;
+    const expectedMs = ghunnahRequiredMs(type);
+    if (!nasal){
+      markStrict1Warning(w, 'ghunnah-' + type,
+        'the microphone spectrum did not clearly show nasal resonance; check this rule by listening');
+    } else if (measuredMs > 0 && measuredMs < expectedMs){
+      markStrict1Warning(w, 'ghunnah-length-' + type,
+        'estimated nasal interval ' + measuredMs + ' ms; approximate target ' + Math.round(expectedMs) + ' ms (provisional phone-mic estimate)');
+    }
+    if (type === 'iqlab' && heard && heard.indexOf('\u0645') === -1 && nasal){
+      markStrict1Warning(w, 'ghunnah-asr', 'nasal resonance was detected, but ASR did not return the expected م; verify the word manually');
+    }
+  });
 }
 
 function checkTajweedAudioAlignment(w, heard){
@@ -6320,7 +6325,7 @@ function runStrict1Checks(idx, heard, opts){
       const minSegMs = w.norm.length * (T_mora !== null ? T_mora : 100) * 0.6;
       if (w.audio.durationMs >= minSegMs && vowelMs < required){
         const tag = 'madd-' + kind + (isEndOfAyah ? '-end' : '');
-        markStrict1Error(w, tag, 'vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
+        markStrict1Warning(w, tag, 'estimated vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
           (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : ''));
       }
     }
@@ -6330,7 +6335,7 @@ function runStrict1Checks(idx, heard, opts){
       const required = ghunnahRequiredMs(gType);
       const effectiveMs = Math.round(rmsAnalyser.vowelRun(w.audio.start, w.audio.end).durationMs * 0.6);
       if (effectiveMs < required){
-        markStrict1Error(w, 'ghunnah-length-' + gType, 'voice nasalisation ' + effectiveMs + ' ms < ' + Math.round(required) + ' ms');
+        markStrict1Warning(w, 'ghunnah-length-' + gType, 'estimated nasalisation interval ' + effectiveMs + ' ms < ' + Math.round(required) + ' ms');
       }
     }
 
@@ -6351,14 +6356,14 @@ function runStrict1Checks(idx, heard, opts){
       if (w.tjRules && w.tjRules.madd && STRICT_FEATURES.madd()){
         const required = maddRequiredMs(w.tjRules.madd);
         if (asrMs < required){
-          markStrict1Error(w, 'madd-' + w.tjRules.madd + '-timing', 'timing ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
+          markStrict1Warning(w, 'madd-' + w.tjRules.madd + '-timing', 'ASR timing estimate ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
         }
       }
       if (w.tjRules && w.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
         const gType = w.tjRules.ghunnahType || 'ghunnah';
         const required = ghunnahRequiredMs(gType);
         if (asrMs < required){
-          markStrict1Error(w, 'ghunnah-length-' + gType, 'timing nasalisation ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
+          markStrict1Warning(w, 'ghunnah-length-' + gType, 'ASR timing estimate for nasalisation ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
         }
       }
     }
@@ -6385,7 +6390,7 @@ function runStrict1Checks(idx, heard, opts){
   updateTajweedStatusChip();
   if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w);
   checkHamzatWasl(w, idx, opts.rawHeard);
-  if (!strict1SilentOk(w, heard)){ markStrict1Error(w, 'silent', 'silent letter pronounced'); }
+  if (!strict1SilentOk(w, heard)){ markStrict1Warning(w, 'silent', 'ASR spelling differs from the annotated silent-letter form; transcript alone cannot prove that the silent letter was voiced'); }
   if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
   checkQalqalah(w, heard);
   checkIdghaamNoGhunnah(w, heard);
@@ -7081,7 +7086,7 @@ async function gradeFull(tokens, startIdx){
           const w = words[idx];
           if (!w) continue;
           if (segSlices) w.audio = segSlices[k];
-          runStrict1Checks(idx, heardSlices[k] || heard, { skipTiming: true, timingReliable: false });
+          runStrict1Checks(idx, heardSlices[k] || heard, { skipTiming: true, timingReliable: false, rawHeard: rawTok });
         }
         advancePast(mergedN);
         pendingHeard.length = 0; consecutiveReds = 0;
