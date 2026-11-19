@@ -6740,18 +6740,24 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
 
 // ---------- On-device Arabic (Follow mode never uses cloud recognition) ----------
 const ON_DEVICE_OPTS = { langs: [SPEECH_LANG], processLocally: true };
+// True only on browsers that have NO on-device switch at all (iPhone / Safari). There the
+// browser's own built-in engine is used. Chrome / Edge are never allowed to use cloud.
+let useBuiltInEngine = false;
 function sleepMs(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 // Resolves { ok:true } or { ok:false, reason, message }. May download the Arabic pack
 // (needs a user gesture + internet once); after that it works offline.
 async function ensureOnDeviceArabic(){
   if(!SPEECH_SUPPORTED) return { ok:false, reason:'unsupported', message:'Speech recognition is not available in this browser.' };
+  useBuiltInEngine = false;
   if(typeof SpeechRecognitionCtor.available !== 'function' || typeof SpeechRecognitionCtor.install !== 'function'){
-    return { ok:false, reason:'no-api', message:'This browser has no on-device speech recognition. Follow mode now needs a recent version of Chrome or Edge that supports it.' };
+    // No way to request on-device mode (e.g. Safari on iPhone): use the browser's built-in engine.
+    useBuiltInEngine = true;
+    return { ok:true, builtIn:true };
   }
   let st;
   try{ st = await SpeechRecognitionCtor.available(ON_DEVICE_OPTS); }
-  catch(e){ return { ok:false, reason:'no-api', message:'On-device speech recognition could not be checked in this browser.' }; }
+  catch(e){ useBuiltInEngine = true; return { ok:true, builtIn:true }; }
   if(st === 'available') return { ok:true };
   if(st === 'unavailable') return { ok:false, reason:'unavailable', message:'On-device Arabic speech recognition is not available on this device.' };
   // 'downloadable' | 'downloading'
@@ -6783,7 +6789,7 @@ function createSpeechRecognition(forceNoPhrases){
   rec.maxAlternatives  = 5;
   // Follow mode: on-device Arabic ONLY (no cloud fallback).
   rec.__onDevice = !!followOnly;
-  if(followOnly){
+  if(followOnly && !useBuiltInEngine){
     if(!('processLocally' in rec)) return null;
     try{ rec.processLocally = true; }catch(_){ return null; }
   }
