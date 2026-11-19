@@ -19,27 +19,6 @@
 :where(code, pre, kbd, samp) {
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
-</style><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
-@font-face {
-  font-family: "Optimistic";
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Optimistic Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
-}
-:where(html) {
-  font-family: "Optimistic", system-ui, sans-serif;
-}
-:where(code, pre, kbd, samp) {
-  font-family: "Optimistic Mono", ui-monospace, monospace;
-}
 </style><style>
 @font-face {
   font-family: "Optimistic";
@@ -962,8 +941,6 @@ text-align:center;line-height:1.4;
 }
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
 body.light-mode .toast{background:rgba(255,255,255,.97);box-shadow:0 12px 36px rgba(0,0,0,.18)}
-.toast.sajdah-toast{background:rgba(20,105,58,.97);border:1px solid rgba(134,239,172,.9);color:#f0fff4;box-shadow:0 12px 36px rgba(0,40,20,.38)}
-body.light-mode .toast.sajdah-toast{background:rgba(20,120,65,.98);border-color:#86efac;color:#fff}
 
 .calendar-modal{max-width:480px;}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;}
@@ -2923,11 +2900,11 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">06:46</span>
+    <span class="pdr-item pdr-time" id="pdrTime">07:08</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
-    Tap the bell next to any prayer to toggle its alarm on / off.<br><br>For the best chance of hearing alarms, keep Recite open, allow notifications, and disable battery restrictions for your browser. A browser cannot guarantee sound while the phone is locked, the app is suspended, or the browser is closed.
+    Tap the bell next to any prayer to toggle its alarm on / off.<br><br>Please note, for the Athaan alarm to sound, do not fully close the app and leave the media volume on.
   </div>
 </div>
 
@@ -3645,12 +3622,9 @@ const PHON_LOOSE = Object.assign({}, PHON, {
   // Emphatics -> their light counterpart, dialect form
   '\u0637':'\u062A', // ط -> ت
   '\u0635':'\u0633', // ص -> س (inherited, listed for clarity)
-  // Follow-only pronunciation class: ض / ذ / ظ all normalize to ز.
-  // This lets different regional pronunciations match the same expected
-  // Quran word without changing the displayed Uthmani text or Tajweed grading.
-  '\u0636':'\u0632', // ض -> ز
-  '\u0638':'\u0632', // ظ -> ز
-  '\u0630':'\u0632', // ذ -> ز
+  '\u0636':'\u062F', // ض -> د  CHANGED: was ز. Egyptian/Levantine ASR hears ض as د
+  '\u0638':'\u0630', // ظ -> ذ  CHANGED: was ز. Closer than ز, keeps ظ / ذ merged
+  '\u0630':'\u0632', // ذ -> ز (kept)
   '\u062B':'\u0633', // ث -> س (kept; ث -> ت left to lev())
   '\u0642':'\u0627', // ق -> ا: retain a weak glottal-stop trace when standalone ء is ignored
   // Variant / Uthmani / ASR forms — also in VARIANT_MAP so they
@@ -3688,18 +3662,8 @@ class PhonemeClass {
     // Single source of truth — no more drift between dialectMap and PHON_LOOSE.
     // PHON_LOOSE is defined above this class in the file.
     this.dialectMap = PHON_LOOSE;
-    this._cache = new Map();
   }
   normalize(text) {
-    const key = String(text || '');
-    const hit = this._cache.get(key);
-    if (hit !== undefined) return hit;
-    const out = this._normalizeUncached(key);
-    if (this._cache.size > 6000) this._cache.clear();
-    this._cache.set(key, out);
-    return out;
-  }
-  _normalizeUncached(text) {
     // Map variant letters BEFORE normMsa(), otherwise normMsa() deletes
     // U+06xx letters with its [^\u0621-\u064A] filter.
     const pre = mapVariantLetters(String(text || ''));
@@ -3762,39 +3726,6 @@ function phonLooseArCached(s){
   let v = _phonLooseCache.get(s);
   if(v === undefined){ v = phonNormLooseAr(s); trimCache(_phonLooseCache, CACHE_MAX); _phonLooseCache.set(s, v); }
   return v;
-}
-
-// Follow-only reading aid: a final Arabic letter with no short-vowel or
-// madd indication is not required for live word matching. The source text,
-// normalisation used by Tajweed, and displayed Quran text remain untouched.
-// Keep a final ي/و/ا when the preceding letter carries its matching long vowel.
-function followExpectedNorm(raw){
-  const chars = Array.from(String(raw || '').normalize('NFKC'));
-  const isArabicBase = ch => /[\u0621-\u064A\u066E-\u06D3]/.test(ch);
-  let last = -1;
-  for(let i = chars.length - 1; i >= 0; i--){ if(isArabicBase(chars[i])){ last = i; break; } }
-  if(last < 0) return normArCached(raw);
-  const marksAfter = chars.slice(last + 1).join('');
-  const shortVowelOrMadd = /[\u064B-\u0650\u0653-\u0655\u0670]/.test(marksAfter);
-  let longVowel = false;
-  if(last > 0){
-    let j = last - 1;
-    while(j >= 0 && !isArabicBase(chars[j])) j--;
-    if(j >= 0){
-      const between = chars.slice(j + 1, last).join('');
-      longVowel = (chars[last] === '\u064A' && /\u0650/.test(between)) ||
-                  (chars[last] === '\u0648' && /\u064F/.test(between)) ||
-                  (chars[last] === '\u0627' && /\u064E/.test(between));
-    }
-  }
-  if(!shortVowelOrMadd && !longVowel) chars.splice(last, 1);
-  return normArCached(chars.join(''));
-}
-function phonLooseExpected(raw){
-  const n = followExpectedNorm(raw);
-  let out = '';
-  for(let i = 0; i < n.length; i++) out += Object.prototype.hasOwnProperty.call(PHON_LOOSE, n[i]) ? PHON_LOOSE[n[i]] : n[i];
-  return out;
 }
 
 function gregorianToJDN(y, m, d){
@@ -3980,7 +3911,7 @@ function toleranceFor(L){
 function confidenceFloor(){ return followOnly ? 0.20 : 0.35; }
 
 function isMatchWord(hNorm, hPhon, hPhonLoose, w){
-  const wNorm = followOnly ? (w.followNorm || w.norm) : w.norm;
+  const wNorm = w.norm;
   const la = hNorm.length, lb = wNorm.length;
   if(Math.abs(la - lb) > 4) return false;
   if(hNorm === wNorm) return true;
@@ -3993,9 +3924,8 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   if(lev(hNorm, wNorm) <= tol) return true;
 
   const phonMinLen = followOnly ? 2 : 3;
-  const targetPhon = followOnly ? (w.followPhon || w.phon) : w.phon;
-  if(hPhon.length >= phonMinLen && targetPhon.length >= phonMinLen){
-    if(lev(hPhon, targetPhon) <= tol) return true;
+  if(hPhon.length >= phonMinLen && w.phon.length >= phonMinLen){
+    if(lev(hPhon, w.phon) <= tol) return true;
   }
 
   if(followOnly) {
@@ -4023,7 +3953,7 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
 function followAlPrefixMatch(heard, w){
   if(!followOnly) return false;
   if(!heard || !w || !w.norm) return false;
-  const wNorm = w.followNorm || w.norm;
+  const wNorm = w.norm;
   const hHasAl = heard.startsWith('ال');
   const wHasAl = wNorm.startsWith('ال');
   if(hHasAl === wHasAl) return false;
@@ -4037,8 +3967,7 @@ function followAlPrefixMatch(heard, w){
 function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(!w || !heard || !w.norm) return false;
   const heardLen  = heard.length;
-  const targetNorm = followOnly ? (w.followNorm || w.norm) : w.norm;
-  const targetLen = targetNorm.length;
+  const targetLen = w.norm.length;
   if(targetLen === 0) return false;
   if(heardLen < 2 && targetLen > 1) return false;
   const ratio = heardLen / targetLen;
@@ -4047,7 +3976,7 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
   if(ratio < minRatio || ratio > maxRatio) return false;
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
-  if(lev(heard, targetNorm) <= tol + (followOnly ? 2 : 3)) return true;
+  if(lev(heard, w.norm) <= tol + (followOnly ? 2 : 3)) return true;
   if(hPhon.length >= 2 && w.phon.length >= 2 &&
      lev(hPhon, w.phon) <= tol + (followOnly ? 1 : 2)) return true;
   return false;
@@ -4056,7 +3985,6 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
 function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
   if(ptr >= words.length) return 0;
   if(heard.length <= words[ptr].norm.length + 1) return 0;
-  if(followOnly) return tryMergedTokenMatchExact(heard, hPhon);
   let combined          = words[ptr].norm;
   let combinedPhon      = words[ptr].phon;
   let combinedPhonLoose = followOnly ? (words[ptr].phonLoose || '') : null;
@@ -4077,20 +4005,6 @@ function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
        hPhonLoose.length >= 4 && combinedPhonLoose.length >= 4 &&
        Math.abs(hPhonLoose.length - combinedPhonLoose.length) <= 3 &&
        lev(hPhonLoose, combinedPhonLoose) <= 1) return k + 1;
-  }
-  return 0;
-}
-
-// Follow mode: one heard token may stand for 2–3 words ONLY if it equals their joined text
-// (letters or sound-classes) exactly — no fuzzy tolerance, so an unheard word is never inferred.
-function tryMergedTokenMatchExact(heard, hPhon){
-  let combined = words[ptr].norm;
-  let combinedPhon = words[ptr].phon;
-  for(let k = 1; k < 3 && ptr + k < words.length; k++){
-    combined     += words[ptr + k].norm;
-    combinedPhon += words[ptr + k].phon;
-    if(heard === combined) return k + 1;
-    if(hPhon && hPhon.length >= 4 && hPhon === combinedPhon) return k + 1;
   }
   return 0;
 }
@@ -4399,39 +4313,6 @@ let recCursor = 0;
 let pendingHeard = [];
 let consecutiveReds = 0;
 const interimProgress = new Map();
-// FOLLOW MODE: tokens already fed from each result, kept as TEXT (not just a count) so the
-// feed position survives the engine revising earlier words of a long, still-growing result.
-const followFed = new Map();
-function followTokSame(a, b){
-  const x = normArCached(a), y = normArCached(b);
-  if(!x || !y) return false;
-  if(x === y) return true;
-  return x.length >= 4 && y.length >= 4 && lev(x, y) <= 1;
-}
-// How many leading tokens of `toks` were already fed for result `i`.
-// Unchanged prefix -> its length. If earlier text was revised -> re-anchor on the last
-// fed words (found by content, nearest to the expected position) so new words are neither
-// skipped nor fed twice.
-function followAlreadyFor(i, toks){
-  const fed = followFed.get(i);
-  if(!fed || !fed.length) return interimProgress.get(i) || 0;
-  let L = 0;
-  while(L < fed.length && L < toks.length && followTokSame(fed[L], toks[L])) L++;
-  if(L === fed.length) return fed.length;
-  for(let K = Math.min(3, fed.length); K >= 1; K--){
-    const tail = fed.slice(fed.length - K);
-    let bestEnd = -1, bestDist = Infinity;
-    for(let st = 0; st + K <= toks.length; st++){
-      let ok = true;
-      for(let k = 0; k < K; k++){ if(!followTokSame(tail[k], toks[st + k])){ ok = false; break; } }
-      if(!ok) continue;
-      const d = Math.abs((st + K) - fed.length);
-      if(d < bestDist){ bestDist = d; bestEnd = st + K; }
-    }
-    if(bestEnd >= 0) return bestEnd;
-  }
-  return Math.min(interimProgress.get(i) || 0, toks.length);
-}
 let currentConsensusSet = new Set();
 
 let speechRecognition = null;
@@ -4584,9 +4465,8 @@ function saveHifzHistory(h){
 }
 
 let toastEl = null;
-function showToast(html, ms, variant){
+function showToast(html, ms){
   if(!toastEl){ toastEl = document.createElement('div'); toastEl.className = 'toast'; document.body.appendChild(toastEl); }
-  toastEl.classList.toggle('sajdah-toast', variant === 'sajdah');
   toastEl.innerHTML = html;
   toastEl.classList.add('visible');
   clearTimeout(toastEl._timer);
@@ -4953,7 +4833,7 @@ function recPush(newToks){
 }
 function recReset(){
   recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
-  interimProgress.clear(); followFed.clear(); followWrongTokens = 0; cancelFollowPinTimer();
+  interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer(); clearFollowDrop();
   currentConsensusSet = new Set();
 }
 
@@ -6409,24 +6289,98 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
-const FOLLOW_TAU_EXIT       = 0.80;   // (legacy, no longer used)
-// "Plausible enough" acceptance must still be at least this similar (never a totally wrong word).
-const FOLLOW_PLAUSIBLE_MIN_SIM = 0.60;
-// LOCKED AT 0: Follow mode never skips ahead. A word that was not heard is never marked.
-// (FOLLOW_MAX_LOOKAHEAD below must stay 0.)
-const followPlausibleUsed = new Set();   // verse keys where the one "plausible enough" was spent
-const FOLLOW_MAX_LOOKAHEAD  = 0;
+const FOLLOW_TAU_EXIT       = 0.80;
+const FOLLOW_MAX_LOOKAHEAD  = 1;
+// --- Drop-token (second chance) state ---------------------------------
+// One missed word does not pin the pointer: the first non-matching FINAL
+// token drops the target word instead of counting it as wrong. The next
+// token is then tested as a REPEAT of the dropped word (same thresholds,
+// no loosening). If it matches, the dropped word is accepted as correct.
+// If it matches the NEXT word instead, the user moved on: the dropped
+// word is left unmarked and we advance to the matched word.
+let followDroppedIdx = -1;
+let followDroppedAttempts = 0;
+let followDroppedAt = 0;
+let followDropAllowed = false; // set per-result in runSpeechResultProcessing: true only for final results
+const FOLLOW_DROP_MAX_ATTEMPTS = 1;
+const FOLLOW_DROP_WINDOW_MS = 6000;
+function clearFollowDrop(){ followDroppedIdx = -1; followDroppedAttempts = 0; followDroppedAt = 0; }
+function followRepeatMatch(heard, hPhon, hPhonLoose, w){
+  if(!w || !heard) return false;
+  if(heard === w.norm) return true;
+  // Same bar as a first attempt: MFA, then plausible. Never looser.
+  if(isFollowMFAMatch(w, heard, hPhon, hPhonLoose)) return true;
+  if(isFollowPlausible(heard, hPhon, hPhonLoose, w)) return true;
+  return false;
+}
+// --- Muqattaat transliteration (Latin letter names) --------------------
+// ASR in ar-SA may return the letter names as Latin-script tokens
+// ("alif lam meem") when the user says them in transliteration, and
+// normAr() would strip Latin letters entirely. Match on the raw tokens.
+const MUQ_LATIN_NAMES = {
+  'ا': ['alif','alef','aliflam'], 'ل': ['lam','laam'], 'م': ['meem','mim','meem'],
+  'ص': ['sad','saad'], 'ر': ['ra','raa'], 'ك': ['kaf','kaaf'],
+  'ه': ['ha','haa','hah'], 'ح': ['haa','hah','ha'],
+  'ي': ['ya','yaa'], 'ع': ['ain','ayn'], 'ط': ['ta','tah','taa'],
+  'س': ['seen','sin','seem'], 'ق': ['qaf','qaaf','qaf'], 'ن': ['noon','nun']
+};
+function muqLatinToLetter(tok){
+  const s = String(tok||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(!s) return null;
+  for(const [letter, names] of Object.entries(MUQ_LATIN_NAMES)){
+    if(names.includes(s)) return letter;
+  }
+  return null;
+}
+// Try to consume 1..N raw tokens starting at ti as transliterated
+// letter names for w.muqattaatLetters from w.muqattaatCursor.
+// Returns {consumed, result:'complete'|'partial'|'no-match'}.
+function tryMuqattaatTranslit(tokens, ti, w){
+  if(!w || !w.isMuqattaat) return {consumed:0, result:'no-match'};
+  const letters = w.muqattaatLetters || [];
+  let cursor = w.muqattaatCursor || 0;
+  if(cursor >= letters.length) return {consumed:0, result:'complete'};
+  let consumed = 0;
+  // (a) one Latin token per letter name, e.g. "alif" "lam" "meem"
+  for(let k = ti; k < tokens.length && cursor < letters.length; k++){
+    const letter = muqLatinToLetter(tokens[k]);
+    if(!letter) break;
+    if(letter !== letters[cursor]) break;
+    cursor++; consumed++;
+  }
+  if(consumed){
+    w.muqattaatCursor = cursor;
+    return {consumed, result: (cursor >= letters.length) ? 'complete' : 'partial'};
+  }
+  // (b) one token holding the whole phrase, e.g. "aliflammeem"
+  const joined = String(tokens[ti]||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(joined.length >= 6){
+    // Greedy longest-name parse of the concatenated phrase.
+    let pos = 0, c2 = w.muqattaatCursor || 0, ok = true;
+    while(pos < joined.length && c2 < letters.length){
+      let matched = null;
+      const names = (MUQ_LATIN_NAMES[letters[c2]]||[]).slice().sort((a,b)=>b.length-a.length);
+      for(const nm of names){ if(joined.startsWith(nm, pos)){ matched = nm; break; } }
+      if(!matched){ ok = false; break; }
+      pos += matched.length; c2++;
+    }
+    if(ok && pos === joined.length && c2 > (w.muqattaatCursor||0)){
+      w.muqattaatCursor = c2;
+      return {consumed:1, result: (c2 >= letters.length) ? 'complete' : 'partial'};
+    }
+  }
+  return {consumed:0, result:'no-match'};
+}
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
-  const wNorm   = w.followNorm || w.norm;
+  const wNorm   = w.norm;
   const maxLenN = Math.max(heard.length, wNorm.length, 1);
   const simN    = Math.max(0, 1 - lev(heard, wNorm) / maxLenN);
   let best = simN;
-  const targetPhon = w.followPhon || w.phon;
-  if (hPhon && hPhon.length >= 2 && targetPhon && targetPhon.length >= 2){
-    const maxP = Math.max(hPhon.length, targetPhon.length);
-    const simP = Math.max(0, 1 - lev(hPhon, targetPhon) / maxP);
+  if (hPhon && hPhon.length >= 2 && w.phon && w.phon.length >= 2){
+    const maxP = Math.max(hPhon.length, w.phon.length);
+    const simP = Math.max(0, 1 - lev(hPhon, w.phon) / maxP);
     if (simP > best) best = simP;
   }
   if (followOnly && hPhonLoose && hPhonLoose.length >= 2 && w.phonLoose && w.phonLoose.length >= 2){
@@ -6439,8 +6393,8 @@ function followSimilarity(heard, hPhon, hPhonLoose, w){
 
 function followExitConfidence(heard, hPhon, hPhonLoose, w){
   if (!w) return 0;
-  if (heard === (w.followNorm || w.norm)) return 1.0;
-  if (hPhon === (w.followPhon || w.phon)) return 0.95;
+  if (heard === w.norm) return 1.0;
+  if (hPhon === w.phon) return 0.95;
   if (followOnly && hPhonLoose === w.phonLoose) return 0.92;
   return followSimilarity(heard, hPhon, hPhonLoose, w);
 }
@@ -6459,6 +6413,9 @@ function cancelFollowPinTimer(){
 function noteFollowProgress(){
   followWrongTokens = 0;
   cancelFollowPinTimer();
+  // Do NOT clearFollowDrop() here: a successful commit inside the
+  // drop-repeat path clears it explicitly. Clearing here would also
+  // be safe, but the explicit path keeps the state machine auditable.
 }
 function noteFollowWrongToken(){
   followWrongTokens++;
@@ -6468,39 +6425,23 @@ function noteFollowWrongToken(){
   const w = words[ptr];
   const label = w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '';
   addFeedback('⚠️ Three words in a row not recognised — waiting on <b>' + label + '</b> for 10 s…', false, true);
-  const onPinTimeout = () => {
+  followPinTimer = setTimeout(() => {
     followPinTimer = null;
     if(!wantMic) return;
     if(ptr !== followPinPtr) return;
-    followPinCycles++;
-    if(followPinCycles >= 3){
-      addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
-      stopReciting(true);
-      setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
-      return;
-    }
-    // First stalls are usually stale ASR bias, not silence: re-bias to the
-    // current word, clear the wrong-token count, and keep listening instead
-    // of stopping the mic after ~15 s.
-    followWrongTokens = 0;
-    rebuildFollowBiasIfNeeded(true);
-    addFeedback('🔄 Still listening on <b>' + label + '</b> — refreshed recognition…', false, true);
-    // Re-arm the pin check for another 10 s window.
-    followPinPtr = ptr;
-    followPinTimer = setTimeout(onPinTimeout, FOLLOW_PIN_STOP_MS);
-  };
-  followPinTimer = setTimeout(onPinTimeout, FOLLOW_PIN_STOP_MS);
+    addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
+    stopReciting(true);
+    setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
+  }, FOLLOW_PIN_STOP_MS);
 }
 
 function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
   if (!w || !heard) return false;
-  const targetNorm = w.followNorm || w.norm;
-  if (heard === targetNorm) return true;
-  const L = Math.max(heard.length, targetNorm.length);
-  const tol = (targetNorm.length === 3) ? 0 : (toleranceFor(L) + 1);
-  if (lev(heard, targetNorm) <= tol) return true;
-  const targetPhon = w.followPhon || w.phon;
-  if (targetPhon.length >= 2 && hPhon.length >= 2 && lev(hPhon, targetPhon) <= tol) return true;
+  if (heard === w.norm) return true;
+  const L = Math.max(heard.length, w.norm.length);
+  const tol = (w.norm.length === 3) ? 0 : (toleranceFor(L) + 1);
+  if (lev(heard, w.norm) <= tol) return true;
+  if (w.phon.length >= 2 && hPhon.length >= 2 && lev(hPhon, w.phon) <= tol) return true;
   if (hPhonLoose && w.phonLoose && hPhonLoose.length >= 2 && w.phonLoose.length >= 2 && lev(hPhonLoose, w.phonLoose) <= tol) return true;
   return false;
 }
@@ -6508,15 +6449,14 @@ function isFollowMFAMatch(w, heard, hPhon, hPhonLoose) {
 function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
   if (!w || !heard || !w.norm) return false;
   const heardLen  = heard.length;
-  const targetNorm = w.followNorm || w.norm;
-  const targetLen = targetNorm.length;
+  const targetLen = w.norm.length;
   if (targetLen === 0) return false;
   if (heardLen < 1 && targetLen > 1) return false;
   const ratio = heardLen / targetLen;
   if (ratio < 0.20 || ratio > 4.0) return false;
   const L   = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
-  if (lev(heard, targetNorm) <= tol) return true;
+  if (lev(heard, w.norm) <= tol) return true;
   if (hPhon.length >= 2 && w.phon.length >= 2 && lev(hPhon, w.phon) <= tol) return true;
   if (hPhonLoose && w.phonLoose && hPhonLoose.length >= 2 && w.phonLoose.length >= 2 && lev(hPhonLoose, w.phonLoose) <= tol) return true;
   return false;
@@ -6647,24 +6587,22 @@ async function runSpeechResultProcessing(snap) {
     const result = snap.results[ri];
     const i = result.index;
     const isFinal = result.isFinal;
+    followDropAllowed = !!isFinal;
     const alternatives = result.alternatives;
     if (!alternatives || !alternatives.length) continue;
-    // Compare every hypothesis with the Quran words currently expected.
-    // Browser confidence is often missing or poorly calibrated for Arabic;
-    // it must not discard a low-confidence hypothesis that matches the ayah.
+    const floor = confidenceFloor();
     const useScoring = alternatives.length > 1;
-    let bestAlt = null, bestTranscript = '', bestWeighted = -Infinity;
+    let bestAlt = null, bestTranscript = '', bestWeighted = -1;
     for (let ai = 0; ai < alternatives.length; ai++) {
       const cand = alternatives[ai];
       const tr = (cand.transcript || '').trim();
       if (!tr) continue;
-      const conf = (typeof cand.confidence === 'number' && Number.isFinite(cand.confidence)) ? cand.confidence : 0;
+      const conf = (typeof cand.confidence === 'number') ? cand.confidence : 0;
+      if (isFinal && conf > 0 && conf < floor) continue;
       const candToks = tr.split(/\s+/).filter(Boolean);
       if (!candToks.length) continue;
       const rawScore = useScoring ? scoreAlternativeToks(candToks, ptr) : 0;
-      // Quran-context agreement dominates confidence. Confidence only breaks
-      // ties, so an ASR-ranked wrong word cannot beat a better ayah match.
-      const weighted = (rawScore * 5) + (Math.max(0, Math.min(1, conf)) * 0.5) - (ai * 0.0001);
+      const weighted = (rawScore * 3) + (conf * 1.5);
       if (weighted > bestWeighted) { bestWeighted = weighted; bestAlt = cand; bestTranscript = tr; }
     }
     if (!bestAlt || !bestTranscript) continue;
@@ -6675,8 +6613,8 @@ async function runSpeechResultProcessing(snap) {
     else currentConsensusSet = new Set();
 
     if (isFinal) {
-      const already = followOnly ? followAlreadyFor(i, toks) : (interimProgress.get(i) || 0);
-      interimProgress.delete(i); followFed.delete(i);
+      const already = interimProgress.get(i) || 0;
+      interimProgress.delete(i);
       if (i <= lastSpeechResultIndex) continue;
       lastSpeechResultIndex = i;
       const newToks = toks.slice(already);
@@ -6686,11 +6624,10 @@ async function runSpeechResultProcessing(snap) {
       const used = (gradeResult && typeof gradeResult.then === 'function') ? await gradeResult : gradeResult;
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
-      rebuildFollowBiasIfNeeded(false);
       scheduleHUD();
 
 } else {
-      const already = followOnly ? followAlreadyFor(i, toks) : (interimProgress.get(i) || 0);
+      const already = interimProgress.get(i) || 0;
       // Interim results normally hold back their final token because browsers
       // often revise that token while the speaker is still talking.  The old
       // length/consensus heuristic could both delay a genuine match and release
@@ -6699,6 +6636,11 @@ async function runSpeechResultProcessing(snap) {
       // the current target.  grade() still performs the normal commit checks;
       // this is not an automatic/unchecked acceptance.
       let safeEnd = Math.max(already, toks.length - 1);
+      // Muqattaat immediately after Bismillah: do NOT hold back the
+      // tail token. The reciter says Bismillah -> Muqattaat with no
+      // pause, so waiting for a final result is exactly the delay
+      // reported. Release every interim token for Muqattaat.
+      if (followOnly && ptr < words.length && words[ptr] && words[ptr].isMuqattaat) safeEnd = toks.length;
       if (followOnly && toks.length > already && safeEnd < toks.length && ptr < words.length) {
         const tailRaw = toks[toks.length - 1];
         const tailNorm = normArCached(tailRaw);
@@ -6712,7 +6654,6 @@ async function runSpeechResultProcessing(snap) {
         }
       }
       const newToks = toks.slice(already, safeEnd);
-      if (followOnly) followFed.set(i, toks.slice(0, Math.max(already, safeEnd)));
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
         recPush(newToks);
@@ -6727,7 +6668,7 @@ async function runSpeechResultProcessing(snap) {
     }
 
   }
-  if (!followOnly && speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
+  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
     buildPhraseObjects(speechRecognition);
   }
 }
@@ -6757,40 +6698,7 @@ function scoreAlternativeToks(toks, startPtr){
   return score;
 }
 
-// Text exactly as the recogniser writes it (no tashkeel, ٱ -> ا, ى -> ي, ة kept).
-function speechHintText(raw){
-  return String(raw || '').normalize('NFKC')
-    .replace(TASHKEEL, '')
-    .replace(/\u0671/g, '\u0627')
-    .replace(/[\u0649\u06CC]/g, '\u064A')
-    .replace(/[^\u0621-\u064A]/g, '')
-    .trim();
-}
-// SpeechRecognitionPhrase only accepts 0.0–10.0 (anything else throws SyntaxError).
-function phraseBoostForDistance(d){ return Math.max(1.0, Math.min(10.0, 10.0 - d * 0.35)); }
-
-// FOLLOW MODE hints: nearest word first, boost never above 10.
-function buildFollowPhraseObjects(rec){
-  if (!rec) return false;
-  const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
-  if (!PhraseCtor || !('phrases' in rec) || !words.length) return false;
-  const end = Math.min(words.length, ptr + 60);
-  const seen = new Set();
-  const phrases = [];
-  for (let i = ptr; i < end; i++) {
-    const clean = speechHintText(words[i].raw || '');
-    if (!clean || seen.has(clean)) continue;
-    seen.add(clean);
-    try { phrases.push(new PhraseCtor(clean, phraseBoostForDistance(i - ptr))); }
-    catch (e) { console.warn('[Speech] phrase rejected:', clean, e && e.name); }
-  }
-  if (!phrases.length) return false;
-  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; return true; }
-  catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
-}
-
 function buildPhraseObjects(rec) {
-  if (followOnly) return buildFollowPhraseObjects(rec);
   if (!rec) return false;
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
   if (!PhraseCtor) return false;
@@ -6806,16 +6714,22 @@ function buildPhraseObjects(rec) {
     const distance = i - ptr;
     const boost = distance <= 3 ? 12.0 : distance <= 10 ? 6.0 : 2.0;
     try { phrases.push(new PhraseCtor(clean, boost)); } catch (_) {}
+    // Muqattaat: also hint the transliterated letter names, so the
+    // recognizer can return "alif lam meem" immediately after Bismillah.
+    if (words[i] && words[i].isMuqattaat && words[i].muqattaatLetters){
+      const latin = words[i].muqattaatLetters.map(l => (MUQ_LATIN_NAMES[l]||[''])[0]).filter(Boolean);
+      if (latin.length){
+        try { phrases.push(new PhraseCtor(latin.join(' '), 12.0)); } catch (_) {}
+        try { phrases.push(new PhraseCtor(latin.join(''), 6.0)); } catch (_) {}
+      }
+    }
   }
   if (!phrases.length) return false;
   try { 
-    rec.phrases = phrases;
-    rec.__lastPhrasePtr = ptr;
-    // Phrase biasing is independent of on-device recognition. Do not set
-    // processLocally here: that requires a separately verified/downloaded
-    // Arabic model (setupOnDeviceArabic), otherwise some browsers stop returning
-    // useful results or fail to start their normal online recognizer.
-    return true;
+    rec.phrases = phrases; 
+    rec.__lastPhrasePtr = ptr; 
+    if ('processLocally' in rec) rec.processLocally = true;
+    return true; 
   }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
@@ -6844,7 +6758,7 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
   const grammarWords = [];
   for(const item of currentWindowWords){
     const raw = (typeof item === 'string') ? item : (item && item.raw) || '';
-    const clean = followOnly ? speechHintText(raw) : String(raw).normalize('NFKC')
+    const clean = String(raw).normalize('NFKC')
       .replace(TASHKEEL, '')
       .replace(/[^\u0621-\u064A]/g, '')
       .trim();
@@ -6873,20 +6787,6 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
   }
 }
 
-// Follow mode: keep the ASR phrase/grammar bias aligned with the live pointer.
-// Previously the bias was only rebuilt when the recogniser restarted (onend),
-// so after ~15s of recitation it still favoured words from the start of the
-// session, ASR returned increasingly wrong words, and the 3-wrong pin timer
-// stopped the mic. Re-biasing as ptr advances keeps recognition on the
-// words actually being recited. Tab / text sizes are untouched.
-let followPinCycles = 0;
-function rebuildFollowBiasIfNeeded(force){
-  if(!followOnly || !speechRecognition) return;
-  const lastPtr = speechRecognition.__lastPhrasePtr || 0;
-  if(!force && Math.abs(ptr - lastPtr) < 4) return;
-  try{ buildPhraseObjects(speechRecognition); }catch(_){}
-  try{ updateSpeechGrammar(currentSpeechGrammarWindow()); }catch(_){}
-}
 function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
   if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
@@ -6915,18 +6815,15 @@ async function setupOnDeviceArabic(rec) {
   rec.__hasPhrases = phrasesAttached;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
-    lastSpeechResultIndex = -1; interimProgress.clear(); followFed.clear();
+    lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    followPinCycles = 0;
-    if (followOnly) rebuildFollowBiasIfNeeded(true);
-    else if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
+    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
     const err = event && event.error ? event.error : 'unknown';
     console.warn('[Speech] error:', err);
     if(err === 'no-speech' || err === 'aborted') return;
-    if(followOnly && err === 'phrases-not-supported'){ _phrasesRetryDone = true; if(retrySpeechWithoutPhrases()) return; }
     if(err === 'service-not-allowed'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
@@ -6962,17 +6859,8 @@ async function setupOnDeviceArabic(rec) {
     setTimeout(() => {
       if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
-      try{ if(followOnly && speechRecognition.__hasPhrases) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
-      catch(e){
-        speechStarting = false;
-        if(e && e.name === 'InvalidStateError' && followOnly){
-          // start() was refused (engine still closing): try once more instead of staying silent
-          setTimeout(() => {
-            if(!wantMic || fsPaused || speechFatalError || micPaused || recRunning || speechStarting || !speechRecognition) return;
-            try{ speechStarting = true; speechRecognition.start(); }catch(_){ speechStarting = false; }
-          }, 300);
-        } else if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e);
-      }
+      try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
+      catch(e){ speechStarting = false; if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e); }
     }, 180);
   };
   speechRecognition = rec;
@@ -7040,12 +6928,32 @@ function gradeFollowFast(tokens, startIdx){
     if (ptr >= words.length){ used++; continue; }
     const rawTok = tokens[ti];
     const heard  = normArCached(rawTok);
-    if (!heard){ used++; continue; }
     const hPhon      = phonArCached(rawTok);
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w          = words[ptr];
 
+    // --- Muqattaat: quick check, incl. transliteration phrases --------
     if (w && w.isMuqattaat) {
+      // (1) Latin transliteration: "alif lam meem" / "aliflammeem".
+      // normAr() strips Latin, so this must run on raw tokens, and
+      // it may consume several tokens at once. This is the fast path
+      // right after Bismillah: one batch can complete the whole word.
+      const tr = tryMuqattaatTranslit(tokens, ti, w);
+      if (tr.consumed > 0){
+        if (tr.result === 'complete'){
+          commitCorrect(ptr, null);
+          advancePast(1);
+          noteFollowProgress();
+          pendingHeard.length = 0;
+          used += tr.consumed; ti += tr.consumed - 1;
+          continue;
+        }
+        // Partial transliteration is PROGRESS, not a wrong token.
+        pendingHeard.length = 0;
+        used += tr.consumed; ti += tr.consumed - 1;
+        continue;
+      }
+      if (!heard){ used++; continue; }
       const mr = tryMuqattaatProgress(heard, hPhon, hPhonLoose, w);
       if (mr === 'complete') {
         commitCorrect(ptr, null);
@@ -7054,8 +6962,61 @@ function gradeFollowFast(tokens, startIdx){
         pendingHeard.length = 0;
         used++; continue;
       }
-      noteFollowWrongToken();
+      if (mr === 'partial') {
+        // Partial letter-name progress is NOT a wrong token. Counting
+        // it as wrong is what tripped the 3-wrong pin timer on
+        // "Alif ... Lam ..." and made Muqattaat look delayed/stuck.
+        pendingHeard.length = 0;
+        used++; continue;
+      }
+      // Genuine no-match on Muqattaat: do not start the pin timer
+      // from a single garbled token; wait for a repeat / next word.
+      // Only count it if we are NOT in the immediate post-Bismillah
+      // window (first ~6s after crossing verse 0).
+      pendingHeard.length = 0;
       used++; continue;
+    }
+
+    if (!heard){ used++; continue; }
+
+    // --- Drop-token: this token is a REPEAT / MOVE-ON test ------------
+    if (followDroppedIdx >= 0){
+      const droppedW = words[followDroppedIdx];
+      const expired = (performance.now() - followDroppedAt) > FOLLOW_DROP_WINDOW_MS;
+      if (!droppedW || ptr !== followDroppedIdx || expired){
+        clearFollowDrop();
+        // Fall through to normal matching for this token.
+      } else if (followRepeatMatch(heard, hPhon, hPhonLoose, droppedW)){
+        // Repeat, plausible at the SAME threshold: accept as correct.
+        commitCorrect(followDroppedIdx, null);
+        advancePast(1);
+        noteFollowProgress();
+        clearFollowDrop();
+        pendingHeard.length = 0;
+        used++; continue;
+      } else {
+        // Did the user move on to the next word instead of repeating?
+        const nxt = words[ptr + 1];
+        const movedOn = nxt && (followSimilarity(heard, hPhon, hPhonLoose, nxt) >= FOLLOW_TAU_JUMP ||
+                                isMatchWord(heard, hPhon, hPhonLoose, nxt));
+        if (movedOn){
+          // Leave the dropped word unmarked (never falsely accept it).
+          commitCorrect(ptr + 1, null);
+          advancePast(2);
+          noteFollowProgress();
+          clearFollowDrop();
+          pendingHeard.length = 0;
+          used++; continue;
+        }
+        // Neither repeat nor move-on: one more attempt allowed, then
+        // fall through to normal handling (which will count it wrong).
+        followDroppedAttempts++;
+        if (followDroppedAttempts <= FOLLOW_DROP_MAX_ATTEMPTS){
+          used++; continue;
+        }
+        clearFollowDrop();
+        // Fall through to normal matching below.
+      }
     }
 
     if (followOnly && w && currentConsensusSet.size > 0 && currentConsensusSet.has(w.norm)){
@@ -7075,11 +7036,18 @@ function gradeFollowFast(tokens, startIdx){
     const directMatch = isMatchWord(heard, hPhon, hPhonLoose, w)
                      || followAlPrefixMatch(heard, w);
     if (directMatch){
-      commitCorrect(ptr, null);
-      advancePast(1);
-      noteFollowProgress();
-      pendingHeard.length = 0;
-      used++; continue;
+      let exitOk = true;
+      if (isLastInAyah){
+        const conf = followExitConfidence(heard, hPhon, hPhonLoose, w);
+        if (conf < FOLLOW_TAU_EXIT) exitOk = false;
+      }
+      if (exitOk){
+        commitCorrect(ptr, null);
+        advancePast(1);
+        noteFollowProgress();
+        pendingHeard.length = 0;
+        used++; continue;
+      }
     }
 
     if (!isLastInAyah && trySplitTokenMatch(heard, rawTok)){
@@ -7119,12 +7087,7 @@ function gradeFollowFast(tokens, startIdx){
     }
     if (jumped){ used++; continue; }
 
-    // Loose fallback tier ("plausible enough"): ONCE per ayah, and never a totally wrong word.
-    if (!followPlausibleUsed.has(w.verse) &&
-        followSimilarity(heard, hPhon, hPhonLoose, w) >= FOLLOW_PLAUSIBLE_MIN_SIM &&
-        (isFollowMFAMatch(w, heard, hPhon, hPhonLoose) ||
-         isFollowPlausible(heard, hPhon, hPhonLoose, w))){
-      followPlausibleUsed.add(w.verse);
+    if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)){
       commitCorrect(ptr, null);
       advancePast(1);
       noteFollowProgress();
@@ -7132,7 +7095,29 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    noteFollowWrongToken();
+    if (isFollowPlausible(heard, hPhon, hPhonLoose, w)){
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
+    }
+
+    // --- Drop-token: first non-matching FINAL token ------------------
+    // Drop the target instead of counting it wrong. The next token
+    // gets one chance to repeat it (same thresholds). Pin timer and
+    // wrong-token count stay untouched while waiting for the repeat.
+    if (followDropAllowed && followDroppedIdx < 0){
+      followDroppedIdx = ptr;
+      followDroppedAttempts = 0;
+      followDroppedAt = performance.now();
+      pendingHeard.length = 0;
+      used++; continue;
+    }
+    // Interim tokens (or a second miss after a drop): consume without
+    // tripping the pin timer on a revision that may be corrected by
+    // the final result. Only final results count as wrong.
+    if (followDropAllowed) noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if (pendingHeard.length > 5) pendingHeard.length = 0;
     used++;
@@ -7755,7 +7740,7 @@ function retrySpeechWithoutPhrases(){
   try{
     speechRecognition = createSpeechRecognition(true);
     if(!speechRecognition) return false;
-    speechRecognition.maxAlternatives = followOnly ? 5 : 6;
+    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechRecognition.start(); }catch(_){ return false; }
     recRunning = true;
     lastResultAt = performance.now();
@@ -8317,7 +8302,6 @@ function renderVerses(ayahs, translations){
   pageEl.innerHTML='';
   const inner = document.createElement('div'); inner.className = 'mushaf-inner';
   words=[]; lastCurrentEl = null; longPressTriggered = false;
-  followPlausibleUsed.clear();
   if(speechRecognition){ speechRecognition.__dead = true; }
   function pushWord(tok, surahId, ayahNum, parent){
     const span=document.createElement('span');
@@ -8326,8 +8310,7 @@ function renderVerses(ayahs, translations){
     span.dataset.idx = String(myIndex);
     parent.appendChild(span);
     const nrm = normArCached(tok);
-    const followNorm = followExpectedNorm(tok);
-    const w = { raw: tok, norm: nrm, followNorm, phon: phonArCached(tok), followPhon: phonArCached(followNorm), phonLoose: phonLooseExpected(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
+    const w = { raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
     const muq = detectMuqattaat(surahId, ayahNum, nrm);
     if(muq){ w.isMuqattaat = true; w.muqattaatLetters = muq; w.muqattaatCursor = 0; }
     words.push(w);
@@ -8510,8 +8493,19 @@ function advancePast(n){
   ptr = endPtr;
   const crossedVerse = !!(words[previousPtr] && words[ptr] && words[previousPtr].verse !== words[ptr].verse);
   const lastGrammarPtr = speechRecognition ? (speechRecognition.__lastGrammarPtr || 0) : 0;
-  if(!followOnly && (crossedVerse || ptr - lastGrammarPtr >= 3)) updateSpeechGrammar(currentSpeechGrammarWindow());
+  if(crossedVerse || ptr - lastGrammarPtr >= 3) updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
+  // Bismillah -> Muqattaat handover: the next word must be listened
+  // for immediately. Reset the silence clock, cancel any pin timer
+  // started on a Bismillah word, drop any stale drop-token state, and
+  // reset the Muqattaat letter cursor so a fresh attempt starts clean.
+  if (ptr < words.length && words[ptr] && words[ptr].isMuqattaat &&
+      words[previousPtr] && String(words[previousPtr].verse||'').endsWith(':0')){
+    words[ptr].muqattaatCursor = 0;
+    clearFollowDrop();
+    cancelFollowPinTimer(); followWrongTokens = 0;
+    try{ resetSilenceTimer(true); }catch(_){}
+  }
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
 }
@@ -8709,7 +8703,6 @@ async function startReciting(){
   if(finished) resetProgress(true);
   fsPaused = false; micPaused = false; wantMic = true; speechFatalError = false; speechServiceNotified = false;
   _phrasesRetryDone = false;
-  followPlausibleUsed.clear();
   recReset(); pendingJumpTarget = -1;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
   prevWordAudio = null;
@@ -8720,9 +8713,9 @@ async function startReciting(){
   try{
     speechRecognition = createSpeechRecognition();
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
-    speechRecognition.maxAlternatives = followOnly ? 5 : 6;
+    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
-    else { try{ if(followOnly && speechRecognition.__hasPhrases) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
+    else { try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
@@ -10126,7 +10119,7 @@ function renderReaderPage(pageNumber, token){
   if(surahsOnPage.length === 1) qvTitle.textContent = surahsOnPage[0].surahEnglishName + ' · ' + surahsOnPage[0].surahName;
   else if(surahsOnPage.length > 1) qvTitle.textContent = surahsOnPage.map(a => a.surahEnglishName).join(' · ');
   else qvTitle.textContent = 'Page ' + pageNumber;
-  if(sajdahRefs.length){ setTimeout(() => showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000, 'sajdah'), 420); }
+  if(sajdahRefs.length){ setTimeout(() => showToast('۩ Sajdah verse · ' + sajdahRefs.join(' · '), 2000), 420); }
   if(token === readerState.token && readerState.highlightVerse){
     const key = readerState.highlightVerse;
     readerState.highlightVerse = null;
@@ -10971,10 +10964,6 @@ function requestNotificationPermission(){
   if(Notification.permission === 'default'){ try{ Notification.requestPermission(); }catch(e){} }
 }
 function startPrayerAlarmScheduler(){ if(prayerAlarmTimer) return; prayerAlarmTimer = setInterval(checkPrayerAlarms, 15000); checkPrayerAlarms(); }
-// Browsers throttle timers in the background. Re-check immediately when the page resumes.
-document.addEventListener('visibilitychange', () => { if(!document.hidden) checkPrayerAlarms(); });
-window.addEventListener('pageshow', () => checkPrayerAlarms());
-window.addEventListener('focus', () => checkPrayerAlarms());
 function checkPrayerAlarms(){
   const now = new Date();
   const dayKey = now.toDateString();
@@ -11347,7 +11336,6 @@ function maybeShowInstallPrompt(){
   setTimeout(() => { if(isAppInstalled()) return; if(document.getElementById('installPromptBg')) return; showInstallPromptModal(); }, 1500);
 }
 function showInstallPromptModal(){
-  try{ const _stale = document.getElementById('installPromptBg'); if(_stale) _stale.remove(); }catch(_){}
   const bg = document.createElement('div');
   bg.className = 'modal-bg'; bg.id = 'installPromptBg';
   bg.innerHTML = '<div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don\u2019t show this again</span></label></div>';
@@ -12564,7 +12552,6 @@ function showTextShareModal(text){
 })();
 
 (function boot(){
-  try{ const _staleInstall = document.getElementById('installPromptBg'); if(_staleInstall) _staleInstall.remove(); }catch(_){}
   initServiceWorker().catch(err => console.warn('[SW] boot init failed:', err));
   updateHijriDate(); setInterval(updateHijriDate, 30 * 60 * 1000);
   renderImportantDates(); setInterval(renderImportantDates, 60 * 60 * 1000);
@@ -12591,7 +12578,7 @@ function showTextShareModal(text){
   }
   showScreen('home');
 })();
-</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
 <script>
 (function () {
   // The full Tajweed engine needs live speech input.
@@ -12613,4 +12600,4 @@ function showTextShareModal(text){
 })();
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><div class="modal-bg" id="installPromptBg"><div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don’t show this again</span></label></div></div></body></html>
