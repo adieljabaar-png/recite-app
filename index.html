@@ -19,6 +19,27 @@
 :where(code, pre, kbd, samp) {
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
+</style><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
 </style><style>
 @font-face {
   font-family: "Optimistic";
@@ -2900,7 +2921,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">11:59</span>
+    <span class="pdr-item pdr-time" id="pdrTime">14:26</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -3876,6 +3897,31 @@ function toleranceFor(L){
 
 function confidenceFloor(){ return 0.35; }
 
+/* FOLLOW-ONLY similar-letter equivalence: س~ص, ت~ط, د~ض, ذ~ز~ظ,
+   ح~ه~خ, ع~غ, ق~ك, ا~ء, ي~ى, ة~ه. Canonicalises both strings to a
+   class representative before lev(). Stored words are never rewritten;
+   Tajweed never calls it. */
+const FOLLOW_SIMILAR_CLASSES = [['س','ص'],['ت','ط'],['د','ض'],['ذ','ز','ظ'],['ح','ه','خ'],['ع','غ'],['ق','ك'],['ا','ء','ؤ','ئ'],['ي','ى'],['ة','ه'],['ث','س']];
+const FOLLOW_SIMILAR_MAP = {};
+FOLLOW_SIMILAR_CLASSES.forEach(g => g.forEach(ch => { FOLLOW_SIMILAR_MAP[ch] = g[0]; }));
+function followSimilarCanon(s){ let out=''; for(let i=0;i<(s||'').length;i++) out += FOLLOW_SIMILAR_MAP[s[i]] || s[i]; return out; }
+function isFollowSimilarLooseMatch(heard, hPhonLoose, w){
+  if(!followOnly || !heard || !w || !w.norm) return false;
+  const L = Math.max(heard.length, w.norm.length);
+  const tol = toleranceFor(L);
+  if(lev(followSimilarCanon(heard), followSimilarCanon(w.norm)) <= tol + 1) return true;
+  if(hPhonLoose && w.phonLoose && hPhonLoose.length >= 3 && w.phonLoose.length >= 3 &&
+     lev(followSimilarCanon(hPhonLoose), followSimilarCanon(w.phonLoose)) <= tol + 1) return true;
+  return false;
+}
+/* FOLLOW-ONLY ASR confusion map (Option 1). Exact-match only:
+   heard تنزيل -> expected تنذر, لتنزيل -> لتنذر, أنزل/انزل -> أنذر.
+   Never skips a word; Tajweed untouched. */
+const FOLLOW_CONFUSION_MAP = { 'تنزيل':'تنذر', 'لتنزيل':'لتنذر', 'أنزل':'أنذر', 'انزل':'انذر' };
+function isFollowConfusionMatch(heard, w){
+  if(!followOnly || !heard || !w || !w.norm) return false;
+  return FOLLOW_CONFUSION_MAP[heard] === w.norm;
+}
 function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   const wNorm = w.norm;
   const la = hNorm.length, lb = wNorm.length;
@@ -3901,9 +3947,10 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   }
   if(followOnly && hPhonLoose && w.phonLoose &&
      hPhonLoose.length >= 3 && w.phonLoose.length >= 3 &&
-     lev(hPhonLoose, w.phonLoose) <= tol){
+     lev(hPhonLoose, w.phonLoose) <= tol + 1){
     return true;
   }
+  if(followOnly && isFollowSimilarLooseMatch(hNorm, hPhonLoose, w)) return true;
 
   if(la >= 5 && lb >= 5 && lenDiff <= 1){
     const S = la < lb ? la : lb;
@@ -6291,7 +6338,7 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
-const FOLLOW_TAU_EXIT       = 0.80;
+const FOLLOW_TAU_EXIT       = 0.68;
 const FOLLOW_MAX_LOOKAHEAD  = 0;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
@@ -6375,11 +6422,14 @@ function isFollowPlausible(heard, hPhon, hPhonLoose, w) {
   if (targetLen === 0) return false;
   if (heardLen < 2 && targetLen > 1) return false;
   const ratio = heardLen / targetLen;
-  if (ratio < 0.60 || ratio > 1.65) return false;
+  if (ratio < 0.50 || ratio > 1.80) return false;
   const L = Math.max(heardLen, targetLen);
   const tol = toleranceFor(L);
   if (lev(heard, w.norm) <= tol) return true;
   if (L >= 4 && hPhon.length >= 3 && w.phon.length >= 3 && lev(hPhon, w.phon) <= tol) return true;
+  if (hPhonLoose && w.phonLoose && hPhonLoose.length >= 3 && w.phonLoose.length >= 3 &&
+      lev(hPhonLoose, w.phonLoose) <= tol + 1) return true;
+  if (isFollowSimilarLooseMatch(heard, hPhonLoose, w)) return true;
   return false;
 }
 
@@ -6492,23 +6542,68 @@ async function runSpeechResultProcessing(snap) {
       const newToks = toks.slice(already);
       if (!newToks.length) continue;
       recPush(newToks);
-      const used = await grade(recTokens, recCursor);
+      let used = await grade(recTokens, recCursor);
       recCursor = Math.min(recCursor + used, recTokens.length);
       if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+      /* FOLLOW ONLY (4): best transcript advanced nothing — grade the
+         other alternatives in score order until one advances the
+         pointer. Best transcript's tokens were unmatched, so they are
+         discarded, not stacked on the fallback's. */
+      if (followOnly && used === 0 && alternatives.length > 1) {
+        const ranked = alternatives.map(a => {
+          const tr2 = (a.transcript || '').trim();
+          const cf2 = (typeof a.confidence === 'number') ? a.confidence : 0;
+          return { tr: tr2, conf: cf2, score: (tr2 ? scoreAlternativeToks(tr2.split(/\s+/).filter(Boolean), ptr) : -1) * 3 + cf2 * 1.5 };
+        }).sort((a, b) => b.score - a.score);
+        for (const alt of ranked) {
+          if (!alt.tr || alt.tr === bestTranscript) continue;
+          if (isFinal && alt.conf > 0 && alt.conf < floor) continue;
+          const altToks = alt.tr.split(/\s+/).filter(Boolean).slice(already);
+          if (!altToks.length) continue;
+          recTokens.length = 0; recCursor = 0;
+          recPush(altToks);
+          used = await grade(recTokens, recCursor);
+          recCursor = Math.min(recCursor + used, recTokens.length);
+          if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+          if (used > 0) break;
+        }
+      }
       scheduleHUD();
     } else {
       const bestConf = (typeof bestAlt.confidence === 'number') ? bestAlt.confidence : 0;
-      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && toks.length >= 3;
+      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && toks.length >= 2;
       if (canCommitInterim) {
         const already = interimProgress.get(i) || 0;
-        const safeEnd = Math.max(already, toks.length - 2);
+        const safeEnd = Math.max(already, toks.length - 1);
         const newToks = toks.slice(already, safeEnd);
         if (newToks.length) {
           interimProgress.set(i, safeEnd);
           recPush(newToks);
-          const used = await grade(recTokens, recCursor);
+          let used = await grade(recTokens, recCursor);
           recCursor = Math.min(recCursor + used, recTokens.length);
           if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+          if (followOnly && used === 0 && alternatives.length > 1) {
+            const ranked = alternatives.map(a => {
+              const tr2 = (a.transcript || '').trim();
+              const cf2 = (typeof a.confidence === 'number') ? a.confidence : 0;
+              return { tr: tr2, conf: cf2, score: (tr2 ? scoreAlternativeToks(tr2.split(/\s+/).filter(Boolean), ptr) : -1) * 3 + cf2 * 1.5 };
+            }).sort((a, b) => b.score - a.score);
+            for (const alt of ranked) {
+              if (!alt.tr || alt.tr === bestTranscript) continue;
+              if (alt.conf > 0 && alt.conf < floor) continue;
+              const altToksAll = alt.tr.split(/\s+/).filter(Boolean);
+              const altSafe = Math.max(already, altToksAll.length - 1);
+              const altToks = altToksAll.slice(already, altSafe);
+              if (!altToks.length) continue;
+              interimProgress.set(i, altSafe);
+              recTokens.length = 0; recCursor = 0;
+              recPush(altToks);
+              used = await grade(recTokens, recCursor);
+              recCursor = Math.min(recCursor + used, recTokens.length);
+              if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+              if (used > 0) break;
+            }
+          }
           scheduleHUD();
         }
       }
@@ -6533,7 +6628,7 @@ function scoreAlternativeToks(toks, startPtr){
     const hPhon = phonArCached(rawTok);
     const hPhonLoose = followOnly ? phonLooseArCached(rawTok) : null;
     const w = words[wi];
-    if(heard === w.norm || isMatchWord(heard, hPhon, hPhonLoose, w)){ score += 3; ti++; wi++; continue; }
+    if(heard === w.norm || isMatchWord(heard, hPhon, hPhonLoose, w) || isFollowConfusionMatch(heard, w)){ score += 3; ti++; wi++; continue; }
     if(followOnly){
       const mergedN = tryMergedTokenMatchAt(heard, hPhon, hPhonLoose, wi);
       if(mergedN > 0){ score += 3 * mergedN; ti++; wi += mergedN; continue; }
@@ -6553,29 +6648,28 @@ function buildPhraseObjects(rec) {
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
   if (!PhraseCtor) return false;
   if (!('phrases' in rec)) return false;
-  if (!words.length) return false;
-  const end = Math.min(words.length, ptr + 50);
+  if (!words.length || ptr >= words.length) return false;
+  const curVerse = words[ptr].verse;
+  let end = ptr;
+  while (end < words.length && words[end].verse === curVerse) end++;
+  const nextEnd = Math.min(words.length, end + 3);
   const seen = new Set();
   const phrases = [];
-  for (let i = ptr; i < end; i++) {
-    const clean = String(words[i].raw || '').normalize('NFKC').replace(TASHKEEL, '').replace(/[^\u0621-\u064A\s]/g, '').trim();
+  const cleanWord = (w) => String(w.raw || '').normalize('NFKC').replace(TASHKEEL, '').replace(/[^\u0621-\u064A\s]/g, '').trim();
+  for (let i = ptr; i < nextEnd; i++) {
+    const clean = cleanWord(words[i]);
     if (!clean || seen.has(clean)) continue;
     seen.add(clean);
     try { phrases.push(new PhraseCtor(clean, 6.0)); } catch (_) {}
   }
+  const ayahPhrase = [];
+  for (let i = ptr; i < end; i++) { const clean = cleanWord(words[i]); if (clean) ayahPhrase.push(clean); }
+  if (ayahPhrase.length >= 2) { try { phrases.push(new PhraseCtor(ayahPhrase.join(' '), 6.0)); } catch (_) {} }
   if (!phrases.length) return false;
-  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; return true; }
+  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; rec.__lastPhraseVerse = curVerse; return true; }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
 
-
-
-// Build a very small grammar window: the remaining words in the current
-// verse, followed by only the next three words from the following verse.
-
-
-// SpeechGrammarList is optional and is ignored by some browser speech engines.
-// Keep the grammar deliberately narrow to avoid adding decoding overhead.
 
 
 function createSpeechRecognition(forceNoPhrases){
@@ -6593,7 +6687,7 @@ function createSpeechRecognition(forceNoPhrases){
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
+    if (rec.__lastPhraseVerse !== (words[ptr] && words[ptr].verse)) buildPhraseObjects(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -6725,7 +6819,8 @@ function gradeFollowFast(tokens, startIdx){
 
     /* 1. Direct match */
     const directMatch = isMatchWord(heard, hPhon, hPhonLoose, w)
-                     || followAlPrefixMatch(heard, w);
+                     || followAlPrefixMatch(heard, w)
+                     || isFollowConfusionMatch(heard, w);
     if (directMatch){
       let exitOk = true;
       if (isLastInAyah){
@@ -8192,6 +8287,7 @@ function advancePast(n){
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
+  try { if (speechRecognition && speechRecognition.__hasPhrases && nextVerse && speechRecognition.__lastPhraseVerse !== nextVerse) buildPhraseObjects(speechRecognition); } catch (_) {}
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
 }
@@ -12302,7 +12398,7 @@ function showTextShareModal(text){
   }
   showScreen('home');
 })();
-</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
 <script>
 (function () {
   // The full Tajweed engine needs live speech input.
@@ -12324,4 +12420,4 @@ function showTextShareModal(text){
 })();
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
