@@ -6368,9 +6368,6 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.80;   // (legacy, no longer used)
-// Last word of an ayah must reach this confidence before the pointer may leave the ayah.
-const FOLLOW_EXIT_FLOOR       = 0.70;   // words of 4+ letters
-const FOLLOW_EXIT_FLOOR_SHORT = 0.65;   // words of 3 letters or fewer
 // "Plausible enough" acceptance must still be at least this similar (never a totally wrong word).
 const FOLLOW_PLAUSIBLE_MIN_SIM = 0.60;
 // LOCKED AT 0: Follow mode never skips ahead. A word that was not heard is never marked.
@@ -6856,6 +6853,7 @@ async function setupOnDeviceArabic(rec) {
     const err = event && event.error ? event.error : 'unknown';
     console.warn('[Speech] error:', err);
     if(err === 'no-speech' || err === 'aborted') return;
+    if(followOnly && err === 'phrases-not-supported'){ _phrasesRetryDone = true; if(retrySpeechWithoutPhrases()) return; }
     if(err === 'service-not-allowed'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
@@ -6891,9 +6889,18 @@ async function setupOnDeviceArabic(rec) {
     setTimeout(() => {
       if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
-      try{ if(followOnly) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
-      catch(e){ speechStarting = false; if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e); }
-    }, followOnly ? 60 : 180);
+      try{ if(followOnly && speechRecognition.__hasPhrases) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
+      catch(e){
+        speechStarting = false;
+        if(e && e.name === 'InvalidStateError' && followOnly){
+          // start() was refused (engine still closing): try once more instead of staying silent
+          setTimeout(() => {
+            if(!wantMic || fsPaused || speechFatalError || micPaused || recRunning || speechStarting || !speechRecognition) return;
+            try{ speechStarting = true; speechRecognition.start(); }catch(_){ speechStarting = false; }
+          }, 300);
+        } else if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e);
+      }
+    }, 180);
   };
   speechRecognition = rec;
   return rec;
@@ -6991,20 +6998,6 @@ function gradeFollowFast(tokens, startIdx){
 
     const nextW        = words[ptr + 1];
     const isLastInAyah = !nextW || nextW.verse !== w.verse;
-
-    // Exit gate: the last word of an ayah must clear a confidence floor, whichever check
-    // would otherwise accept it. Split / exactly-merged tokens are judged by their own rules.
-    if (isLastInAyah){
-      const tgtLen = (w.followNorm || w.norm).length;
-      const floor  = tgtLen <= 3 ? FOLLOW_EXIT_FLOOR_SHORT : FOLLOW_EXIT_FLOOR;
-      const conf   = followExitConfidence(heard, hPhon, hPhonLoose, w);
-      if (conf < floor && !trySplitTokenMatch(heard, rawTok) && tryMergedTokenMatch(heard, hPhon, hPhonLoose) === 0){
-        noteFollowWrongToken();
-        pendingHeard.push(rawTok);
-        if (pendingHeard.length > 5) pendingHeard.length = 0;
-        used++; continue;
-      }
-    }
 
     const directMatch = isMatchWord(heard, hPhon, hPhonLoose, w)
                      || followAlPrefixMatch(heard, w);
@@ -8656,7 +8649,7 @@ async function startReciting(){
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     speechRecognition.maxAlternatives = followOnly ? 5 : 6;
     if(speechStarting){}
-    else { try{ if(followOnly) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
+    else { try{ if(followOnly && speechRecognition.__hasPhrases) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
