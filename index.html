@@ -2900,7 +2900,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">07:16</span>
+    <span class="pdr-item pdr-time" id="pdrTime">07:23</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -4859,7 +4859,10 @@ async function openCoachScreen(){
   try{
     await loadSurah(STORE.surah, true);
     coachLoaded = true;
-    fetchCoachTajweed(surahNum).catch(() => {});
+    // FOLLOW-ONLY CUT: no Tajweed prefetch. Follow never applies
+    // Tajweed colours/rules, so fetching + parsing them here was
+    // pure background work (network + build) on every coach open.
+    if(!followOnly) fetchCoachTajweed(surahNum).catch(() => {});
   } finally { coachLoading = false; }
 }
 
@@ -7752,6 +7755,12 @@ function retrySpeechWithoutPhrases(){
 }
 
 function startMicDiagnostic(){
+  // FOLLOW-ONLY CUT: no mic-diagnostic interval. Follow uses none
+  // of the diagnostic layers (track health + RMS silence are
+  // already Tajweed-only inside micDiagTick); the ASR silence
+  // timer still watches for silence in Follow mode. Tajweed mode
+  // still runs the full diagnostic.
+  if(followOnly) return;
   if(micDiagnosedWorking) return;   // already verified — never re-run
   stopMicDiagnostic();
   resetMicDiagState();
@@ -8281,7 +8290,11 @@ async function loadSurah(n, keepFeedback){
     setStatus('Ready', 'idle', surahMeta.numberOfAyahs + ' ayahs · ' + (micPermission==='granted' ? 'Mic on' : 'Tap Start reciting to allow mic'));
     if(!keepFeedback) feedbackEl.innerHTML = '<div class="line"><b>' + surahMeta.englishName + '</b> <span class="ar">' + surahMeta.name + '</span> — loaded.</div>';
     if (!followOnly){ coachTajweedApplied = false; coachTajweedReady = false; applyTajweedColorsToCoach(); }
-    else { fetchCoachTajweed(surahNum).catch(() => {}); }
+    // FOLLOW-ONLY CUT: no Tajweed prefetch here either. In Follow
+    // mode the fetched annotations are never applied (applyTajweed-
+    // ColorsToCoach returns early on followOnly), so this was a
+    // wasted background fetch + parse + cache build per surah load.
+    // Tajweed mode still prefetches via applyTajweedColorsToCoach().
   }catch(e){ console.error('[QuranCoach] loadSurah failed:', e); showLoadError(e); }
 }
 function describeError(e){ if(!e) return 'Unknown error'; if(e.name === 'AbortError') return 'Request timed out after ' + (FETCH_TIMEOUT_MS/1000) + ' s'; if(e.message) return e.message; return String(e); }
@@ -8656,7 +8669,11 @@ function setMicButton(){
 }
 
 async function startReciting(){
-  unlockAudio();
+  // FOLLOW-ONLY CUT: no AudioContext / shared-audio build. Follow
+  // has beeps off and plays no audio; Web Speech Recognition does
+  // not need an AudioContext. Tajweed mode still unlocks audio
+  // (beeps + acoustic RMS analysis need it).
+  if(!followOnly) unlockAudio();
   if(!words.length){
     if(mode !== 'surah'){ await loadSurah(STORE.surah, true); }
     if(!words.length) return;
@@ -11243,15 +11260,7 @@ function detectStandalone(){
   catch(e){ return IS_STANDALONE; }
 }
 function isRunningAsInstalledApp(){ return detectStandalone(); }
-function isAppInstalled(){
-  // FIX (stuck on install): a past install ATTEMPT (qc.installTabDone in
-  // localStorage) is NOT proof the app is installed. Counting it here
-  // made the app permanently claim "already installed" after one tap
-  // on Install — even if the user cancelled or later deleted the icon
-  // — so Install could never be offered again. Only real signals count:
-  // the browser's appinstalled event, or actually running standalone.
-  return appInstalledFlag || detectStandalone();
-}
+function isAppInstalled(){ return appInstalledFlag || detectStandalone() || isInstallRecorded(); }
 function updateInstallMenuItem(){
   if(!homeMenuInstall) return;
   const title = homeMenuInstallTitle || homeMenuInstall.querySelector('.hmi-text strong');
@@ -11346,42 +11355,11 @@ function maybeShowInstallPrompt(){
 function showInstallPromptModal(){
   const bg = document.createElement('div');
   bg.className = 'modal-bg'; bg.id = 'installPromptBg';
-  bg.innerHTML = '<div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don\u2019t show this again</span></label><label class="ip-checkbox"><input type="checkbox" id="ipNotInstalled"><span>App is not yet installed</span></label></div>';
+  bg.innerHTML = '<div class="modal install-prompt-modal"><div class="grabber"></div><div class="install-device"><span>📲</span><span>Add to device</span></div><h2>Install Quran Recitation Coach</h2><p>Add this app to your Home Screen for one-tap access, full-screen reading and offline audio.</p><div class="install-steps-mini"><div class="install-step-mini"><span>✓</span><span>Runs full screen — no address bar</span></div><div class="install-step-mini"><span>✓</span><span>Works offline for saved surahs and audio</span></div><div class="install-step-mini"><span>✓</span><span>Your bookmarks and progress stay on your device</span></div></div><button class="primary" id="ipInstallNow" type="button" style="width:100%">Install now</button><div style="height:8px"></div><button class="ghost" id="ipInstallLater" type="button" style="width:100%">Install later</button><label class="ip-checkbox"><input type="checkbox" id="ipDontShow"><span>Don\u2019t show this again</span></label></div>';
   document.body.appendChild(bg);
-  const applyInstallTicks = () => {
-    // Read the tick boxes BEFORE bg.remove() — after removal the
-    // elements are gone and getElementById returns null, so a tick
-    // read only at close time could be silently lost.
-    const dontShow = document.getElementById('ipDontShow');
-    const notInstalled = document.getElementById('ipNotInstalled');
-    const wantsNotInstalled = !!(notInstalled && notInstalled.checked);
-    const wantsDontShow = !!(dontShow && dontShow.checked);
-    try{
-      if(wantsNotInstalled){
-        // The app is NOT installed: clear every stale "installed"
-        // record, and do NOT set "don't show again" — the prompt
-        // must be allowed to come back and offer install again.
-        localStorage.removeItem(INSTALL_DONE_KEY);
-        localStorage.removeItem(INSTALL_PROMPT_DISMISSED_KEY);
-        appInstalledFlag = false;
-        updateInstallMenuItem();
-      } else if(wantsDontShow){
-        localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1');
-      }
-    }catch(e){}
-    return wantsNotInstalled;
-  };
-  // Save the tick the MOMENT it is tapped, not only on close. If the
-  // modal is dismissed by any other path (backdrop, Install now ->
-  // instructions), a close-only save could be skipped and the tick
-  // would silently not work.
-  const dontShowEl = bg.querySelector('#ipDontShow');
-  if(dontShowEl) dontShowEl.addEventListener('change', applyInstallTicks);
-  const notInstalledEl = bg.querySelector('#ipNotInstalled');
-  if(notInstalledEl) notInstalledEl.addEventListener('change', applyInstallTicks);
   const close = (installed) => {
-    const wantsNotInstalled = applyInstallTicks();
-    if(installed && !wantsNotInstalled){ try{ localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1'); }catch(e){} }
+    const chk = document.getElementById('ipDontShow');
+    if((chk && chk.checked) || installed){ try{ localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, '1'); }catch(e){} }
     bg.remove();
   };
   bg.addEventListener('click', e => { if(e.target === bg) close(false); });
