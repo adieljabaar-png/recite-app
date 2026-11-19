@@ -3637,9 +3637,15 @@ const PHON = {
 // One char can only map to ONE target, so loose picks the most common
 // ASR / dialect hearing. The other hearing is left to lev() tolerance.
 const PHON_LOOSE = Object.assign({}, PHON, {
-  '\u062D':'\u0647','\u062E':'\u0647','\u063A':'\u0642','\u0639':'\u0621'
+  // Follow-only common ASR/dialect/Uthmani confusions.
+  '\u062D':'\u0647','\u062E':'\u0647','\u063A':'\u0642','\u0639':'\u0621',
+  '\u0630':'\u0632','\u062B':'\u0633','\u0638':'\u0632','\u0636':'\u062F',
+  '\u0635':'\u0633','\u0637':'\u062A','\u0642':'\u0643',
+  '\u0629':'\u0647','\u0649':'\u064A','\u0626':'\u064A','\u0624':'\u0648',
+  '\u0671':'\u0627','\u06CC':'\u064A','\u06D2':'\u064A',
+  '\u06C0':'\u0647','\u06C1':'\u0647','\u06D5':'\u0647',
+  '\u06A9':'\u0643','\u06AF':'\u0643','\u0686':'\u062C','\u067E':'\u0628'
 });
-
 const EMPHATIC_FAMILY = {
   '\u0635': '\u0633',
   '\u0636': '\u062F',
@@ -8499,7 +8505,7 @@ async function startReciting(){
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
-    startMicDiagnostic(); armSpeechKeepalive();
+    if(!followOnly) startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
     addFeedback('🎧 Listening — recite from anywhere in the page or surah.');
     // Inform the user when acoustic rules are unavailable
@@ -8551,7 +8557,7 @@ function resumeMic(){
     }
     recRunning = true; speechFatalError = false;
     lastResultAt = performance.now();
-    startMicDiagnostic(); armSpeechKeepalive();
+    if(!followOnly) startMicDiagnostic(); armSpeechKeepalive();
     try{ speechStarting = true; speechRecognition && speechRecognition.start(); }
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
@@ -11655,13 +11661,19 @@ if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target ==
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
-    if(wantMic && !finished && !fsPaused) resumeMic();
+    if(wantMic && !finished && !fsPaused && !followOnly) resumeMic();
     if((wantMic||playing||viewerAudio.active) && !wakeLock) requestWakeLock();
     schedulePositionAudioOverlay();
     if(audioListRendered) refreshAudioRowStates();
   } else {
-    if(recRunning) pauseMic();
-    if(wantMic) saveProgressNow();
+    if(followOnly && wantMic){
+      saveProgressNow();
+      stopReciting(true);
+      setStatus('Paused (background)', 'idle', 'Tap Start to resume');
+    } else {
+      if(recRunning) pauseMic();
+      if(wantMic) saveProgressNow();
+    }
   }
 });
 let lastTouch=0;
@@ -11680,7 +11692,11 @@ window.addEventListener('beforeunload',()=>{
     currentAudio = null;
   }
 });
-window.addEventListener('pagehide', () => { try{ releaseMicStream(); }catch(_){} });
+window.addEventListener('pagehide', () => {
+  try{ if(followOnly && wantMic) stopReciting(true); }catch(_){}
+  try{ if(speechRecognition){ speechRecognition.onend=null; speechRecognition.onerror=null; speechRecognition.onresult=null; speechRecognition.abort(); } }catch(_){}
+  try{ releaseMicStream(); }catch(_){}
+});
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
     if(qrFullscreen && !qrFullscreen.hidden){ closeQrScreen(); return; }
