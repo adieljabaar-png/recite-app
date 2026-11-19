@@ -4357,6 +4357,39 @@ let recCursor = 0;
 let pendingHeard = [];
 let consecutiveReds = 0;
 const interimProgress = new Map();
+// FOLLOW MODE: tokens already fed from each result, kept as TEXT (not just a count) so the
+// feed position survives the engine revising earlier words of a long, still-growing result.
+const followFed = new Map();
+function followTokSame(a, b){
+  const x = normArCached(a), y = normArCached(b);
+  if(!x || !y) return false;
+  if(x === y) return true;
+  return x.length >= 4 && y.length >= 4 && lev(x, y) <= 1;
+}
+// How many leading tokens of `toks` were already fed for result `i`.
+// Unchanged prefix -> its length. If earlier text was revised -> re-anchor on the last
+// fed words (found by content, nearest to the expected position) so new words are neither
+// skipped nor fed twice.
+function followAlreadyFor(i, toks){
+  const fed = followFed.get(i);
+  if(!fed || !fed.length) return interimProgress.get(i) || 0;
+  let L = 0;
+  while(L < fed.length && L < toks.length && followTokSame(fed[L], toks[L])) L++;
+  if(L === fed.length) return fed.length;
+  for(let K = Math.min(3, fed.length); K >= 1; K--){
+    const tail = fed.slice(fed.length - K);
+    let bestEnd = -1, bestDist = Infinity;
+    for(let st = 0; st + K <= toks.length; st++){
+      let ok = true;
+      for(let k = 0; k < K; k++){ if(!followTokSame(tail[k], toks[st + k])){ ok = false; break; } }
+      if(!ok) continue;
+      const d = Math.abs((st + K) - fed.length);
+      if(d < bestDist){ bestDist = d; bestEnd = st + K; }
+    }
+    if(bestEnd >= 0) return bestEnd;
+  }
+  return Math.min(interimProgress.get(i) || 0, toks.length);
+}
 let currentConsensusSet = new Set();
 
 let speechRecognition = null;
@@ -4878,7 +4911,7 @@ function recPush(newToks){
 }
 function recReset(){
   recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
-  interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
+  interimProgress.clear(); followFed.clear(); followWrongTokens = 0; cancelFollowPinTimer();
   currentConsensusSet = new Set();
 }
 
@@ -6589,8 +6622,8 @@ async function runSpeechResultProcessing(snap) {
     else currentConsensusSet = new Set();
 
     if (isFinal) {
-      const already = interimProgress.get(i) || 0;
-      interimProgress.delete(i);
+      const already = followOnly ? followAlreadyFor(i, toks) : (interimProgress.get(i) || 0);
+      interimProgress.delete(i); followFed.delete(i);
       if (i <= lastSpeechResultIndex) continue;
       lastSpeechResultIndex = i;
       const newToks = toks.slice(already);
@@ -6603,7 +6636,7 @@ async function runSpeechResultProcessing(snap) {
       scheduleHUD();
 
 } else {
-      const already = interimProgress.get(i) || 0;
+      const already = followOnly ? followAlreadyFor(i, toks) : (interimProgress.get(i) || 0);
       // Interim results normally hold back their final token because browsers
       // often revise that token while the speaker is still talking.  The old
       // length/consensus heuristic could both delay a genuine match and release
@@ -6625,6 +6658,7 @@ async function runSpeechResultProcessing(snap) {
         }
       }
       const newToks = toks.slice(already, safeEnd);
+      if (followOnly) followFed.set(i, toks.slice(0, Math.max(already, safeEnd)));
       if (newToks.length) {
         interimProgress.set(i, safeEnd);
         recPush(newToks);
@@ -6813,7 +6847,7 @@ async function setupOnDeviceArabic(rec) {
   rec.__hasPhrases = phrasesAttached;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
-    lastSpeechResultIndex = -1; interimProgress.clear();
+    lastSpeechResultIndex = -1; interimProgress.clear(); followFed.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
     if (!followOnly && Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
   };
