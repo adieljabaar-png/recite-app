@@ -6252,6 +6252,34 @@ function markStrict1Warning(w, kind, detail){
   markTajweedIssue(w, kind, detail, 'yellow');
 }
 
+/* Hamzat al-Wasl is pronounced when beginning, but is dropped when joining.
+   The browser ASR sometimes preserves an explicit hamza (أ/إ/آ/ء) in its raw
+   token. Keep that raw spelling before normAr() collapses all alif variants.
+   This is deliberately a conservative warning: ASR spelling is evidence, not
+   a direct measurement of the glottis. */
+function hasExplicitHamzaOnset(raw){
+  const s = String(raw || '').normalize('NFKC')
+    .replace(TASHKEEL, '')
+    .replace(/^[\s\u200e\u200f\u202a-\u202e\u2066-\u2069\u0640]+/, '');
+  return /^[\u0623\u0625\u0622\u0621\u0624\u0626]/.test(s);
+}
+function checkHamzatWasl(w, idx, rawHeard){
+  if (!STRICT_FEATURES.hamWasl() || !w || !w.tjRules || !w.tjRules.hamWasl) return;
+  if (idx <= 0 || !hasExplicitHamzaOnset(rawHeard)) return;
+  const prev = words[idx - 1];
+  if (!prev || prev.verse !== w.verse) return; // beginning of ayah / recitation: wasl is pronounced
+  let gap = null;
+  if (prevWordAudio && w.audio && isFinite(prevWordAudio.end) && isFinite(w.audio.start)){
+    gap = w.audio.start - prevWordAudio.end;
+    // A real pause/restart permits Hamzat al-Wasl to be pronounced. Do not
+    // accuse a reciter when the words are clearly separated.
+    if (gap > 350) return;
+  }
+  markStrict1Warning(w, 'hamzat-al-wasl',
+    'possible audible hamza at the start of a joined Hamzat al-Wasl word' +
+    (gap !== null ? ' (audio boundary ' + Math.round(gap) + ' ms)' : ' (ASR retained explicit hamza)'));
+}
+
 function runStrict1Checks(idx, heard, opts){
   opts = opts || {};
   if (followOnly) return;
@@ -6356,10 +6384,7 @@ function runStrict1Checks(idx, heard, opts){
   if (checkTajweedAudioAlignment(w, heard)) checkIndependentNasalRules(w, heard);
   updateTajweedStatusChip();
   if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w);
-  if (STRICT_FEATURES.hamWasl() && w.tjRules && w.tjRules.hamWasl && prevWordAudio && w.audio){
-    const gap = w.audio.start - prevWordAudio.end;
-    if (gap > 45){ markStrict1Warning(w, 'hamzat-al-wasl', 'glottal re-attack (gap ' + Math.round(gap) + ' ms)'); }
-  }
+  checkHamzatWasl(w, idx, opts.rawHeard);
   if (!strict1SilentOk(w, heard)){ markStrict1Error(w, 'silent', 'silent letter pronounced'); }
   if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
   checkQalqalah(w, heard);
@@ -7026,7 +7051,7 @@ async function gradeFull(tokens, startIdx){
         /* FIX 6b — emphatic check now runs inside runStrict1Checks; removed duplicate here */
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
         commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, heard, { timingReliable: true });
+        runStrict1Checks(ptr, heard, { timingReliable: true, rawHeard: rawTok });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
         noteFollowProgress();
@@ -7037,7 +7062,7 @@ async function gradeFull(tokens, startIdx){
         const combined = normArCached(pendingHeard.join('') + rawTok);
         const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
         commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, combined, { timingReliable: false });
+        runStrict1Checks(ptr, combined, { timingReliable: false, rawHeard: rawTok });
         advancePast(1);
         pendingHeard.length = 0; consecutiveReds = 0;
         noteFollowProgress();
@@ -7067,7 +7092,7 @@ async function gradeFull(tokens, startIdx){
       const seg = rmsAnalyser.isRunning() ? rmsAnalyser.segmentEndingBefore(performance.now()) : null;
       if (await runMFAInference(words[ptr], seg, heard)) {
         commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, heard, { timingReliable: false });
+        runStrict1Checks(ptr, heard, { timingReliable: false, rawHeard: rawTok });
         advancePast(1);
         pendingHeard.length = 0;
         noteFollowProgress();
@@ -7079,7 +7104,7 @@ async function gradeFull(tokens, startIdx){
       const _needsVowelRun = !followOnly && _wRms.tjRules && (_wRms.tjRules.madd || _wRms.tjRules.hasGhunnahContext);
       if (_needsVowelRun && seg && isAcousticWordShapeMatch(_wRms, seg)) {
         commitCorrect(ptr, seg);
-        runStrict1Checks(ptr, heard, { timingReliable: false });
+        runStrict1Checks(ptr, heard, { timingReliable: false, rawHeard: rawTok });
         advancePast(1);
         pendingHeard.length = 0;
         noteFollowProgress();
@@ -7100,7 +7125,7 @@ async function gradeFull(tokens, startIdx){
           const voiced = seg && seg.durationMs > 40 && rmsAnalyser.voiceDurationMs(seg.start, seg.end) > 20;
           if(voiced){
             commitCorrect(ptr, seg);
-            if(!followOnly){ runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true }); }
+            if(!followOnly){ runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true, rawHeard: rawTok }); }
             lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
             advancePast(1);
             pendingHeard.length = 0;
