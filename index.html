@@ -3646,8 +3646,18 @@ class PhonemeClass {
     // Single source of truth — no more drift between dialectMap and PHON_LOOSE.
     // PHON_LOOSE is defined above this class in the file.
     this.dialectMap = PHON_LOOSE;
+    this._cache = new Map();
   }
   normalize(text) {
+    const key = String(text || '');
+    const hit = this._cache.get(key);
+    if (hit !== undefined) return hit;
+    const out = this._normalizeUncached(key);
+    if (this._cache.size > 6000) this._cache.clear();
+    this._cache.set(key, out);
+    return out;
+  }
+  _normalizeUncached(text) {
     // Map variant letters BEFORE normMsa(), otherwise normMsa() deletes
     // U+06xx letters with its [^\u0621-\u064A] filter.
     const pre = mapVariantLetters(String(text || ''));
@@ -4004,6 +4014,7 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
 function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
   if(ptr >= words.length) return 0;
   if(heard.length <= words[ptr].norm.length + 1) return 0;
+  if(followOnly) return tryMergedTokenMatchExact(heard, hPhon);
   let combined          = words[ptr].norm;
   let combinedPhon      = words[ptr].phon;
   let combinedPhonLoose = followOnly ? (words[ptr].phonLoose || '') : null;
@@ -4024,6 +4035,20 @@ function tryMergedTokenMatch(heard, hPhon, hPhonLoose){
        hPhonLoose.length >= 4 && combinedPhonLoose.length >= 4 &&
        Math.abs(hPhonLoose.length - combinedPhonLoose.length) <= 3 &&
        lev(hPhonLoose, combinedPhonLoose) <= 1) return k + 1;
+  }
+  return 0;
+}
+
+// Follow mode: one heard token may stand for 2–3 words ONLY if it equals their joined text
+// (letters or sound-classes) exactly — no fuzzy tolerance, so an unheard word is never inferred.
+function tryMergedTokenMatchExact(heard, hPhon){
+  let combined = words[ptr].norm;
+  let combinedPhon = words[ptr].phon;
+  for(let k = 1; k < 3 && ptr + k < words.length; k++){
+    combined     += words[ptr + k].norm;
+    combinedPhon += words[ptr + k].phon;
+    if(heard === combined) return k + 1;
+    if(hPhon && hPhon.length >= 4 && hPhon === combinedPhon) return k + 1;
   }
   return 0;
 }
@@ -6309,9 +6334,15 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
-const FOLLOW_TAU_EXIT       = 0.80;
-// LOCKED AT 0: Follow mode never skips ahead. A word that was not heard is never
-// marked, and the pointer only moves when the CURRENT word is matched.
+const FOLLOW_TAU_EXIT       = 0.80;   // (legacy, no longer used)
+// Last word of an ayah must reach this confidence before the pointer may leave the ayah.
+const FOLLOW_EXIT_FLOOR       = 0.70;   // words of 4+ letters
+const FOLLOW_EXIT_FLOOR_SHORT = 0.65;   // words of 3 letters or fewer
+// "Plausible enough" acceptance must still be at least this similar (never a totally wrong word).
+const FOLLOW_PLAUSIBLE_MIN_SIM = 0.60;
+// LOCKED AT 0: Follow mode never skips ahead. A word that was not heard is never marked.
+// (FOLLOW_MAX_LOOKAHEAD below must stay 0.)
+const followPlausibleUsed = new Set();   // verse keys where the one "plausible enough" was spent
 const FOLLOW_MAX_LOOKAHEAD  = 0;
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
@@ -6345,9 +6376,6 @@ function followExitConfidence(heard, hPhon, hPhonLoose, w){
 const FOLLOW_LOOKAHEAD = 1;
 const FOLLOW_WRONG_LIMIT = 3;
 const FOLLOW_PIN_STOP_MS = 10000;
-// "Plausible enough" acceptance (the loose fallback tier) may be used ONCE per ayah.
-// After that, only a real match of the current word advances the pointer.
-const followPlausibleUsed = new Set();
 let followWrongTokens = 0;
 let followPinTimer    = null;
 let followPinPtr      = -1;
@@ -6611,9 +6639,8 @@ async function runSpeechResultProcessing(snap) {
     }
 
   }
-  if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
+  if (!followOnly && speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 8) {
     buildPhraseObjects(speechRecognition);
-    updateSpeechGrammar(currentSpeechGrammarWindow(), speechRecognition);
   }
 }
 
@@ -6642,8 +6669,7 @@ function scoreAlternativeToks(toks, startPtr){
   return score;
 }
 
-// Text exactly as the recogniser writes it: no tashkeel, alef-wasla -> alef, alef-maqsura -> yaa.
-// (normMsa() would also turn ة into ه, a spelling the engine never outputs.)
+// Text exactly as the recogniser writes it (no tashkeel, ٱ -> ا, ى -> ي, ة kept).
 function speechHintText(raw){
   return String(raw || '').normalize('NFKC')
     .replace(TASHKEEL, '')
@@ -6652,23 +6678,14 @@ function speechHintText(raw){
     .replace(/[^\u0621-\u064A]/g, '')
     .trim();
 }
-
 // SpeechRecognitionPhrase only accepts 0.0–10.0 (anything else throws SyntaxError).
-const PHRASE_BOOST_MAX = 10.0;
-const PHRASE_BOOST_MIN = 1.0;
-function phraseBoostForDistance(d){
-  const b = PHRASE_BOOST_MAX - d * 0.35;           // 10 → ~1 across the 60-word window
-  return Math.max(PHRASE_BOOST_MIN, Math.min(PHRASE_BOOST_MAX, b));
-}
+function phraseBoostForDistance(d){ return Math.max(1.0, Math.min(10.0, 10.0 - d * 0.35)); }
 
-// Hints are built in order of distance from the current word (nearest first,
-// strongest boost first), de-duplicated so the nearest occurrence wins.
-function buildPhraseObjects(rec) {
+// FOLLOW MODE hints: nearest word first, boost never above 10.
+function buildFollowPhraseObjects(rec){
   if (!rec) return false;
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
-  if (!PhraseCtor) return false;
-  if (!('phrases' in rec)) return false;
-  if (!words.length) return false;
+  if (!PhraseCtor || !('phrases' in rec) || !words.length) return false;
   const end = Math.min(words.length, ptr + 60);
   const seen = new Set();
   const phrases = [];
@@ -6680,9 +6697,36 @@ function buildPhraseObjects(rec) {
     catch (e) { console.warn('[Speech] phrase rejected:', clean, e && e.name); }
   }
   if (!phrases.length) return false;
-  try {
+  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; return true; }
+  catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
+}
+
+function buildPhraseObjects(rec) {
+  if (followOnly) return buildFollowPhraseObjects(rec);
+  if (!rec) return false;
+  const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
+  if (!PhraseCtor) return false;
+  if (!('phrases' in rec)) return false;
+  if (!words.length) return false;
+  const end = Math.min(words.length, ptr + 60);
+  const seen = new Set();
+  const phrases = [];
+  for (let i = ptr; i < end; i++) {
+    const clean = normMsa(words[i].raw || '');
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    const distance = i - ptr;
+    const boost = distance <= 3 ? 12.0 : distance <= 10 ? 6.0 : 2.0;
+    try { phrases.push(new PhraseCtor(clean, boost)); } catch (_) {}
+  }
+  if (!phrases.length) return false;
+  try { 
     rec.phrases = phrases;
     rec.__lastPhrasePtr = ptr;
+    // Phrase biasing is independent of on-device recognition. Do not set
+    // processLocally here: that requires a separately verified/downloaded
+    // Arabic model (setupOnDeviceArabic), otherwise some browsers stop returning
+    // useful results or fail to start their normal online recognizer.
     return true;
   }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
@@ -6712,7 +6756,10 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
   const grammarWords = [];
   for(const item of currentWindowWords){
     const raw = (typeof item === 'string') ? item : (item && item.raw) || '';
-    const clean = speechHintText(raw);
+    const clean = followOnly ? speechHintText(raw) : String(raw).normalize('NFKC')
+      .replace(TASHKEEL, '')
+      .replace(/[^\u0621-\u064A]/g, '')
+      .trim();
     if(clean && !seen.has(clean)){
       seen.add(clean);
       grammarWords.push(clean);
@@ -6738,47 +6785,22 @@ function updateSpeechGrammar(currentWindowWords, recOverride){
   }
 }
 
-// ---------- On-device Arabic (Follow mode never uses cloud recognition) ----------
-const ON_DEVICE_OPTS = { langs: [SPEECH_LANG], processLocally: true };
-// True only on browsers that have NO on-device switch at all (iPhone / Safari). There the
-// browser's own built-in engine is used. Chrome / Edge are never allowed to use cloud.
-let useBuiltInEngine = false;
-function sleepMs(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-// Resolves { ok:true } or { ok:false, reason, message }. May download the Arabic pack
-// (needs a user gesture + internet once); after that it works offline.
-async function ensureOnDeviceArabic(){
-  if(!SPEECH_SUPPORTED) return { ok:false, reason:'unsupported', message:'Speech recognition is not available in this browser.' };
-  useBuiltInEngine = false;
-  if(typeof SpeechRecognitionCtor.available !== 'function' || typeof SpeechRecognitionCtor.install !== 'function'){
-    // No way to request on-device mode (e.g. Safari on iPhone): use the browser's built-in engine.
-    useBuiltInEngine = true;
-    return { ok:true, builtIn:true };
-  }
-  let st;
-  try{ st = await SpeechRecognitionCtor.available(ON_DEVICE_OPTS); }
-  catch(e){ useBuiltInEngine = true; return { ok:true, builtIn:true }; }
-  if(st === 'available') return { ok:true };
-  if(st === 'unavailable') return { ok:false, reason:'unavailable', message:'On-device Arabic speech recognition is not available on this device.' };
-  // 'downloadable' | 'downloading'
-  if(!navigator.onLine) return { ok:false, reason:'offline', message:'The Arabic speech pack must be downloaded once. Connect to the internet and try again.' };
-  addFeedback('⬇️ Downloading the Arabic on-device speech pack (one time)…', false, true);
-  setStatus('Downloading Arabic speech pack…', 'loading');
-  try{ if(st === 'downloadable') await SpeechRecognitionCtor.install(ON_DEVICE_OPTS); }
-  catch(e){ return { ok:false, reason:'install-failed', message:'The Arabic speech pack could not be installed. Try again from a tap on Start reciting.' }; }
-  for(let i = 0; i < 90; i++){
-    try{ st = await SpeechRecognitionCtor.available(ON_DEVICE_OPTS); }catch(e){ break; }
-    if(st === 'available') return { ok:true };
-    if(st !== 'downloading' && st !== 'downloadable') break;
-    await sleepMs(1000);
-  }
-  return { ok:false, reason:'install-failed', message:'The Arabic speech pack is not ready yet. Wait a moment and try again.' };
-}
-
 function createSpeechRecognition(forceNoPhrases){
   if(!SPEECH_SUPPORTED) return null;
-  if(speechRecognition && !speechRecognition.__dead && speechRecognition.__onDevice === !!followOnly) return speechRecognition;
+  if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
   if(speechRecognition){ try{ speechRecognition.abort(); }catch(_){} speechRecognition = null; }
+
+async function setupOnDeviceArabic(rec) {
+  if (!('processLocally' in rec) || !SpeechRecognitionCtor.available) return false;
+  const opts = { langs: ['ar-SA'], processLocally: true };
+  let status = await SpeechRecognitionCtor.available(opts);   // 'available' | 'downloadable' | 'downloading' | 'unavailable'
+  if (status === 'downloadable') {
+    await SpeechRecognitionCtor.install(opts);                // must be triggered by a user gesture
+    status = await SpeechRecognitionCtor.available(opts);
+  }
+  if (status === 'available') { rec.processLocally = true; return true; }
+  return false;                                               // fall back to cloud
+}
 
   const rec = new SpeechRecognitionCtor();
   rec.lang             = SPEECH_LANG;
@@ -6787,20 +6809,13 @@ function createSpeechRecognition(forceNoPhrases){
   // Request several hypotheses so the Quran-aware scorer can choose the best one.
   // Browsers that do not support multiple alternatives simply return fewer.
   rec.maxAlternatives  = 5;
-  // Follow mode: on-device Arabic ONLY (no cloud fallback).
-  rec.__onDevice = !!followOnly;
-  if(followOnly && !useBuiltInEngine){
-    if(!('processLocally' in rec)) return null;
-    try{ rec.processLocally = true; }catch(_){ return null; }
-  }
   const phrasesAttached = forceNoPhrases ? false : buildPhraseObjects(rec);
   rec.__hasPhrases = phrasesAttached;
-  updateSpeechGrammar(currentSpeechGrammarWindow(), rec);
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8){ buildPhraseObjects(rec); updateSpeechGrammar(currentSpeechGrammarWindow(), rec); }
+    if (!followOnly && Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 8) buildPhraseObjects(rec);
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -6834,14 +6849,6 @@ function createSpeechRecognition(forceNoPhrases){
       updateFsMicBtn(); syncFsButtons();
       return;
     }
-    if(err === 'language-not-supported'){
-      releaseMicStream(); stopMicDiagnostic();
-      speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
-      setMicButton(); updateFsMicBtn(); syncFsButtons();
-      setStatus('Arabic speech pack missing', 'error');
-      addFeedback('⚠️ On-device Arabic speech recognition is not installed. Tap <b>Start reciting</b> again to download it.', true);
-      return;
-    }
     if(err === 'network'){ notifySpeechServiceUnreachable(); return; }
   };
   rec.onend = () => {
@@ -6850,9 +6857,9 @@ function createSpeechRecognition(forceNoPhrases){
     setTimeout(() => {
       if(!wantMic || fsPaused || speechFatalError || micPaused) return;
       if(!speechRecognition) return;
-      try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
+      try{ if(followOnly) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }
       catch(e){ speechStarting = false; if(e && e.name !== 'InvalidStateError') console.warn('[Speech] restart failed:', e); }
-    }, 180);
+    }, followOnly ? 60 : 180);
   };
   speechRecognition = rec;
   return rec;
@@ -6951,21 +6958,28 @@ function gradeFollowFast(tokens, startIdx){
     const nextW        = words[ptr + 1];
     const isLastInAyah = !nextW || nextW.verse !== w.verse;
 
+    // Exit gate: the last word of an ayah must clear a confidence floor, whichever check
+    // would otherwise accept it. Split / exactly-merged tokens are judged by their own rules.
+    if (isLastInAyah){
+      const tgtLen = (w.followNorm || w.norm).length;
+      const floor  = tgtLen <= 3 ? FOLLOW_EXIT_FLOOR_SHORT : FOLLOW_EXIT_FLOOR;
+      const conf   = followExitConfidence(heard, hPhon, hPhonLoose, w);
+      if (conf < floor && !trySplitTokenMatch(heard, rawTok) && tryMergedTokenMatch(heard, hPhon, hPhonLoose) === 0){
+        noteFollowWrongToken();
+        pendingHeard.push(rawTok);
+        if (pendingHeard.length > 5) pendingHeard.length = 0;
+        used++; continue;
+      }
+    }
+
     const directMatch = isMatchWord(heard, hPhon, hPhonLoose, w)
                      || followAlPrefixMatch(heard, w);
     if (directMatch){
-      let exitOk = true;
-      if (isLastInAyah){
-        const conf = followExitConfidence(heard, hPhon, hPhonLoose, w);
-        if (conf < FOLLOW_TAU_EXIT) exitOk = false;
-      }
-      if (exitOk){
-        commitCorrect(ptr, null);
-        advancePast(1);
-        noteFollowProgress();
-        pendingHeard.length = 0;
-        used++; continue;
-      }
+      commitCorrect(ptr, null);
+      advancePast(1);
+      noteFollowProgress();
+      pendingHeard.length = 0;
+      used++; continue;
     }
 
     if (!isLastInAyah && trySplitTokenMatch(heard, rawTok)){
@@ -7005,8 +7019,9 @@ function gradeFollowFast(tokens, startIdx){
     }
     if (jumped){ used++; continue; }
 
-    // Loose fallback tier ("plausible enough"): allowed once per ayah only.
+    // Loose fallback tier ("plausible enough"): ONCE per ayah, and never a totally wrong word.
     if (!followPlausibleUsed.has(w.verse) &&
+        followSimilarity(heard, hPhon, hPhonLoose, w) >= FOLLOW_PLAUSIBLE_MIN_SIM &&
         (isFollowMFAMatch(w, heard, hPhon, hPhonLoose) ||
          isFollowPlausible(heard, hPhon, hPhonLoose, w))){
       followPlausibleUsed.add(w.verse);
@@ -8395,7 +8410,7 @@ function advancePast(n){
   ptr = endPtr;
   const crossedVerse = !!(words[previousPtr] && words[ptr] && words[previousPtr].verse !== words[ptr].verse);
   const lastGrammarPtr = speechRecognition ? (speechRecognition.__lastGrammarPtr || 0) : 0;
-  if(crossedVerse || ptr - lastGrammarPtr >= 3) updateSpeechGrammar(currentSpeechGrammarWindow());
+  if(!followOnly && (crossedVerse || ptr - lastGrammarPtr >= 3)) updateSpeechGrammar(currentSpeechGrammarWindow());
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
@@ -8553,17 +8568,7 @@ async function startReciting(){
     if(!words.length) return;
   }
   if(!SPEECH_SUPPORTED){ addFeedback('⚠️ Browser speech recognition is not available here. Try <b>Chrome</b>, <b>Edge</b> or <b>Safari</b> on a device with internet.', true); setStatus('Speech not supported', 'error'); return; }
-  if(followOnly){
-    // On-device Arabic only. Works offline once the pack is installed.
-    setStatus('Checking Arabic speech…', 'loading');
-    const od = await ensureOnDeviceArabic();
-    if(!od.ok){
-      setStatus('On-device Arabic unavailable', 'error');
-      addFeedback('⚠️ ' + od.message, true);
-      setMicButton();
-      return;
-    }
-  } else if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
+  if(!navigator.onLine){ speechServiceNotified = false; notifySpeechServiceUnreachable(); return; }
 
     if(followOnly){
     releaseMicStream();
@@ -8617,7 +8622,7 @@ async function startReciting(){
     if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
     speechRecognition.maxAlternatives = followOnly ? 5 : 6;
     if(speechStarting){}
-    else { try{ updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
+    else { try{ if(followOnly) buildPhraseObjects(speechRecognition); updateSpeechGrammar(currentSpeechGrammarWindow()); speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
     recRunning = true; lastResultAt = performance.now(); sessionHadResult = false;
     startMicDiagnostic(); armSpeechKeepalive();
     setStatus('Listening', 'listening', contextLabel());
