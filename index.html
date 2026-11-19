@@ -2900,7 +2900,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">19 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">08:51</span>
+    <span class="pdr-item pdr-time" id="pdrTime">09:05</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -6184,7 +6184,7 @@ function splitSegmentByWords(seg, wordsArr, startIdx, count){
 const FOLLOW_TAU_PLAUSIBLE  = 0.72;
 const FOLLOW_TAU_JUMP       = 0.85;
 const FOLLOW_TAU_EXIT       = 0.85;
-const FOLLOW_MAX_LOOKAHEAD  = 2;
+const FOLLOW_MAX_LOOKAHEAD  = 0; // disabled: no jumping over unheard words
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
   if (!w || !heard) return 0;
@@ -6240,9 +6240,14 @@ function noteFollowWrongToken(){
     followPinTimer = null;
     if(!wantMic) return;
     if(ptr !== followPinPtr) return;
-    addFeedback('⏹️ That word was not recited within 10 s — microphone stopped.', true);
-    stopReciting(true);
-    setStatus('Paused (word not recognised)', 'idle', 'Tap Start reciting to resume');
+    // RULE: an unheard / totally incorrect word must NEVER be skipped or
+    // jumped. So the pin does not advance, does not stop the mic, and does
+    // not mark the word correct. It only prompts a repeat and keeps
+    // listening. The pointer moves only on a plausible-enough match
+    // (direct / MFA / plausible) to THIS word.
+    const w = words[ptr];
+    addFeedback('🔁 Still waiting on <b>' + (w ? escapeHtml(w.raw.replace(TASHKEEL, '')) : '') + '</b> — please repeat it. Listening continues.', false, true);
+    followWrongTokens = 0; // allow the prompt to re-arm; ptr stays put
   }, FOLLOW_PIN_STOP_MS);
 }
 
@@ -6494,7 +6499,7 @@ function createSpeechRecognition(forceNoPhrases){
     speechStarting = false; recRunning = true;
     lastSpeechResultIndex = -1; interimProgress.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
-    if (Math.abs(ptr - (rec.__lastPhrasePtr || 0)) >= 24) buildPhraseObjects(rec);
+    buildPhraseObjects(rec); // always refresh: stale phrases bias ASR back to old words after a restart
   };
   rec.onresult = (event) => scheduleSpeechResult(event);
   rec.onerror = (event) => {
@@ -6552,7 +6557,11 @@ function armSpeechKeepalive(){
     speechKeepaliveTimer = null;
     if(!wantMic || fsPaused || speechFatalError || micPaused) return;
     if(!speechRecognition) return;
-    if(!speechStarting){ try{ speechRecognition.stop(); }catch(e){} }
+    // Only nudge a restart if ASR has actually gone quiet; stopping a
+    // healthy recogniser every 40s drops in-flight results.
+    if(!speechStarting && performance.now() - lastResultAt > SPEECH_KEEPALIVE_MS){
+      try{ speechRecognition.stop(); }catch(e){}
+    }
     armSpeechKeepalive();
   }, SPEECH_KEEPALIVE_MS);
 }
@@ -6662,6 +6671,8 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
+    // Merged is allowed: ONE heard token that itself contains/equals the
+    // combined text of 2 words (ASR joined them) — no word is unheard.
     const mergedN = tryMergedTokenMatch(heard, hPhon, hPhonLoose);
     if (mergedN > 0){
       commitManyCorrect(ptr, ptr + mergedN, null);
@@ -6671,23 +6682,8 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
-    let jumped = false;
-    for (let k = 1; k <= FOLLOW_MAX_LOOKAHEAD; k++){
-      if (ptr + k >= words.length) break;
-      const futureW = words[ptr + k];
-      if (futureW.verse !== w.verse) break;
-      if (futureW.isMuqattaat) break;
-      const sim = followSimilarity(heard, hPhon, hPhonLoose, futureW);
-      if (sim >= FOLLOW_TAU_JUMP){
-        commitManyCorrect(ptr, ptr + k + 1, null);
-        advancePast(k + 1);
-        noteFollowProgress();
-        pendingHeard.length = 0;
-        jumped = true;
-        break;
-      }
-    }
-    if (jumped){ used++; continue; }
+    // No lookahead jump: matching a LATER word must not skip the
+    // current word — it may simply be unheard / totally incorrect.
 
     if (isFollowMFAMatch(w, heard, hPhon, hPhonLoose)){
       commitCorrect(ptr, null);
@@ -6705,6 +6701,8 @@ function gradeFollowFast(tokens, startIdx){
       used++; continue;
     }
 
+    // No ayah-boundary rescue: matching a word in the next ayah must
+    // not skip the current word. Stay on it until it is plausibly heard.
     noteFollowWrongToken();
     pendingHeard.push(rawTok);
     if (pendingHeard.length > 5) pendingHeard.length = 0;
@@ -7705,9 +7703,12 @@ function resetSilenceTimer(force){
   silenceTimer = setTimeout(() => {
     if(!wantMic) return;
     if(performance.now() - lastResultAt < ms * 0.8){ resetSilenceTimer(true); return; }
-    addFeedback('⏸️ ' + Math.round(ms / 1000) + ' seconds of silence — stopped listening.', false, true);
-    stopReciting(true);
-    setStatus('Paused (silence)', 'idle', 'Tap Start to resume');
+    // ASR-quiet != user-silent: Chrome's service can pause with no results
+    // while the user is still reciting. Restart the recogniser instead of
+    // stopping — stopping here was another 10s stall.
+    addFeedback('🔄 No speech results for ' + Math.round(ms / 1000) + ' s — restarting listening…', false, true);
+    try{ if(speechRecognition) speechRecognition.stop(); }catch(_){}
+    lastResultAt = performance.now();
   }, ms);
 }
 function clearSilenceTimer(){ clearTimeout(silenceTimer); silenceTimer = null; }
