@@ -1,13 +1,16 @@
 {
-  "name": "quran-recitation-coach",
-  "version": "2.0.1",
-  "private": true,
+  "name": "110-meta",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel --prod"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "@vercel/kv": "^2.0.0",
-    "web-push": "^3.6.7"
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "vite": "^8.3.8"
   }
 }
