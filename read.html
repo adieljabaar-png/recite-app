@@ -624,8 +624,39 @@
         .male-voice-modal .modal-actions { display:flex; gap:10px; margin-top:16px; }
         .male-voice-modal .modal-actions button { flex:1; }
         .male-voice-modal label { display:flex; align-items:center; gap:8px; font-size:.9rem; margin-top:12px; }
+        /* Gold Start Test buttons, matching Recite's gold coach tab */
+        .btn-start-test, button.btn-start-test {
+            background: linear-gradient(180deg, #e2bd48, #a98208) !important;
+            color: #172033 !important; border: 1px solid #a98208 !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,.20) !important;
+            border-radius: 12px; font-weight: 800;
+        }
+        .btn-start-test:hover, button.btn-start-test:hover {
+            background: linear-gradient(180deg, #edcc5a, #b58d0b) !important;
+            transform: translateY(-1px);
+        }
+        .btn-start-test:active { transform: scale(.98); }
 
-</style>
+
+        /* FINAL OVERRIDE: every Start Test control uses Recite gold styling */
+        button.btn-start-test, button[onclick*="handleTestButton"] {
+            background: linear-gradient(180deg, #e2bd48, #a98208) !important;
+            color: #172033 !important;
+            border: 1px solid #a98208 !important;
+            box-shadow: 0 8px 22px rgba(0,0,0,.20) !important;
+            border-radius: 12px !important;
+            font-weight: 800 !important;
+            text-shadow: none !important;
+        }
+        button.btn-start-test:hover, button[onclick*="handleTestButton"]:hover {
+            background: linear-gradient(180deg, #edcc5a, #b58d0b) !important;
+            transform: translateY(-1px);
+        }
+        button.btn-start-test:active, button[onclick*="handleTestButton"]:active { transform: scale(.98); }
+        button.btn-start-test:focus-visible, button[onclick*="handleTestButton"]:focus-visible {
+            outline: 3px solid rgba(201,162,39,.45); outline-offset: 3px;
+        }
+    </style>
 </head>
 <body data-theme="midnight">
     <script>try{if(localStorage.getItem('qc.theme')==='light')document.body.classList.add('light-mode');}catch(e){}</script>
