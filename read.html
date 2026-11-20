@@ -608,7 +608,24 @@
         .info-modal .btn-group .primary { background: linear-gradient(180deg, #5c96ff, #3a72e6); border: 1px solid #3a72e6; color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
         .info-modal .btn-group .secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); border: 1px solid var(--gold); color: var(--text-main); }
         @media (min-width: 640px) { .modal-bg { align-items: center; padding: 20px; } .modal { border-radius: 22px; border-bottom: 1px solid var(--gold); max-height: 88vh; } }
-    </style>
+    
+        /* Recite-style gold tabs and raised surfaces */
+        :root { --primary:#c9a227; --primary-hover:#a98208; --glow:rgba(201,162,39,.22); }
+        body.light-mode { --primary:#a67c00; --primary-hover:#8a6500; --glow:rgba(166,124,0,.18); }
+        .nav-tab, .back-pill, .iconbtn, .top-bar, .screen, .content-card, .vowel-desc, .grid-cell, .practice-cell { box-shadow:var(--shadow); }
+        .nav-tab.active { background:linear-gradient(135deg,#e2bd48,#a98208) !important; color:#172033 !important; border-color:#a98208 !important; box-shadow:0 8px 22px rgba(0,0,0,.20); }
+        .nav-tab { box-shadow:var(--shadow); }
+        .male-voice-modal-bg { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.58); }
+        .male-voice-modal-bg.show { display:flex; }
+        .male-voice-modal { width:min(460px,100%); background:var(--bg-card); color:var(--text-main); border:1px solid var(--gold); border-radius:20px; padding:22px; box-shadow:0 18px 50px rgba(0,0,0,.35); }
+        .male-voice-modal h2 { margin:0 0 10px; }
+        .male-voice-modal p { line-height:1.5; }
+        .male-voice-modal a { display:inline-block; color:var(--primary); font-weight:700; margin:8px 0; }
+        .male-voice-modal .modal-actions { display:flex; gap:10px; margin-top:16px; }
+        .male-voice-modal .modal-actions button { flex:1; }
+        .male-voice-modal label { display:flex; align-items:center; gap:8px; font-size:.9rem; margin-top:12px; }
+
+</style>
 </head>
 <body data-theme="midnight">
     <script>try{if(localStorage.getItem('qc.theme')==='light')document.body.classList.add('light-mode');}catch(e){}</script>
@@ -1188,6 +1205,34 @@
             return arSA || arAny || null;
         }
         function hasArabicVoice() { return !!pickArabicVoice(); }
+        // A browser voice's gender is not standardized; use name hints only and disclose uncertainty.
+        function pickArabicMaleVoice() {
+            const voices = getVoicesSafe();
+            for (const v of voices) {
+                const lang = normLang(v.lang), name = (v.name || '').toLowerCase();
+                if (!(lang === 'ar' || lang.indexOf('ar-') === 0 || /arabic|عرب/.test(name))) continue;
+                if (/male|masculine|maj(e|ed)|tarik|tariq|hamed|hamid|naayf|nayef|عربي.*ذكر|ذكر/.test(name)) return v;
+            }
+            return null;
+        }
+        function showMaleVoicePromptIfNeeded() {
+            try { if (localStorage.getItem('readArabic.maleVoicePromptDismissed') === '1') return; } catch(e) {}
+            if (pickArabicMaleVoice()) return;
+            const modal = document.getElementById('male-voice-modal-bg'); if (modal) modal.classList.add('show');
+        }
+        function closeMaleVoicePrompt() {
+            const cb=document.getElementById('male-voice-dontshow');
+            if(cb && cb.checked) { try { localStorage.setItem('readArabic.maleVoicePromptDismissed','1'); } catch(e){} }
+            const modal=document.getElementById('male-voice-modal-bg'); if(modal) modal.classList.remove('show');
+        }
+        document.addEventListener('DOMContentLoaded',function(){
+            const close=document.getElementById('male-voice-close'), settings=document.getElementById('male-voice-settings');
+            if(close) close.addEventListener('click',closeMaleVoicePrompt);
+            if(settings) settings.addEventListener('click',function(){closeMaleVoicePrompt();openTtsSettings();});
+            whenVoicesReady().then(function(){setTimeout(showMaleVoicePromptIfNeeded,250);});
+            if(window.speechSynthesis) window.speechSynthesis.addEventListener('voiceschanged',function(){ if(!pickArabicMaleVoice()) showMaleVoicePromptIfNeeded(); });
+        });
+
 
         // Desktop browsers load their voice list asynchronously — wait for it (max 1.5 s).
         let voicesReadyPromise = null;
@@ -2962,5 +3007,14 @@
         }
     })();
     </script>
+
+<div id="male-voice-modal-bg" class="male-voice-modal-bg" role="dialog" aria-modal="true" aria-label="Arabic male voice installation">
+ <div class="male-voice-modal"><h2>🔊 Arabic voice not detected</h2>
+ <p>Read Arabic could not find an installed Arabic voice that appears to be a male voice in your browser. Voice labels vary by device, so this check may not identify gender correctly.</p>
+ <p>Open your device's Text-to-Speech voice settings and download Arabic voice data, then reload Read Arabic.</p>
+ <a href="https://play.google.com/store/apps/details?id=com.google.android.tts" target="_blank" rel="noopener">Download / update Speech Services by Google</a>
+ <div class="modal-actions"><button class="btn btn-secondary" type="button" id="male-voice-close">Close</button><button class="btn" type="button" id="male-voice-settings">Voice settings</button></div>
+ <label><input type="checkbox" id="male-voice-dontshow"> Don't show again</label></div></div>
+
 </body>
 </html>
