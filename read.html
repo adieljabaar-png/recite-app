@@ -675,38 +675,46 @@
         #voice-status-banner a.vsb-primary, #voice-status-banner button.vsb-primary { background:linear-gradient(180deg,#e8c33a,#c9a227); color:#1a2233; border-color:#a67c00; }
         #voice-status-banner .vsb-close { background:transparent; border:none; font-size:1rem; padding:4px 8px; }
     
-        /* ===== Active tab = solid gold (Coach banner), auto-scaling text ===== */
-        /* Base = mobile portrait: 12px. Landscape + PC scale up automatically. */
-        .nav-tab { font-size: 12px !important; }
-        .nav-tab.active {
-            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%) !important;
-            background-color: #c9a227 !important;
-            color: #1a2233 !important;
-            border-color: #a67c00 !important;
-            font-size: 12px !important;
-            font-weight: 800 !important;
-            letter-spacing: 0.01em !important;
-            box-shadow: var(--shadow-tab-active) !important;
-        }
-        body.light-mode .nav-tab.active {
-            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%) !important;
-            color: #1a2233 !important;
-            border-color: #a67c00 !important;
-        }
-        /* Mobile landscape: a little more room, so text steps up */
-        @media (orientation: landscape) and (max-width: 1023px) {
-            .nav-tab, .nav-tab.active { font-size: 13px !important; }
-        }
-        /* Tablet / small PC */
-        @media (min-width: 640px) {
-            .nav-tab, .nav-tab.active { font-size: 14px !important; }
-        }
-        /* PC: fluid auto-scale with viewport width, capped so it never gets huge */
-        @media (min-width: 1024px) {
-            .nav-tab, .nav-tab.active { font-size: clamp(14px, 0.7vw + 7px, 16px) !important; }
-        }
-        @media (min-width: 1440px) {
-            .nav-tab, .nav-tab.active { font-size: 16px !important; }
+        /* ===== Mobile portrait: ALL text -2px (landscape / PC untouched) ===== */
+        @media (max-width: 640px) and (orientation: portrait) {
+            .nav-tab, .nav-tab.active { font-size: 10px !important; }
+            /* Main window: READ + Overview — also -2px */
+            .app-title { font-size: calc(1.8rem - 2px) !important; }
+            .overview-summary { font-size: calc(0.8rem - 2px) !important; }
+            .overview-summary strong { font-size: calc(0.88rem - 2px) !important; }
+            .overview-summary p { font-size: calc(0.8rem - 2px) !important; }
+            /* Rest of mobile portrait text — every size stepped down exactly 2px */
+            body { font-size: calc(1rem - 2px); }
+            .back-pill { font-size: calc(0.85rem - 2px) !important; }
+            .practice-banner, .menu-item, .mic-status, .heard-line, .score-info, .status-bar, .toast { font-size: calc(0.9rem - 2px) !important; }
+            .install-pill-btn { font-size: calc(0.82rem - 2px) !important; }
+            .install-pill-close { font-size: calc(0.78rem - 2px) !important; }
+            .btn-pause, .mic-test-verdict { font-size: calc(0.95rem - 2px) !important; }
+            .btn, .panel-stop-btn { font-size: calc(1.05rem - 2px) !important; }
+            .content-card h3 { font-size: calc(1.05rem - 2px) !important; }
+            .content-card li, .content-card p, .instruction-box, .voice-wizard-card li { font-size: calc(0.92rem - 2px) !important; }
+            .content-card code { font-size: calc(0.85rem - 2px) !important; }
+            .vowel-desc p { font-size: calc(0.85rem - 2px) !important; }
+            .translit { font-size: calc(0.68rem - 2px) !important; }
+            .score-value { font-size: calc(1.1rem - 2px) !important; }
+            .best-score-badge { font-size: calc(0.75rem - 2px) !important; }
+            .completion-badge, .platform-badge { font-size: calc(0.78rem - 2px) !important; }
+            .qr-card h3, .voice-wizard-card h3 { font-size: calc(1.1rem - 2px) !important; }
+            .qr-card .qr-url, .qr-hint { font-size: calc(0.82rem - 2px) !important; }
+            .mic-test-live { font-size: calc(1rem - 2px) !important; }
+            .mic-test-live.empty { font-size: calc(0.9rem - 2px) !important; }
+            .info-modal h2 { font-size: calc(1.15rem - 2px) !important; }
+            .info-modal .feature h3 { font-size: calc(0.95rem - 2px) !important; }
+            .info-modal .feature ul li { font-size: calc(0.83rem - 2px) !important; }
+            .info-modal .footer-note { font-size: calc(0.72rem - 2px) !important; }
+            .info-modal .btn-group button { font-size: calc(0.95rem - 2px) !important; }
+            #voice-status-banner .vsb-text { font-size: calc(0.88rem - 2px) !important; }
+            #voice-status-banner .vsb-text strong { font-size: calc(0.92rem - 2px) !important; }
+            #voice-status-banner a, #voice-status-banner button { font-size: calc(0.82rem - 2px) !important; }
+            /* Arabic letters stay large for readability — only their small transliteration shrinks (above). */
+            /* Lesson headings: -2px as well */
+            .screen h2 { font-size: calc(1.5rem - 2px) !important; }
+            .screen p, .screen li { font-size: calc(0.9rem - 2px) !important; }
         }
 </style>
 </head>
@@ -750,7 +758,7 @@
     </div>
 
     <div class="nav-tabs">
-        <div class="nav-tab" data-screen="screen-1">Lesson 1</div>
+        <div class="nav-tab active" data-screen="screen-1">Lesson 1</div>
         <div class="nav-tab" data-screen="screen-2">Lesson 2</div>
         <div class="nav-tab" data-screen="screen-3">Lesson 3</div>
         <div class="nav-tab" data-screen="screen-4">Lesson 4</div>
@@ -761,12 +769,12 @@
         <div class="nav-tab" data-screen="screen-9">Lesson 9</div>
         <div class="nav-tab" data-screen="screen-13">Lesson 10</div>
         <div class="nav-tab" data-screen="screen-10">Lesson 11</div>
-        <div class="nav-tab active" data-screen="screen-12">Lesson 12</div>
+        <div class="nav-tab" data-screen="screen-12">Lesson 12</div>
         <div class="nav-tab" data-screen="screen-11">Lesson 13</div>
         <div class="nav-tab" data-screen="screen-14">Lesson 14</div>
     </div>
 
-    <div id="screen-1" class="screen">
+    <div id="screen-1" class="screen active">
         <h2 style="text-align:center;">Alphabet</h2>
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 6px 0;">
             There are 28 letters in the Arabic alphabet without "Hamzah".
@@ -911,7 +919,7 @@
         <div class="status-bar" id="status-screen-11"></div>
     </div>
 
-    <div id="screen-12" class="screen active">
+    <div id="screen-12" class="screen">
         <h2 style="text-align:center;">Stopping Rules</h2>
         <div class="vowel-desc">
             <p><strong>Stopping rules:</strong></p>
