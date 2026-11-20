@@ -1,4 +1,25 @@
-<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -37,7 +58,7 @@
 
         /* Palette copied from the Recite app (dark = default, body.light-mode = light) */
         :root {
-            --primary: #4f8cff; --primary-hover: #3a72e6;
+            --primary: #c9a227; --primary-hover: #a67c00;
             --bg-main: #0d1119; --bg-card: #151c2b; --panel-2: #1b2436;
             --text-main: #e8edf7; --text-light: #8f9bb3;
             --border: #28334a; --panel-bg: #151c2b; --panel-text: #e8edf7;
@@ -51,10 +72,10 @@
             --shadow-lift: 0 20px 40px rgba(15,20,35,.22), 0 6px 14px rgba(15,20,35,.14), inset 0 1px 0 rgba(255,255,255,.85);
             --gold: #c9a227; --gold-soft: rgba(201,162,39,.65);
             --bar-bg: rgba(13,17,25,.88);
-            --glow: rgba(79,140,255,.20);
+            --glow: rgba(201,162,39,.20);
         }
         body.light-mode {
-            --primary: #2a6fe0; --primary-hover: #1f5bc4;
+            --primary: #c9a227; --primary-hover: #a67c00;
             --bg-main: #f5f7fb; --bg-card: #ffffff; --panel-2: #eef2f8;
             --text-main: #1a2233; --text-light: #5a6884;
             --border: #d1dae8; --panel-bg: #ffffff; --panel-text: #1a2233;
@@ -68,7 +89,7 @@
             --shadow-lift: 0 20px 40px rgba(20,30,55,.20), 0 6px 14px rgba(20,30,55,.12), inset 0 1px 0 rgba(255,255,255,.95);
             --gold: #a67c00; --gold-soft: rgba(166,124,0,.65);
             --bar-bg: rgba(245,247,251,.88);
-            --glow: rgba(42,111,224,.16);
+            --glow: rgba(201,162,39,.16);
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -237,7 +258,7 @@
 
         /* ===== Screenshot shadow system — applied to EVERY tab / screen / card ===== */
         /* Matches the reference image: white card, 1px gold border, soft deep drop shadow + top highlight. */
-        .screen, .content-card, .top-bar, .test-panel, .practice-banner, .overview-summary,
+        .screen, .content-card, .top-bar, .test-panel, .practice-banner,
         .modal, .voice-wizard-card, .info-modal, .score-progress-container {
             box-shadow: var(--shadow-card) !important;
             border: 1px solid var(--gold) !important;
@@ -625,13 +646,13 @@
         }
         .nav-tab, .back-pill, .iconbtn { box-shadow: var(--shadow); }
         .nav-tab.active {
-            background: linear-gradient(180deg, #5c96ff, #3a72e6); color: #fff;
-            box-shadow: 0 5px 16px rgba(79,140,255,.32);
+            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%); color: #fff;
+            box-shadow: 0 5px 16px rgba(201,162,39,.32);
         }
         .nav-tab:hover, .back-pill:hover, .iconbtn:hover { filter: brightness(1.08); }
         .top-bar { justify-content: center; }
         .overview-summary { text-align: center; flex: 1 1 100%; }
-        .btn { background: linear-gradient(180deg, #5c96ff, #3a72e6); color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
+        .btn { background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%); color: #fff; box-shadow: 0 5px 16px rgba(201,162,39,.32); }
         .btn.btn-secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); color: var(--text-main); box-shadow: var(--shadow); }
         .btn.btn-danger { background: linear-gradient(180deg, #ff6b7a, #e04555); }
 
@@ -649,8 +670,8 @@
         body.light-mode .modal .grabber { background: #c8d3e6; }
         .info-modal h2 { display: flex; align-items: center; gap: 9px; font-size: 1.15rem; margin: 0 0 8px; }
         .info-modal > p { margin: 0 0 14px; color: var(--text-light); font-size: .82rem; line-height: 1.55; }
-        .info-modal .feature { background: rgba(79,140,255,.06); border: 1px solid rgba(79,140,255,.22); border-radius: 13px; padding: 12px 13px; margin-bottom: 10px; }
-        body.light-mode .info-modal .feature { background: rgba(42,111,224,.05); border-color: rgba(42,111,224,.20); }
+        .info-modal .feature { background: rgba(201,162,39,.06); border: 1px solid rgba(201,162,39,.22); border-radius: 13px; padding: 12px 13px; margin-bottom: 10px; }
+        body.light-mode .info-modal .feature { background: rgba(201,162,39,.05); border-color: rgba(201,162,39,.20); }
         .info-modal .feature h3 { margin: 0 0 8px; font-size: .95rem; color: var(--text-main); display: flex; align-items: center; gap: 7px; }
         .info-modal .feature h3 .fnum { background: var(--primary); color: #fff; width: 22px; height: 22px; border-radius: 50%;
             display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
@@ -661,7 +682,7 @@
         .info-modal .footer-note { text-align: center; color: var(--text-light); font-size: .72rem; margin: 6px 0 14px; font-style: italic; }
         .info-modal .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
         .info-modal .btn-group button { width: 100%; height: 50px; font: inherit; font-weight: 600; font-size: .95rem; cursor: pointer; border-radius: 12px; }
-        .info-modal .btn-group .primary { background: linear-gradient(180deg, #5c96ff, #3a72e6); border: 1px solid #3a72e6; color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
+        .info-modal .btn-group .primary { background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%); border: 1px solid #a67c00; color: #fff; box-shadow: 0 5px 16px rgba(201,162,39,.32); }
         .info-modal .btn-group .secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); border: 1px solid var(--gold); color: var(--text-main); }
         @media (min-width: 640px) { .modal-bg { align-items: center; padding: 20px; } .modal { border-radius: 22px; border-bottom: 1px solid var(--gold); max-height: 88vh; } }
 
@@ -716,6 +737,30 @@
             .screen h2 { font-size: calc(1.5rem - 2px) !important; }
             .screen p, .screen li { font-size: calc(0.9rem - 2px) !important; }
         }
+
+        /* ===== No inner rectangle around Read Overview + gold highlights (Recite gold) ===== */
+        /* Outer .top-bar keeps its gold border + shadow. Inner .overview-summary is flat/transparent. */
+        .overview-summary {
+            border: none !important; box-shadow: none !important; background: transparent !important;
+            outline: none !important; padding: 0 !important; border-radius: 0 !important;
+        }
+        .top-bar {
+            border: 1px solid var(--gold) !important;
+            box-shadow: var(--shadow-card) !important;
+        }
+        /* Every blue highlighted tab / button -> Recite gold, dark text for contrast */
+        .nav-tab.active, .iconbtn.active, .btn, .info-modal .btn-group .primary,
+        button.primary, .btn-primary {
+            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%) !important;
+            background-color: #c9a227 !important;
+            color: #1a2233 !important;
+            border-color: #a67c00 !important;
+            box-shadow: var(--shadow-tab-active) !important;
+        }
+        .nav-tab.active { font-weight: 800 !important; }
+        /* Hover / focus highlights also gold, not blue */
+        .back-pill:hover, .iconbtn:hover, .nav-tab:hover { border-color: var(--gold) !important; }
+        .nav-tab.active:hover, .iconbtn.active:hover, .btn:hover { filter: brightness(1.05) !important; }
 </style>
 </head>
 <body data-theme="midnight">
@@ -758,7 +803,7 @@
     </div>
 
     <div class="nav-tabs">
-        <div class="nav-tab active" data-screen="screen-1">Lesson 1</div>
+        <div class="nav-tab" data-screen="screen-1">Lesson 1</div>
         <div class="nav-tab" data-screen="screen-2">Lesson 2</div>
         <div class="nav-tab" data-screen="screen-3">Lesson 3</div>
         <div class="nav-tab" data-screen="screen-4">Lesson 4</div>
@@ -771,10 +816,10 @@
         <div class="nav-tab" data-screen="screen-10">Lesson 11</div>
         <div class="nav-tab" data-screen="screen-12">Lesson 12</div>
         <div class="nav-tab" data-screen="screen-11">Lesson 13</div>
-        <div class="nav-tab" data-screen="screen-14">Lesson 14</div>
+        <div class="nav-tab active" data-screen="screen-14">Lesson 14</div>
     </div>
 
-    <div id="screen-1" class="screen active">
+    <div id="screen-1" class="screen">
         <h2 style="text-align:center;">Alphabet</h2>
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 6px 0;">
             There are 28 letters in the Arabic alphabet without "Hamzah".
@@ -958,7 +1003,7 @@
         <div class="practice-grid" id="review-grid"><div class="practice-cell"><span class="ar">رَفَعَ</span></div><div class="practice-cell"><span class="ar">أَمَرَ</span></div><div class="practice-cell"><span class="ar">كَسَبَ</span></div><div class="practice-cell"><span class="ar">وَقَبَ</span></div><div class="practice-cell"><span class="ar">خَلَقَ</span></div><div class="practice-cell"><span class="ar">حَسَدَ</span></div><div class="practice-cell"><span class="ar">لَكَ</span></div><div class="practice-cell"><span class="ar">تَرَ</span></div><div class="practice-cell"><span class="ar">فَهُوَ</span></div><div class="practice-cell"><span class="ar">هُوَ</span></div><div class="practice-cell"><span class="ar">وَلِيَ</span></div><div class="practice-cell"><span class="ar">مَلَكَ</span></div><div class="practice-cell"><span class="ar">عَبَسَ</span></div><div class="practice-cell"><span class="ar">وَلَدَ</span></div><div class="practice-cell"><span class="ar">جَمَعَ</span></div><div class="practice-cell"><span class="ar">فَعَلَ</span></div><div class="practice-cell"><span class="ar">إِرَمْ</span></div><div class="practice-cell"><span class="ar">لَهُ</span></div><div class="practice-cell"><span class="ar">صُحُفَ</span></div><div class="practice-cell"><span class="ar">خُلُقَ</span></div><div class="practice-cell"><span class="ar">قُتِلَ</span></div><div class="practice-cell"><span class="ar">أُذِنَ</span></div><div class="practice-cell"><span class="ar">يَكُنْ</span></div><div class="practice-cell"><span class="ar">خَشِيَ</span></div><div class="practice-cell"><span class="ar">زَادَ</span></div><div class="practice-cell"><span class="ar">خَافَ</span></div><div class="practice-cell"><span class="ar">تَابَ</span></div><div class="practice-cell"><span class="ar">جَاهَدَ</span></div><div class="practice-cell"><span class="ar">حَاسَبَ</span></div><div class="practice-cell"><span class="ar">جُنَاحُ</span></div><div class="practice-cell"><span class="ar">شَارَبَ</span></div><div class="practice-cell"><span class="ar">فَرَاغٌ</span></div><div class="practice-cell"><span class="ar">خَادِعَ</span></div><div class="practice-cell"><span class="ar">قَاتَلَ</span></div><div class="practice-cell"><span class="ar">صَابَرَ</span></div><div class="practice-cell"><span class="ar">تَعَالَ</span></div><div class="practice-cell"><span class="ar">دِينِي</span></div><div class="practice-cell"><span class="ar">فِيهِ</span></div><div class="practice-cell"><span class="ar">أَرِنِي</span></div><div class="practice-cell"><span class="ar">كِتَابِي</span></div><div class="practice-cell"><span class="ar">أَحِيبُ</span></div><div class="practice-cell"><span class="ar">بُوَارِي</span></div><div class="practice-cell"><span class="ar">مَفَاتِيحُ</span></div><div class="practice-cell"><span class="ar">رَازِقِينَ</span></div><div class="practice-cell"><span class="ar">عِبَادِي</span></div><div class="practice-cell"><span class="ar">عَذَابِي</span></div><div class="practice-cell"><span class="ar">تَمَاثِيلُ</span></div><div class="practice-cell"><span class="ar">مَقَادِيرُ</span></div><div class="practice-cell"><span class="ar">أَخِيهِ</span></div><div class="practice-cell"><span class="ar">بَنِيهِ</span></div><div class="practice-cell"><span class="ar">نُوحٌ</span></div><div class="practice-cell"><span class="ar">طُورٌ</span></div><div class="practice-cell"><span class="ar">تُوبُوا</span></div><div class="practice-cell"><span class="ar">نُورٌ</span></div><div class="practice-cell"><span class="ar">قَالُوا</span></div><div class="practice-cell"><span class="ar">يَرْجُو</span></div><div class="practice-cell"><span class="ar">يَقُومُ</span></div><div class="practice-cell"><span class="ar">تَكُونُ</span></div><div class="practice-cell"><span class="ar">هَارُونَ</span></div><div class="practice-cell"><span class="ar">قَارُونَ</span></div><div class="practice-cell"><span class="ar">دَاخِرُونَ</span></div><div class="practice-cell"><span class="ar">سَبَقُونَا</span></div><div class="practice-cell"><span class="ar">بَاسِطُونَ</span></div><div class="practice-cell"><span class="ar">رَاجِعُونَ</span></div></div>
     </div>
 
-    <div id="screen-14" class="screen">
+    <div id="screen-14" class="screen active">
         <h2 style="text-align:center;">Recite Ayah</h2>
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
             Recite each ayah aloud, word for word. Every word in the ayah must be spoken for it to count as correct.
@@ -3118,4 +3163,4 @@
     </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
 
-</body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
