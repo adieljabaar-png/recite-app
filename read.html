@@ -1,6 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0d1119">
@@ -8,9 +27,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="READ">
-    <link rel="manifest" id="manifest-link">
-    <link rel="apple-touch-icon" id="apple-touch-icon">
-    <link rel="icon" id="favicon-link">
+    <link rel="manifest" id="manifest-link" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22READ%22%2C%22short_name%22%3A%22READ%22%2C%22description%22%3A%22Learn%20to%20read%20Arabic%20with%20voice%20feedback.%22%2C%22start_url%22%3A%22.%22%2C%22scope%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%2C%22background_color%22%3A%22%23ECFDF5%22%2C%22theme_color%22%3A%22%23059669%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bcharset%3Dutf-8%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520rx%253D%252240%2522%2520fill%253D%2522%2523000000%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%252026%252046%2520Q%252026%252038%252036%252038%2520L%252094%252054%2520L%252094%2520154%2520Q%252064%2520138%252026%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%2520166%252046%2520Q%2520166%252038%2520156%252038%2520L%252098%252054%2520L%252098%2520154%2520Q%2520128%2520138%2520166%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520x%253D%252294%2522%2520y%253D%252254%2522%2520width%253D%25224%2522%2520height%253D%2522100%2522%2520fill%253D%2522%2523000000%2522%2520opacity%253D%25220.4%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cg%2520stroke%253D%2522%2523000000%2522%2520stroke-width%253D%25222.5%2522%2520stroke-linecap%253D%2522round%2522%2520opacity%253D%25220.55%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252276%2522%2520x2%253D%252282%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252294%2522%2520x2%253D%252282%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522112%2522%2520x2%253D%252282%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522130%2522%2520x2%253D%252266%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252276%2522%2520x2%253D%2522110%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252294%2522%2520x2%253D%2522110%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522112%2522%2520x2%253D%2522110%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522130%2522%2520x2%253D%2522126%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fg%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bcharset%3Dutf-8%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520rx%253D%252240%2522%2520fill%253D%2522%2523000000%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%252026%252046%2520Q%252026%252038%252036%252038%2520L%252094%252054%2520L%252094%2520154%2520Q%252064%2520138%252026%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%2520166%252046%2520Q%2520166%252038%2520156%252038%2520L%252098%252054%2520L%252098%2520154%2520Q%2520128%2520138%2520166%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520x%253D%252294%2522%2520y%253D%252254%2522%2520width%253D%25224%2522%2520height%253D%2522100%2522%2520fill%253D%2522%2523000000%2522%2520opacity%253D%25220.4%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cg%2520stroke%253D%2522%2523000000%2522%2520stroke-width%253D%25222.5%2522%2520stroke-linecap%253D%2522round%2522%2520opacity%253D%25220.55%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252276%2522%2520x2%253D%252282%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252294%2522%2520x2%253D%252282%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522112%2522%2520x2%253D%252282%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522130%2522%2520x2%253D%252266%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252276%2522%2520x2%253D%2522110%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252294%2522%2520x2%253D%2522110%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522112%2522%2520x2%253D%2522110%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522130%2522%2520x2%253D%2522126%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fg%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bcharset%3Dutf-8%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520rx%253D%252240%2522%2520fill%253D%2522%2523000000%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%252026%252046%2520Q%252026%252038%252036%252038%2520L%252094%252054%2520L%252094%2520154%2520Q%252064%2520138%252026%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cpath%2520d%253D%2522M%2520166%252046%2520Q%2520166%252038%2520156%252038%2520L%252098%252054%2520L%252098%2520154%2520Q%2520128%2520138%2520166%2520148%2520Z%2522%2520fill%253D%2522%2523FFD700%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Crect%2520x%253D%252294%2522%2520y%253D%252254%2522%2520width%253D%25224%2522%2520height%253D%2522100%2522%2520fill%253D%2522%2523000000%2522%2520opacity%253D%25220.4%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cg%2520stroke%253D%2522%2523000000%2522%2520stroke-width%253D%25222.5%2522%2520stroke-linecap%253D%2522round%2522%2520opacity%253D%25220.55%2522%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252276%2522%2520x2%253D%252282%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%252294%2522%2520x2%253D%252282%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522112%2522%2520x2%253D%252282%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%252240%2522%2520y1%253D%2522130%2522%2520x2%253D%252266%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252276%2522%2520x2%253D%2522110%2522%2520y2%253D%252281%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%252294%2522%2520x2%253D%2522110%2522%2520y2%253D%252299%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522112%2522%2520x2%253D%2522110%2522%2520y2%253D%2522117%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253Cline%2520x1%253D%2522152%2522%2520y1%253D%2522130%2522%2520x2%253D%2522126%2522%2520y2%253D%2522134%2522%252F%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fg%253E%250A%2520%2520%2520%2520%2520%2520%2520%2520%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22maskable%22%7D%5D%7D">
+    <link rel="apple-touch-icon" id="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20192%20192%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Crect%20width%3D%22192%22%20height%3D%22192%22%20rx%3D%2240%22%20fill%3D%22%23000000%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M%2026%2046%20Q%2026%2038%2036%2038%20L%2094%2054%20L%2094%20154%20Q%2064%20138%2026%20148%20Z%22%20fill%3D%22%23FFD700%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M%20166%2046%20Q%20166%2038%20156%2038%20L%2098%2054%20L%2098%20154%20Q%20128%20138%20166%20148%20Z%22%20fill%3D%22%23FFD700%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Crect%20x%3D%2294%22%20y%3D%2254%22%20width%3D%224%22%20height%3D%22100%22%20fill%3D%22%23000000%22%20opacity%3D%220.4%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cg%20stroke%3D%22%23000000%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.55%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%2276%22%20x2%3D%2282%22%20y2%3D%2281%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%2294%22%20x2%3D%2282%22%20y2%3D%2299%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%22112%22%20x2%3D%2282%22%20y2%3D%22117%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%22130%22%20x2%3D%2266%22%20y2%3D%22134%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%2276%22%20x2%3D%22110%22%20y2%3D%2281%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%2294%22%20x2%3D%22110%22%20y2%3D%2299%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%22112%22%20x2%3D%22110%22%20y2%3D%22117%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%22130%22%20x2%3D%22126%22%20y2%3D%22134%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%20%20%20%20%3C%2Fsvg%3E">
+    <link rel="icon" id="favicon-link" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20192%20192%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Crect%20width%3D%22192%22%20height%3D%22192%22%20rx%3D%2240%22%20fill%3D%22%23000000%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M%2026%2046%20Q%2026%2038%2036%2038%20L%2094%2054%20L%2094%20154%20Q%2064%20138%2026%20148%20Z%22%20fill%3D%22%23FFD700%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M%20166%2046%20Q%20166%2038%20156%2038%20L%2098%2054%20L%2098%20154%20Q%20128%20138%20166%20148%20Z%22%20fill%3D%22%23FFD700%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Crect%20x%3D%2294%22%20y%3D%2254%22%20width%3D%224%22%20height%3D%22100%22%20fill%3D%22%23000000%22%20opacity%3D%220.4%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3Cg%20stroke%3D%22%23000000%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.55%22%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%2276%22%20x2%3D%2282%22%20y2%3D%2281%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%2294%22%20x2%3D%2282%22%20y2%3D%2299%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%22112%22%20x2%3D%2282%22%20y2%3D%22117%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2240%22%20y1%3D%22130%22%20x2%3D%2266%22%20y2%3D%22134%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%2276%22%20x2%3D%22110%22%20y2%3D%2281%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%2294%22%20x2%3D%22110%22%20y2%3D%2299%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%22112%22%20x2%3D%22110%22%20y2%3D%22117%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%3Cline%20x1%3D%22152%22%20y1%3D%22130%22%20x2%3D%22126%22%20y2%3D%22134%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%20%20%3C%2Fg%3E%0A%20%20%20%20%20%20%20%20%3C%2Fsvg%3E">
     <title>READ — Arabic Reading Tutor</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -25,7 +44,11 @@
             --accent: #ffb020; --highlight: rgba(255,176,32,.12);
             --success: #2fd07a; --success-bg: rgba(47,208,122,.14);
             --danger: #ff5a6a; --danger-bg: rgba(255,90,106,.14);
-            --shadow: 0 8px 22px rgba(0,0,0,.28);
+            --shadow: 0 12px 28px rgba(0,0,0,.32), 0 3px 8px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+            --shadow-card: 0 14px 30px rgba(15,20,35,.18), 0 4px 10px rgba(15,20,35,.12), 0 1px 2px rgba(15,20,35,.10), inset 0 1px 0 rgba(255,255,255,.85);
+            --shadow-tab: 0 10px 22px rgba(15,20,35,.16), 0 3px 7px rgba(15,20,35,.10), inset 0 1px 0 rgba(255,255,255,.80);
+            --shadow-tab-active: 0 12px 24px rgba(201,162,39,.35), 0 4px 10px rgba(201,162,39,.22), inset 0 1px 0 rgba(255,255,255,.45);
+            --shadow-lift: 0 20px 40px rgba(15,20,35,.22), 0 6px 14px rgba(15,20,35,.14), inset 0 1px 0 rgba(255,255,255,.85);
             --gold: #c9a227; --gold-soft: rgba(201,162,39,.65);
             --bar-bg: rgba(13,17,25,.88);
             --glow: rgba(79,140,255,.20);
@@ -38,7 +61,11 @@
             --accent: #c68a00; --highlight: rgba(198,138,0,.10);
             --success: #1f9a5a; --success-bg: rgba(31,154,90,.12);
             --danger: #d63d52; --danger-bg: rgba(214,61,82,.10);
-            --shadow: 0 8px 22px rgba(0,0,0,.08);
+            --shadow: 0 12px 28px rgba(20,30,55,.14), 0 3px 8px rgba(20,30,55,.08), inset 0 1px 0 rgba(255,255,255,.90);
+            --shadow-card: 0 14px 30px rgba(20,30,55,.16), 0 4px 10px rgba(20,30,55,.10), 0 1px 2px rgba(20,30,55,.08), inset 0 1px 0 rgba(255,255,255,.95);
+            --shadow-tab: 0 10px 22px rgba(20,30,55,.14), 0 3px 7px rgba(20,30,55,.08), inset 0 1px 0 rgba(255,255,255,.95);
+            --shadow-tab-active: 0 12px 24px rgba(166,124,0,.28), 0 4px 10px rgba(166,124,0,.16), inset 0 1px 0 rgba(255,255,255,.60);
+            --shadow-lift: 0 20px 40px rgba(20,30,55,.20), 0 6px 14px rgba(20,30,55,.12), inset 0 1px 0 rgba(255,255,255,.95);
             --gold: #a67c00; --gold-soft: rgba(166,124,0,.65);
             --bar-bg: rgba(245,247,251,.88);
             --glow: rgba(42,111,224,.16);
@@ -207,6 +234,35 @@
         .nav-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
         .nav-tab.disabled { opacity: 0.5; pointer-events: none; }
 
+
+        /* ===== Screenshot shadow system — applied to EVERY tab / screen / card ===== */
+        /* Matches the reference image: white card, 1px gold border, soft deep drop shadow + top highlight. */
+        .screen, .content-card, .top-bar, .test-panel, .practice-banner, .overview-summary,
+        .modal, .voice-wizard-card, .info-modal, .score-progress-container {
+            box-shadow: var(--shadow-card) !important;
+            border: 1px solid var(--gold) !important;
+        }
+        .nav-tab, .back-pill, .iconbtn, .icon-btn, .install-pill {
+            box-shadow: var(--shadow-tab) !important;
+            border: 1px solid var(--gold) !important;
+        }
+        .nav-tab.active {
+            box-shadow: var(--shadow-tab-active) !important;
+            border-color: var(--gold) !important;
+        }
+        .nav-tab:hover, .back-pill:hover, .iconbtn:hover, .icon-btn:hover { box-shadow: var(--shadow-lift) !important; transform: translateY(-1px); }
+        .nav-tab:active, .back-pill:active, .iconbtn:active { transform: translateY(1px) scale(.98); box-shadow: var(--shadow-tab) !important; }
+        .grid-cell, .practice-cell, .letter-cell, .word-cell {
+            box-shadow: var(--shadow-tab) !important;
+            border: 1px solid var(--gold) !important;
+        }
+        .grid-cell:hover, .practice-cell:hover { box-shadow: var(--shadow-lift) !important; transform: translateY(-1px); }
+        .btn, button.primary, button.secondary, .btn-group button {
+            box-shadow: var(--shadow-tab) !important;
+        }
+        .btn:active, button.primary:active, button.secondary:active { box-shadow: var(--shadow-tab) !important; transform: translateY(1px); }
+        /* Voice banner (below) uses the same card shadow */
+        #voice-status-banner { box-shadow: var(--shadow-card) !important; border: 1px solid var(--gold) !important; }
         .screen {
             display: none; background: var(--bg-card); border-radius: 12px; padding: 15px;
             max-width: 1000px; margin: 0 auto 20px auto; box-shadow: var(--shadow);
@@ -608,12 +664,61 @@
         .info-modal .btn-group .primary { background: linear-gradient(180deg, #5c96ff, #3a72e6); border: 1px solid #3a72e6; color: #fff; box-shadow: 0 5px 16px rgba(79,140,255,.32); }
         .info-modal .btn-group .secondary { background: linear-gradient(180deg, var(--panel-2), var(--bg-card)); border: 1px solid var(--gold); color: var(--text-main); }
         @media (min-width: 640px) { .modal-bg { align-items: center; padding: 20px; } .modal { border-radius: 22px; border-bottom: 1px solid var(--gold); max-height: 88vh; } }
-    </style>
+
+        /* Voice status banner — auto-check result */
+        #voice-status-banner { display:none; max-width:1000px; margin:0 auto 14px auto; background:var(--bg-card); border-radius:14px; padding:12px 14px; gap:10px; align-items:center; flex-wrap:wrap; }
+        #voice-status-banner.show { display:flex; }
+        #voice-status-banner .vsb-text { flex:1 1 220px; font-size:.88rem; }
+        #voice-status-banner .vsb-text strong { display:block; font-size:.92rem; }
+        #voice-status-banner .vsb-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        #voice-status-banner a, #voice-status-banner button { border-radius:10px; padding:8px 12px; font:inherit; font-weight:700; font-size:.82rem; cursor:pointer; text-decoration:none; border:1px solid var(--gold); background:linear-gradient(180deg,var(--panel-2),var(--bg-card)); color:var(--text-main); }
+        #voice-status-banner a.vsb-primary, #voice-status-banner button.vsb-primary { background:linear-gradient(180deg,#e8c33a,#c9a227); color:#1a2233; border-color:#a67c00; }
+        #voice-status-banner .vsb-close { background:transparent; border:none; font-size:1rem; padding:4px 8px; }
+    
+        /* ===== Active tab = solid gold (Coach banner), auto-scaling text ===== */
+        /* Base = mobile portrait: 12px. Landscape + PC scale up automatically. */
+        .nav-tab { font-size: 12px !important; }
+        .nav-tab.active {
+            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%) !important;
+            background-color: #c9a227 !important;
+            color: #1a2233 !important;
+            border-color: #a67c00 !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.01em !important;
+            box-shadow: var(--shadow-tab-active) !important;
+        }
+        body.light-mode .nav-tab.active {
+            background: linear-gradient(180deg, #f0d45a 0%, #e8c33a 45%, #c9a227 100%) !important;
+            color: #1a2233 !important;
+            border-color: #a67c00 !important;
+        }
+        /* Mobile landscape: a little more room, so text steps up */
+        @media (orientation: landscape) and (max-width: 1023px) {
+            .nav-tab, .nav-tab.active { font-size: 13px !important; }
+        }
+        /* Tablet / small PC */
+        @media (min-width: 640px) {
+            .nav-tab, .nav-tab.active { font-size: 14px !important; }
+        }
+        /* PC: fluid auto-scale with viewport width, capped so it never gets huge */
+        @media (min-width: 1024px) {
+            .nav-tab, .nav-tab.active { font-size: clamp(14px, 0.7vw + 7px, 16px) !important; }
+        }
+        @media (min-width: 1440px) {
+            .nav-tab, .nav-tab.active { font-size: 16px !important; }
+        }
+</style>
 </head>
 <body data-theme="midnight">
     <script>try{if(localStorage.getItem('qc.theme')==='light')document.body.classList.add('light-mode');}catch(e){}</script>
 
-    <div class="page-bar">
+    <div id="voice-status-banner" role="status" aria-live="polite">
+          <span style="font-size:1.3rem;line-height:1">🔊</span>
+          <div class="vsb-text"><strong id="voice-status-title">✅ Male Arabic voice ready — Majed</strong><span id="voice-status-sub">The app will use it for letters and words.</span></div>
+          <div class="vsb-actions"><a id="voice-status-link" class="vsb-primary" href="#" target="_blank" rel="noopener" style="display:none">Download / Install male Arabic voice</a><button id="voice-status-recheck" type="button">Re-check</button><button id="voice-status-open" type="button" style="display:none">Open voice settings</button><button id="voice-status-dismiss" class="vsb-close" type="button" aria-label="Dismiss">✕</button></div>
+        </div>
+        <div class="page-bar">
         <div class="page-bar-inner">
             <button id="back-btn" class="back-pill" type="button" aria-label="Back to Recite home screen">Back</button>
             <div class="page-bar-right">
@@ -645,7 +750,7 @@
     </div>
 
     <div class="nav-tabs">
-        <div class="nav-tab active" data-screen="screen-1">Lesson 1</div>
+        <div class="nav-tab" data-screen="screen-1">Lesson 1</div>
         <div class="nav-tab" data-screen="screen-2">Lesson 2</div>
         <div class="nav-tab" data-screen="screen-3">Lesson 3</div>
         <div class="nav-tab" data-screen="screen-4">Lesson 4</div>
@@ -656,12 +761,12 @@
         <div class="nav-tab" data-screen="screen-9">Lesson 9</div>
         <div class="nav-tab" data-screen="screen-13">Lesson 10</div>
         <div class="nav-tab" data-screen="screen-10">Lesson 11</div>
-        <div class="nav-tab" data-screen="screen-12">Lesson 12</div>
+        <div class="nav-tab active" data-screen="screen-12">Lesson 12</div>
         <div class="nav-tab" data-screen="screen-11">Lesson 13</div>
         <div class="nav-tab" data-screen="screen-14">Lesson 14</div>
     </div>
 
-    <div id="screen-1" class="screen active">
+    <div id="screen-1" class="screen">
         <h2 style="text-align:center;">Alphabet</h2>
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 6px 0;">
             There are 28 letters in the Arabic alphabet without "Hamzah".
@@ -669,7 +774,7 @@
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
             Tap any letter to hear its pronunciation.
         </p>
-        <div class="grid-row" id="alphabet-grid"></div>
+        <div class="grid-row" id="alphabet-grid"><div class="grid-cell has-translit"><span class="ar">ا</span><span class="translit">Alif</span></div><div class="grid-cell has-translit"><span class="ar">ب</span><span class="translit">Baa</span></div><div class="grid-cell has-translit"><span class="ar">ت</span><span class="translit">Taa</span></div><div class="grid-cell has-translit"><span class="ar">ث</span><span class="translit">Thaa</span></div><div class="grid-cell has-translit"><span class="ar">ج</span><span class="translit">Jeem</span></div><div class="grid-cell has-translit"><span class="ar">ح</span><span class="translit">Haa (deep)</span></div><div class="grid-cell has-translit"><span class="ar">خ</span><span class="translit">Khaa</span></div><div class="grid-cell has-translit"><span class="ar">د</span><span class="translit">Daal</span></div><div class="grid-cell has-translit"><span class="ar">ذ</span><span class="translit">Dhaal</span></div><div class="grid-cell has-translit"><span class="ar">ر</span><span class="translit">Raa</span></div><div class="grid-cell has-translit"><span class="ar">ز</span><span class="translit">Zay</span></div><div class="grid-cell has-translit"><span class="ar">س</span><span class="translit">Seen</span></div><div class="grid-cell has-translit"><span class="ar">ش</span><span class="translit">Sheen</span></div><div class="grid-cell has-translit"><span class="ar">ص</span><span class="translit">Saad</span></div><div class="grid-cell has-translit"><span class="ar">ض</span><span class="translit">Daad</span></div><div class="grid-cell has-translit"><span class="ar">ط</span><span class="translit">Taa (heavy)</span></div><div class="grid-cell has-translit"><span class="ar">ظ</span><span class="translit">Zaa (heavy)</span></div><div class="grid-cell has-translit"><span class="ar">ع</span><span class="translit">Ayn</span></div><div class="grid-cell has-translit"><span class="ar">غ</span><span class="translit">Ghayn</span></div><div class="grid-cell has-translit"><span class="ar">ف</span><span class="translit">Faa</span></div><div class="grid-cell has-translit"><span class="ar">ق</span><span class="translit">Qaaf</span></div><div class="grid-cell has-translit"><span class="ar">ك</span><span class="translit">Kaaf</span></div><div class="grid-cell has-translit"><span class="ar">ل</span><span class="translit">Laam</span></div><div class="grid-cell has-translit"><span class="ar">م</span><span class="translit">Meem</span></div><div class="grid-cell has-translit"><span class="ar">ن</span><span class="translit">Noon</span></div><div class="grid-cell has-translit"><span class="ar">ه</span><span class="translit">Haa (light)</span></div><div class="grid-cell has-translit"><span class="ar">و</span><span class="translit">Waaw</span></div><div class="grid-cell has-translit"><span class="ar">ي</span><span class="translit">Yaa</span></div></div>
         <div class="status-bar" id="status-screen-1"></div>
     </div>
 
@@ -684,19 +789,19 @@
             <p>– On a light letter, it has the "a" sound as in the word "car".</p>
             <p>– On a heavy letter, it has the "o" sound as in the word "hot".</p>
         </div>
-        <div class="practice-grid" id="new-short-fat-ha-grid"></div>
+        <div class="practice-grid" id="new-short-fat-ha-grid"><div class="practice-cell"><span class="ar">أَ</span></div><div class="practice-cell"><span class="ar">بَ</span></div><div class="practice-cell"><span class="ar">تَ</span></div><div class="practice-cell"><span class="ar">ثَ</span></div><div class="practice-cell"><span class="ar">جَ</span></div><div class="practice-cell"><span class="ar">حَ</span></div><div class="practice-cell"><span class="ar">خَ</span></div><div class="practice-cell"><span class="ar">دَ</span></div><div class="practice-cell"><span class="ar">ذَ</span></div><div class="practice-cell"><span class="ar">رَ</span></div><div class="practice-cell"><span class="ar">زَ</span></div><div class="practice-cell"><span class="ar">سَ</span></div><div class="practice-cell"><span class="ar">شَ</span></div><div class="practice-cell"><span class="ar">صَ</span></div><div class="practice-cell"><span class="ar">ضَ</span></div><div class="practice-cell"><span class="ar">طَ</span></div><div class="practice-cell"><span class="ar">ظَ</span></div><div class="practice-cell"><span class="ar">عَ</span></div><div class="practice-cell"><span class="ar">غَ</span></div><div class="practice-cell"><span class="ar">فَ</span></div><div class="practice-cell"><span class="ar">قَ</span></div><div class="practice-cell"><span class="ar">كَ</span></div><div class="practice-cell"><span class="ar">لَ</span></div><div class="practice-cell"><span class="ar">مَ</span></div><div class="practice-cell"><span class="ar">نَ</span></div><div class="practice-cell"><span class="ar">هَ</span></div><div class="practice-cell"><span class="ar">وَ</span></div><div class="practice-cell"><span class="ar">يَ</span></div></div>
         <h3 style="text-align:center;">Letters with Kasrah</h3>
         <div class="vowel-desc">
             <p>– It is a small line that appears below a letter.</p>
             <p>– It has the "i" sound as in the word "in".</p>
         </div>
-        <div class="practice-grid" id="new-short-kasrah-grid"></div>
+        <div class="practice-grid" id="new-short-kasrah-grid"><div class="practice-cell"><span class="ar">إِ</span></div><div class="practice-cell"><span class="ar">بِ</span></div><div class="practice-cell"><span class="ar">تِ</span></div><div class="practice-cell"><span class="ar">ثِ</span></div><div class="practice-cell"><span class="ar">جِ</span></div><div class="practice-cell"><span class="ar">حِ</span></div><div class="practice-cell"><span class="ar">خِ</span></div><div class="practice-cell"><span class="ar">دِ</span></div><div class="practice-cell"><span class="ar">ذِ</span></div><div class="practice-cell"><span class="ar">رِ</span></div><div class="practice-cell"><span class="ar">زِ</span></div><div class="practice-cell"><span class="ar">سِ</span></div><div class="practice-cell"><span class="ar">شِ</span></div><div class="practice-cell"><span class="ar">صِ</span></div><div class="practice-cell"><span class="ar">ضِ</span></div><div class="practice-cell"><span class="ar">طِ</span></div><div class="practice-cell"><span class="ar">ظِ</span></div><div class="practice-cell"><span class="ar">عِ</span></div><div class="practice-cell"><span class="ar">غِ</span></div><div class="practice-cell"><span class="ar">فِ</span></div><div class="practice-cell"><span class="ar">قِ</span></div><div class="practice-cell"><span class="ar">كِ</span></div><div class="practice-cell"><span class="ar">لِ</span></div><div class="practice-cell"><span class="ar">مِ</span></div><div class="practice-cell"><span class="ar">نِ</span></div><div class="practice-cell"><span class="ar">هِ</span></div><div class="practice-cell"><span class="ar">وِ</span></div><div class="practice-cell"><span class="ar">يِ</span></div></div>
         <h3 style="text-align:center;">Letters with Dhammah</h3>
         <div class="vowel-desc">
             <p>– It is a small version of the letter "و" which appears above a letter.</p>
             <p>– It has the "u" sound as in the word "put".</p>
         </div>
-        <div class="practice-grid" id="dhammah-image-grid"></div>
+        <div class="practice-grid" id="dhammah-image-grid"><div class="practice-cell"><span class="ar">أُ</span></div><div class="practice-cell"><span class="ar">بُ</span></div><div class="practice-cell"><span class="ar">تُ</span></div><div class="practice-cell"><span class="ar">ثُ</span></div><div class="practice-cell"><span class="ar">جُ</span></div><div class="practice-cell"><span class="ar">حُ</span></div><div class="practice-cell"><span class="ar">خُ</span></div><div class="practice-cell"><span class="ar">دُ</span></div><div class="practice-cell"><span class="ar">ذُ</span></div><div class="practice-cell"><span class="ar">رُ</span></div><div class="practice-cell"><span class="ar">زُ</span></div><div class="practice-cell"><span class="ar">سُ</span></div><div class="practice-cell"><span class="ar">شُ</span></div><div class="practice-cell"><span class="ar">صُ</span></div><div class="practice-cell"><span class="ar">ضُ</span></div><div class="practice-cell"><span class="ar">طُ</span></div><div class="practice-cell"><span class="ar">ظُ</span></div><div class="practice-cell"><span class="ar">عُ</span></div><div class="practice-cell"><span class="ar">غُ</span></div><div class="practice-cell"><span class="ar">فُ</span></div><div class="practice-cell"><span class="ar">قُ</span></div><div class="practice-cell"><span class="ar">كُ</span></div><div class="practice-cell"><span class="ar">لُ</span></div><div class="practice-cell"><span class="ar">مُ</span></div><div class="practice-cell"><span class="ar">نُ</span></div><div class="practice-cell"><span class="ar">هُ</span></div><div class="practice-cell"><span class="ar">وُ</span></div><div class="practice-cell"><span class="ar">يُ</span></div></div>
     </div>
 
     <div id="screen-3" class="screen">
@@ -705,16 +810,16 @@
             Tap any letter to hear its pronunciation. (Practice only.)
         </p>
         <h3 style="text-align:center;">Letters with Fat'hah</h3>
-        <div class="practice-grid" id="short-fat-ha-grid"></div>
+        <div class="practice-grid" id="short-fat-ha-grid"><div class="practice-cell"><span class="ar">أَبَ</span></div><div class="practice-cell"><span class="ar">تَبَ</span></div><div class="practice-cell"><span class="ar">ثَتَ</span></div><div class="practice-cell"><span class="ar">جَحَ</span></div><div class="practice-cell"><span class="ar">خَخَ</span></div><div class="practice-cell"><span class="ar">دَذَ</span></div><div class="practice-cell"><span class="ar">رَزَ</span></div><div class="practice-cell"><span class="ar">سَشَ</span></div><div class="practice-cell"><span class="ar">صَضَ</span></div><div class="practice-cell"><span class="ar">طَظَ</span></div><div class="practice-cell"><span class="ar">عَغَ</span></div><div class="practice-cell"><span class="ar">فَقَ</span></div><div class="practice-cell"><span class="ar">كَ</span></div><div class="practice-cell"><span class="ar">لَ</span></div><div class="practice-cell"><span class="ar">مَ</span></div><div class="practice-cell"><span class="ar">نَ</span></div><div class="practice-cell"><span class="ar">هَ</span></div><div class="practice-cell"><span class="ar">وَ</span></div><div class="practice-cell"><span class="ar">يَ</span></div></div>
         <h3 style="text-align:center;margin-top:30px;">Letters with Dhammah</h3>
-        <div class="practice-grid" id="short-dhammah-grid"></div>
+        <div class="practice-grid" id="short-dhammah-grid"><div class="practice-cell"><span class="ar">أُبُ</span></div><div class="practice-cell"><span class="ar">تُبُ</span></div><div class="practice-cell"><span class="ar">ثُتُ</span></div><div class="practice-cell"><span class="ar">جُحُ</span></div><div class="practice-cell"><span class="ar">خُخُ</span></div><div class="practice-cell"><span class="ar">دُذُ</span></div><div class="practice-cell"><span class="ar">رُزُ</span></div><div class="practice-cell"><span class="ar">سُشُ</span></div><div class="practice-cell"><span class="ar">صُضُ</span></div><div class="practice-cell"><span class="ar">طُظُ</span></div><div class="practice-cell"><span class="ar">عُغُ</span></div><div class="practice-cell"><span class="ar">فُقُ</span></div><div class="practice-cell"><span class="ar">كُ</span></div><div class="practice-cell"><span class="ar">لُ</span></div><div class="practice-cell"><span class="ar">مُ</span></div><div class="practice-cell"><span class="ar">نُ</span></div><div class="practice-cell"><span class="ar">هُ</span></div><div class="practice-cell"><span class="ar">وُ</span></div><div class="practice-cell"><span class="ar">يُ</span></div></div>
         <h3 style="text-align:center;margin-top:30px;">Letters with Kasrah</h3>
-        <div class="practice-grid" id="short-kasrah-grid"></div>
+        <div class="practice-grid" id="short-kasrah-grid"><div class="practice-cell"><span class="ar">إِبِ</span></div><div class="practice-cell"><span class="ar">تِبِ</span></div><div class="practice-cell"><span class="ar">ثِتِ</span></div><div class="practice-cell"><span class="ar">جِحِ</span></div><div class="practice-cell"><span class="ar">خِخِ</span></div><div class="practice-cell"><span class="ar">دِذِ</span></div><div class="practice-cell"><span class="ar">رِزِ</span></div><div class="practice-cell"><span class="ar">سِشِ</span></div><div class="practice-cell"><span class="ar">صِضِ</span></div><div class="practice-cell"><span class="ar">طِظِ</span></div><div class="practice-cell"><span class="ar">عِغِ</span></div><div class="practice-cell"><span class="ar">فِقِ</span></div><div class="practice-cell"><span class="ar">كِ</span></div><div class="practice-cell"><span class="ar">لِ</span></div><div class="practice-cell"><span class="ar">مِ</span></div><div class="practice-cell"><span class="ar">نِ</span></div><div class="practice-cell"><span class="ar">هِ</span></div><div class="practice-cell"><span class="ar">وِ</span></div><div class="practice-cell"><span class="ar">يِ</span></div></div>
     </div>
 
     <div id="screen-4" class="screen">
         <h2 style="text-align:center;">Short Vowel Practice</h2>
-        <div class="practice-grid" id="short-practice-grid"></div>
+        <div class="practice-grid" id="short-practice-grid"><div class="practice-cell"><span class="ar">رَفَعَ</span></div><div class="practice-cell"><span class="ar">أَمَرَ</span></div><div class="practice-cell"><span class="ar">كَسَبَ</span></div><div class="practice-cell"><span class="ar">وَقَبَ</span></div><div class="practice-cell"><span class="ar">خَلَقَ</span></div><div class="practice-cell"><span class="ar">حَسَدَ</span></div><div class="practice-cell"><span class="ar">لَكَ</span></div><div class="practice-cell"><span class="ar">تَرَ</span></div><div class="practice-cell"><span class="ar">فَهُوَ</span></div><div class="practice-cell"><span class="ar">هُوَ</span></div><div class="practice-cell"><span class="ar">وَلِيَ</span></div><div class="practice-cell"><span class="ar">مَلَكَ</span></div><div class="practice-cell"><span class="ar">عَبَسَ</span></div><div class="practice-cell"><span class="ar">وَلَدَ</span></div><div class="practice-cell"><span class="ar">جَمَعَ</span></div><div class="practice-cell"><span class="ar">فَعَلَ</span></div><div class="practice-cell"><span class="ar">إِرَمْ</span></div><div class="practice-cell"><span class="ar">لَهُ</span></div><div class="practice-cell"><span class="ar">صُحُفَ</span></div><div class="practice-cell"><span class="ar">خُلُقَ</span></div><div class="practice-cell"><span class="ar">قُتِلَ</span></div><div class="practice-cell"><span class="ar">أُذِنَ</span></div><div class="practice-cell"><span class="ar">يَكُنْ</span></div><div class="practice-cell"><span class="ar">خَشِيَ</span></div></div>
     </div>
 
     <div id="screen-5" class="screen">
@@ -730,25 +835,25 @@
             <p>– Long vowels are lengthened for 2 counts.</p>
         </div>
         <h3 style="text-align:center;">Letters</h3>
-        <div class="practice-grid" id="long-fat-ha-grid"></div>
+        <div class="practice-grid" id="long-fat-ha-grid"><div class="practice-cell"><span class="ar">بَا</span></div><div class="practice-cell"><span class="ar">تَا</span></div><div class="practice-cell"><span class="ar">ثَا</span></div><div class="practice-cell"><span class="ar">جَا</span></div><div class="practice-cell"><span class="ar">حَا</span></div><div class="practice-cell"><span class="ar">خَا</span></div><div class="practice-cell"><span class="ar">دَا</span></div><div class="practice-cell"><span class="ar">ذَا</span></div><div class="practice-cell"><span class="ar">رَا</span></div><div class="practice-cell"><span class="ar">زَا</span></div><div class="practice-cell"><span class="ar">سَا</span></div><div class="practice-cell"><span class="ar">شَا</span></div><div class="practice-cell"><span class="ar">صَا</span></div><div class="practice-cell"><span class="ar">ضَا</span></div><div class="practice-cell"><span class="ar">طَا</span></div><div class="practice-cell"><span class="ar">ظَا</span></div><div class="practice-cell"><span class="ar">عَا</span></div><div class="practice-cell"><span class="ar">غَا</span></div><div class="practice-cell"><span class="ar">فَا</span></div><div class="practice-cell"><span class="ar">قَا</span></div><div class="practice-cell"><span class="ar">كَا</span></div><div class="practice-cell"><span class="ar">لَا</span></div><div class="practice-cell"><span class="ar">مَا</span></div><div class="practice-cell"><span class="ar">نَا</span></div><div class="practice-cell"><span class="ar">هَا</span></div><div class="practice-cell"><span class="ar">وَا</span></div><div class="practice-cell"><span class="ar">يَا</span></div></div>
         <h3 style="text-align:center;">Practice</h3>
-        <div class="practice-grid" id="long-fat-ha-practice-grid"></div>
+        <div class="practice-grid" id="long-fat-ha-practice-grid"><div class="practice-cell"><span class="ar">زَادَ</span></div><div class="practice-cell"><span class="ar">خَافَ</span></div><div class="practice-cell"><span class="ar">تَابَ</span></div><div class="practice-cell"><span class="ar">جَاهَدَ</span></div><div class="practice-cell"><span class="ar">حَاسَبَ</span></div><div class="practice-cell"><span class="ar">جُنَاحُ</span></div><div class="practice-cell"><span class="ar">شَارَبَ</span></div><div class="practice-cell"><span class="ar">فَرَاغٌ</span></div><div class="practice-cell"><span class="ar">خَادِعَ</span></div><div class="practice-cell"><span class="ar">قَاتَلَ</span></div><div class="practice-cell"><span class="ar">صَابَرَ</span></div><div class="practice-cell"><span class="ar">تَعَالَ</span></div></div>
     </div>
 
     <div id="screen-6" class="screen">
         <h2 style="text-align:center;">Long Vowels with Kasrah</h2>
         <h3 style="text-align:center;">Letters</h3>
-        <div class="practice-grid" id="long-kasrah-grid"></div>
+        <div class="practice-grid" id="long-kasrah-grid"><div class="practice-cell"><span class="ar">إِي</span></div><div class="practice-cell"><span class="ar">بِي</span></div><div class="practice-cell"><span class="ar">تِي</span></div><div class="practice-cell"><span class="ar">ثِي</span></div><div class="practice-cell"><span class="ar">جِي</span></div><div class="practice-cell"><span class="ar">حِي</span></div><div class="practice-cell"><span class="ar">خِي</span></div><div class="practice-cell"><span class="ar">دِي</span></div><div class="practice-cell"><span class="ar">ذِي</span></div><div class="practice-cell"><span class="ar">رِي</span></div><div class="practice-cell"><span class="ar">زِي</span></div><div class="practice-cell"><span class="ar">سِي</span></div><div class="practice-cell"><span class="ar">شِي</span></div><div class="practice-cell"><span class="ar">صِي</span></div><div class="practice-cell"><span class="ar">ضِي</span></div><div class="practice-cell"><span class="ar">طِي</span></div><div class="practice-cell"><span class="ar">ظِي</span></div><div class="practice-cell"><span class="ar">عِي</span></div><div class="practice-cell"><span class="ar">غِي</span></div><div class="practice-cell"><span class="ar">فِي</span></div><div class="practice-cell"><span class="ar">قِي</span></div><div class="practice-cell"><span class="ar">كِي</span></div><div class="practice-cell"><span class="ar">لِي</span></div><div class="practice-cell"><span class="ar">مِي</span></div><div class="practice-cell"><span class="ar">نِي</span></div><div class="practice-cell"><span class="ar">وِي</span></div><div class="practice-cell"><span class="ar">هِي</span></div><div class="practice-cell"><span class="ar">ئِي</span></div><div class="practice-cell"><span class="ar">يِي</span></div></div>
         <h3 style="text-align:center;">Practice</h3>
-        <div class="practice-grid" id="long-kasrah-practice-grid"></div>
+        <div class="practice-grid" id="long-kasrah-practice-grid"><div class="practice-cell"><span class="ar">دِينِي</span></div><div class="practice-cell"><span class="ar">فِيهِ</span></div><div class="practice-cell"><span class="ar">أَرِنِي</span></div><div class="practice-cell"><span class="ar">كِتَابِي</span></div><div class="practice-cell"><span class="ar">أَحِيبُ</span></div><div class="practice-cell"><span class="ar">بُوَارِي</span></div><div class="practice-cell"><span class="ar">مَفَاتِيحُ</span></div><div class="practice-cell"><span class="ar">رَازِقِينَ</span></div><div class="practice-cell"><span class="ar">عِبَادِي</span></div><div class="practice-cell"><span class="ar">عَذَابِي</span></div><div class="practice-cell"><span class="ar">تَمَاثِيلُ</span></div><div class="practice-cell"><span class="ar">مَقَادِيرُ</span></div><div class="practice-cell"><span class="ar">أَخِيهِ</span></div><div class="practice-cell"><span class="ar">بَنِيهِ</span></div></div>
     </div>
 
     <div id="screen-7" class="screen">
         <h2 style="text-align:center;">Long Vowels with Dhammah</h2>
         <h3 style="text-align:center;">Letters</h3>
-        <div class="practice-grid" id="long-dhammah-grid"></div>
+        <div class="practice-grid" id="long-dhammah-grid"><div class="practice-cell"><span class="ar">أُو</span></div><div class="practice-cell"><span class="ar">بُو</span></div><div class="practice-cell"><span class="ar">تُو</span></div><div class="practice-cell"><span class="ar">ثُو</span></div><div class="practice-cell"><span class="ar">جُو</span></div><div class="practice-cell"><span class="ar">حُو</span></div><div class="practice-cell"><span class="ar">خُو</span></div><div class="practice-cell"><span class="ar">دُو</span></div><div class="practice-cell"><span class="ar">ذُو</span></div><div class="practice-cell"><span class="ar">رُو</span></div><div class="practice-cell"><span class="ar">زُو</span></div><div class="practice-cell"><span class="ar">سُو</span></div><div class="practice-cell"><span class="ar">شُو</span></div><div class="practice-cell"><span class="ar">صُو</span></div><div class="practice-cell"><span class="ar">ضُو</span></div><div class="practice-cell"><span class="ar">طُو</span></div><div class="practice-cell"><span class="ar">ظُو</span></div><div class="practice-cell"><span class="ar">عُو</span></div><div class="practice-cell"><span class="ar">غُو</span></div><div class="practice-cell"><span class="ar">فُو</span></div><div class="practice-cell"><span class="ar">قُو</span></div><div class="practice-cell"><span class="ar">كُو</span></div><div class="practice-cell"><span class="ar">لُو</span></div><div class="practice-cell"><span class="ar">مُو</span></div><div class="practice-cell"><span class="ar">نُو</span></div><div class="practice-cell"><span class="ar">هُو</span></div><div class="practice-cell"><span class="ar">وُو</span></div><div class="practice-cell"><span class="ar">يُو</span></div></div>
         <h3 style="text-align:center;">Practice</h3>
-        <div class="practice-grid" id="long-dhammah-practice-grid"></div>
+        <div class="practice-grid" id="long-dhammah-practice-grid"><div class="practice-cell"><span class="ar">نُوحٌ</span></div><div class="practice-cell"><span class="ar">طُورٌ</span></div><div class="practice-cell"><span class="ar">تُوبُوا</span></div><div class="practice-cell"><span class="ar">نُورٌ</span></div><div class="practice-cell"><span class="ar">قَالُوا</span></div><div class="practice-cell"><span class="ar">يَرْجُو</span></div><div class="practice-cell"><span class="ar">يَقُومُ</span></div><div class="practice-cell"><span class="ar">تَكُونُ</span></div><div class="practice-cell"><span class="ar">هَارُونَ</span></div><div class="practice-cell"><span class="ar">قَارُونَ</span></div><div class="practice-cell"><span class="ar">دَاخِرُونَ</span></div><div class="practice-cell"><span class="ar">سَبَقُونَا</span></div><div class="practice-cell"><span class="ar">بَاسِطُونَ</span></div><div class="practice-cell"><span class="ar">رَاجِعُونَ</span></div></div>
     </div>
 
     <div id="screen-8" class="screen">
@@ -761,11 +866,11 @@
             <p style="margin-top:10px;">Example: <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بًا</span> (ban), <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بٌ</span> (bun), <span style="font-family: 'Amiri', serif; font-size: 1.3rem;">بٍ</span> (bin).</p>
         </div>
         <h3 style="text-align:center;margin-top:20px;">Letters with Fat'hatain (ً)</h3>
-        <div class="practice-grid" id="tanwin-fat-ha-grid"></div>
+        <div class="practice-grid" id="tanwin-fat-ha-grid"><div class="practice-cell"><span class="ar">وًا</span></div><div class="practice-cell"><span class="ar">بًا</span></div><div class="practice-cell"><span class="ar">تًا</span></div><div class="practice-cell"><span class="ar">ثًا</span></div><div class="practice-cell"><span class="ar">جًا</span></div><div class="practice-cell"><span class="ar">حًا</span></div><div class="practice-cell"><span class="ar">خًا</span></div><div class="practice-cell"><span class="ar">يًا</span></div><div class="practice-cell"><span class="ar">هًا</span></div><div class="practice-cell"><span class="ar">نًا</span></div><div class="practice-cell"><span class="ar">مًا</span></div><div class="practice-cell"><span class="ar">لًا</span></div><div class="practice-cell"><span class="ar">كًا</span></div><div class="practice-cell"><span class="ar">دًا</span></div><div class="practice-cell"><span class="ar">قًا</span></div><div class="practice-cell"><span class="ar">فًا</span></div><div class="practice-cell"><span class="ar">غًا</span></div><div class="practice-cell"><span class="ar">عًا</span></div><div class="practice-cell"><span class="ar">ظًا</span></div><div class="practice-cell"><span class="ar">طًا</span></div><div class="practice-cell"><span class="ar">ضًا</span></div><div class="practice-cell"><span class="ar">صًا</span></div><div class="practice-cell"><span class="ar">شًا</span></div><div class="practice-cell"><span class="ar">سًا</span></div><div class="practice-cell"><span class="ar">زًا</span></div><div class="practice-cell"><span class="ar">رًا</span></div><div class="practice-cell"><span class="ar">ذًا</span></div></div>
         <h3 style="text-align:center;margin-top:20px;">Letters with Dhammatain (ٌ)</h3>
-        <div class="practice-grid" id="tanwin-dhammah-grid"></div>
+        <div class="practice-grid" id="tanwin-dhammah-grid"><div class="practice-cell"><span class="ar">وٌ</span></div><div class="practice-cell"><span class="ar">بٌ</span></div><div class="practice-cell"><span class="ar">تٌ</span></div><div class="practice-cell"><span class="ar">ثٌ</span></div><div class="practice-cell"><span class="ar">جٌ</span></div><div class="practice-cell"><span class="ar">حٌ</span></div><div class="practice-cell"><span class="ar">خٌ</span></div><div class="practice-cell"><span class="ar">يٌ</span></div><div class="practice-cell"><span class="ar">هٌ</span></div><div class="practice-cell"><span class="ar">نٌ</span></div><div class="practice-cell"><span class="ar">مٌ</span></div><div class="practice-cell"><span class="ar">لٌ</span></div><div class="practice-cell"><span class="ar">كٌ</span></div><div class="practice-cell"><span class="ar">دٌ</span></div><div class="practice-cell"><span class="ar">قٌ</span></div><div class="practice-cell"><span class="ar">فٌ</span></div><div class="practice-cell"><span class="ar">غٌ</span></div><div class="practice-cell"><span class="ar">عٌ</span></div><div class="practice-cell"><span class="ar">ظٌ</span></div><div class="practice-cell"><span class="ar">طٌ</span></div><div class="practice-cell"><span class="ar">ضٌ</span></div><div class="practice-cell"><span class="ar">صٌ</span></div><div class="practice-cell"><span class="ar">شٌ</span></div><div class="practice-cell"><span class="ar">سٌ</span></div><div class="practice-cell"><span class="ar">زٌ</span></div><div class="practice-cell"><span class="ar">رٌ</span></div><div class="practice-cell"><span class="ar">ذٌ</span></div></div>
         <h3 style="text-align:center;margin-top:20px;">Letters with Kasratain (ٍ)</h3>
-        <div class="practice-grid" id="tanwin-kasrah-grid"></div>
+        <div class="practice-grid" id="tanwin-kasrah-grid"><div class="practice-cell"><span class="ar">وٍ</span></div><div class="practice-cell"><span class="ar">بٍ</span></div><div class="practice-cell"><span class="ar">تٍ</span></div><div class="practice-cell"><span class="ar">ثٍ</span></div><div class="practice-cell"><span class="ar">جٍ</span></div><div class="practice-cell"><span class="ar">حٍ</span></div><div class="practice-cell"><span class="ar">خٍ</span></div><div class="practice-cell"><span class="ar">يٍ</span></div><div class="practice-cell"><span class="ar">هِ</span></div><div class="practice-cell"><span class="ar">نٍ</span></div><div class="practice-cell"><span class="ar">مٍ</span></div><div class="practice-cell"><span class="ar">لٍ</span></div><div class="practice-cell"><span class="ar">كٍ</span></div><div class="practice-cell"><span class="ar">دٍ</span></div><div class="practice-cell"><span class="ar">قٍ</span></div><div class="practice-cell"><span class="ar">فٍ</span></div><div class="practice-cell"><span class="ar">غٍ</span></div><div class="practice-cell"><span class="ar">عٍ</span></div><div class="practice-cell"><span class="ar">ظٍ</span></div><div class="practice-cell"><span class="ar">طٍ</span></div><div class="practice-cell"><span class="ar">ضٍ</span></div><div class="practice-cell"><span class="ar">صٍ</span></div><div class="practice-cell"><span class="ar">شٍ</span></div><div class="practice-cell"><span class="ar">سٍ</span></div><div class="practice-cell"><span class="ar">زٍ</span></div><div class="practice-cell"><span class="ar">رٍ</span></div><div class="practice-cell"><span class="ar">ذٍ</span></div></div>
     </div>
 
     <div id="screen-9" class="screen">
@@ -774,7 +879,7 @@
             <p>– In Arabic, letters can take various forms when they are joined together.</p>
             <p>– The top letter is always read first and the first dot or set of dots belongs to that letter.</p>
         </div>
-        <div class="practice-grid" id="joining-grid"></div>
+        <div class="practice-grid" id="joining-grid"><div class="practice-cell"><span class="ar">بـ</span></div><div class="practice-cell"><span class="ar">تـ</span></div><div class="practice-cell"><span class="ar">ثـ</span></div><div class="practice-cell"><span class="ar">جـ</span></div><div class="practice-cell"><span class="ar">حـ</span></div><div class="practice-cell"><span class="ar">خـ</span></div><div class="practice-cell"><span class="ar">هـ</span></div><div class="practice-cell"><span class="ar">ـبـ</span></div><div class="practice-cell"><span class="ar">ـتـ</span></div><div class="practice-cell"><span class="ar">ـثـ</span></div><div class="practice-cell"><span class="ar">ـجـ</span></div><div class="practice-cell"><span class="ar">ـحـ</span></div><div class="practice-cell"><span class="ar">ـخـ</span></div><div class="practice-cell"><span class="ar">ـهـ</span></div><div class="practice-cell"><span class="ar">ـب</span></div><div class="practice-cell"><span class="ar">ـت</span></div><div class="practice-cell"><span class="ar">ـث</span></div><div class="practice-cell"><span class="ar">ـج</span></div><div class="practice-cell"><span class="ar">ـح</span></div><div class="practice-cell"><span class="ar">ـخ</span></div><div class="practice-cell"><span class="ar">ـه</span></div><div class="practice-cell"><span class="ar">بـ</span></div><div class="practice-cell"><span class="ar">تـ</span></div><div class="practice-cell"><span class="ar">ثـ</span></div><div class="practice-cell"><span class="ar">جـ</span></div><div class="practice-cell"><span class="ar">حـ</span></div><div class="practice-cell"><span class="ar">خـ</span></div><div class="practice-cell"><span class="ar">هـ</span></div><div class="practice-cell"><span class="ar">ـبـ</span></div><div class="practice-cell"><span class="ar">ـتـ</span></div><div class="practice-cell"><span class="ar">ـثـ</span></div><div class="practice-cell"><span class="ar">ـجـ</span></div><div class="practice-cell"><span class="ar">ـحـ</span></div><div class="practice-cell"><span class="ar">ـخـ</span></div><div class="practice-cell"><span class="ar">ـهـ</span></div><div class="practice-cell"><span class="ar">ـب</span></div><div class="practice-cell"><span class="ar">ـت</span></div><div class="practice-cell"><span class="ar">ـث</span></div><div class="practice-cell"><span class="ar">ـج</span></div><div class="practice-cell"><span class="ar">ـح</span></div><div class="practice-cell"><span class="ar">ـخ</span></div><div class="practice-cell"><span class="ar">ـه</span></div><div class="practice-cell"><span class="ar">بـ</span></div><div class="practice-cell"><span class="ar">تـ</span></div><div class="practice-cell"><span class="ar">ثـ</span></div><div class="practice-cell"><span class="ar">جـ</span></div><div class="practice-cell"><span class="ar">حـ</span></div><div class="practice-cell"><span class="ar">خـ</span></div><div class="practice-cell"><span class="ar">هـ</span></div></div>
     </div>
 
     <div id="screen-10" class="screen">
@@ -788,7 +893,7 @@
             <p style="text-align: center; margin-top: 10px;">Example:</p>
             <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem;">الشَّمْس</p>
         </div>
-        <div class="practice-grid" id="sun-moon-grid"></div>
+        <div class="practice-grid" id="sun-moon-grid"><div class="practice-cell"><span class="ar">الْقَمَرُ</span></div><div class="practice-cell"><span class="ar">الَّذِينَ</span></div><div class="practice-cell"><span class="ar">الطُّورُ</span></div><div class="practice-cell"><span class="ar">الضِّعْفُ</span></div><div class="practice-cell"><span class="ar">الْأَرْضِ</span></div><div class="practice-cell"><span class="ar">الْمِيزَانَ</span></div><div class="practice-cell"><span class="ar">الصِّيَامُ</span></div><div class="practice-cell"><span class="ar">الْفَتْحُ</span></div><div class="practice-cell"><span class="ar">الرُّوحُ</span></div><div class="practice-cell"><span class="ar">الْبَلَدِ</span></div><div class="practice-cell"><span class="ar">الصُّبْحُ</span></div><div class="practice-cell"><span class="ar">النُّجُومُ</span></div><div class="practice-cell"><span class="ar">اللِّقَاءُ</span></div><div class="practice-cell"><span class="ar">الْقَارِعَةُ</span></div><div class="practice-cell"><span class="ar">التِّينِ</span></div><div class="practice-cell"><span class="ar">السَّمَاءُ</span></div><div class="practice-cell"><span class="ar">النَّاسِ</span></div><div class="practice-cell"><span class="ar">الذِّبَابُ</span></div><div class="practice-cell"><span class="ar">الثُّرَابِ</span></div><div class="practice-cell"><span class="ar">الْمِسْكِينِ</span></div><div class="practice-cell"><span class="ar">الذَّهَبُ</span></div><div class="practice-cell"><span class="ar">النَّارُ</span></div><div class="practice-cell"><span class="ar">الطَّارِقُ</span></div><div class="practice-cell"><span class="ar">الْخُرُوجُ</span></div><div class="practice-cell"><span class="ar">الْقَوْمُ</span></div><div class="practice-cell"><span class="ar">الظَّالِمُ</span></div><div class="practice-cell"><span class="ar">الْهُدَى</span></div><div class="practice-cell"><span class="ar">السُّجُودُ</span></div><div class="practice-cell"><span class="ar">الْمِيرَاثُ</span></div><div class="practice-cell"><span class="ar">الشِّتَاءُ</span></div><div class="practice-cell"><span class="ar">السَّبِيلُ</span></div></div>
         <div class="status-bar" id="status-screen-10"></div>
     </div>
 
@@ -801,12 +906,12 @@
             <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الدِّينِ</p>
             <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">الرَّحْمَنِ</p>
         </div>
-        <button class="btn btn-start-test" data-screen="screen-11" onclick="handleTestButton(this)">Start Test</button>
-        <div class="practice-grid" id="hamza-grid"></div>
+        <button class="btn btn-start-test" data-screen="screen-11" onclick="handleTestButton(this)">Start Test</button><div class="score-progress-container" data-score-key="screen-11" data-populated="1"><div class="score-info"><span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">30</span></span><span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">30</span></span><span class="completion-badge">✓ Completed</span></div><div class="progress-bar-bg"><div class="progress-bar-fill"></div></div></div>
+        <div class="practice-grid" id="hamza-grid"><div class="practice-cell"><span class="ar">فَانصَبْ</span></div><div class="practice-cell"><span class="ar">لَيْلَةُ الْقَدْرِ</span></div><div class="practice-cell"><span class="ar">وَالرَّيْشُونَ</span></div><div class="practice-cell"><span class="ar">بِاسْمِ</span></div><div class="practice-cell"><span class="ar">وَالْأُخْرَى</span></div><div class="practice-cell"><span class="ar">الْغَفُورُ الْوَدُودُ</span></div><div class="practice-cell"><span class="ar">هُوَ اللَّهُ</span></div><div class="practice-cell"><span class="ar">اللَّهُ الصَّمَدُ</span></div><div class="practice-cell"><span class="ar">إِنَّ الْمُسْلِمِينَ</span></div><div class="practice-cell"><span class="ar">بِاللَّيْلِ</span></div><div class="practice-cell"><span class="ar">وَكَانَ اللَّهُ</span></div><div class="practice-cell"><span class="ar">عَلَّمَ الْقُرْآنَ</span></div><div class="practice-cell"><span class="ar">عِندَ اللَّهِ</span></div><div class="practice-cell"><span class="ar">وَهُوَ الْعَزِيزُ</span></div><div class="practice-cell"><span class="ar">إِنَّ الْأَوَّلِينَ</span></div><div class="practice-cell"><span class="ar">وَالصُّحْى</span></div><div class="practice-cell"><span class="ar">هُوَ الْأَوَّلُ</span></div><div class="practice-cell"><span class="ar">هُمُ الْمُفْلِحُونَ</span></div><div class="practice-cell"><span class="ar">بِالْقَلَمِ</span></div><div class="practice-cell"><span class="ar">هُوَ الَّذِي</span></div><div class="practice-cell"><span class="ar">إِنَّ الشِّرْكَ</span></div><div class="practice-cell"><span class="ar">وَالنَّجْمِ</span></div><div class="practice-cell"><span class="ar">مِنَ الَّذِينَ</span></div><div class="practice-cell"><span class="ar">فَتَمَتَّعُوا</span></div><div class="practice-cell"><span class="ar">وَالْتِّينِ</span></div><div class="practice-cell"><span class="ar">جَنَاحَ الذُّلِّ</span></div><div class="practice-cell"><span class="ar">عَنِ النَّبَإِ الْعَظِيمِ</span></div><div class="practice-cell"><span class="ar">مِنَ الرُّسُلِ</span></div><div class="practice-cell"><span class="ar">أَنَّهُ الْفِرَاقُ</span></div><div class="practice-cell"><span class="ar">وَاسْتَغْفِرُوا اللَّهَ</span></div></div>
         <div class="status-bar" id="status-screen-11"></div>
     </div>
 
-    <div id="screen-12" class="screen">
+    <div id="screen-12" class="screen active">
         <h2 style="text-align:center;">Stopping Rules</h2>
         <div class="vowel-desc">
             <p><strong>Stopping rules:</strong></p>
@@ -829,11 +934,11 @@
             <p>When stopping on a word ending with double fathah, one fathah is dropped and the word is pronounced with long vowel.</p>
             <p style="text-align: center; font-family: 'Amiri', serif; font-size: 1.8rem; direction: rtl;">يَقُولُ أَهْلَكْتُ مَالًا لُّبَدًا</p>
         </div>
-        <button class="btn btn-start-test" data-screen="screen-12" onclick="handleTestButton(this)">Start Test</button>
+        <button class="btn btn-start-test" data-screen="screen-12" onclick="handleTestButton(this)">Start Test</button><div class="score-progress-container" data-score-key="screen-12" data-populated="1"><div class="score-info"><span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">10</span></span><span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">10</span></span><span class="completion-badge">✓ Completed</span></div><div class="progress-bar-bg"><div class="progress-bar-fill"></div></div></div>
         <h3>Short Vowels &amp; Tanwin</h3>
-        <div class="practice-grid" id="stopping-1-grid"></div>
+        <div class="practice-grid" id="stopping-1-grid"><div class="practice-cell"><span class="ar">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</span></div><div class="practice-cell"><span class="ar">الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ</span></div><div class="practice-cell"><span class="ar">هُوَ اللَّهُ الَّذِي لَا إِلَهَ إِلَّا هُوَ</span></div><div class="practice-cell"><span class="ar">لِإِيلَافِ قُرَيْشٍ</span></div><div class="practice-cell"><span class="ar">سَيَصْلَى نَارًا ذَاتَ لَهَبٍ</span></div><div class="practice-cell"><span class="ar">أَيَحْسَبُ أَنْ لَمْ يَرَهُ أَحَدٌ</span></div><div class="practice-cell"><span class="ar">يَقُولُ أَهْلَكْتُ مَالًا لُّبَدًا</span></div></div>
         <h3>Long Vowels &amp; Taa Marbootah</h3>
-        <div class="practice-grid" id="stopping-2-grid"></div>
+        <div class="practice-grid" id="stopping-2-grid"><div class="practice-cell"><span class="ar">وَالشَّمْسِ وَضُحَاهَا</span></div><div class="practice-cell"><span class="ar">وَاللَّيْلِ إِذَا يَغْشَى</span></div><div class="practice-cell"><span class="ar">وَبِالْآخِرَةِ هُمْ يُوقِنُونَ</span></div></div>
         <div class="status-bar" id="status-screen-12"></div>
     </div>
 
@@ -842,7 +947,7 @@
         <p style="text-align:center;color:var(--text-light);font-size:0.9rem;margin:4px 0 12px 0;">
             Tap any word to hear its pronunciation. (Practice only.)
         </p>
-        <div class="practice-grid" id="review-grid"></div>
+        <div class="practice-grid" id="review-grid"><div class="practice-cell"><span class="ar">رَفَعَ</span></div><div class="practice-cell"><span class="ar">أَمَرَ</span></div><div class="practice-cell"><span class="ar">كَسَبَ</span></div><div class="practice-cell"><span class="ar">وَقَبَ</span></div><div class="practice-cell"><span class="ar">خَلَقَ</span></div><div class="practice-cell"><span class="ar">حَسَدَ</span></div><div class="practice-cell"><span class="ar">لَكَ</span></div><div class="practice-cell"><span class="ar">تَرَ</span></div><div class="practice-cell"><span class="ar">فَهُوَ</span></div><div class="practice-cell"><span class="ar">هُوَ</span></div><div class="practice-cell"><span class="ar">وَلِيَ</span></div><div class="practice-cell"><span class="ar">مَلَكَ</span></div><div class="practice-cell"><span class="ar">عَبَسَ</span></div><div class="practice-cell"><span class="ar">وَلَدَ</span></div><div class="practice-cell"><span class="ar">جَمَعَ</span></div><div class="practice-cell"><span class="ar">فَعَلَ</span></div><div class="practice-cell"><span class="ar">إِرَمْ</span></div><div class="practice-cell"><span class="ar">لَهُ</span></div><div class="practice-cell"><span class="ar">صُحُفَ</span></div><div class="practice-cell"><span class="ar">خُلُقَ</span></div><div class="practice-cell"><span class="ar">قُتِلَ</span></div><div class="practice-cell"><span class="ar">أُذِنَ</span></div><div class="practice-cell"><span class="ar">يَكُنْ</span></div><div class="practice-cell"><span class="ar">خَشِيَ</span></div><div class="practice-cell"><span class="ar">زَادَ</span></div><div class="practice-cell"><span class="ar">خَافَ</span></div><div class="practice-cell"><span class="ar">تَابَ</span></div><div class="practice-cell"><span class="ar">جَاهَدَ</span></div><div class="practice-cell"><span class="ar">حَاسَبَ</span></div><div class="practice-cell"><span class="ar">جُنَاحُ</span></div><div class="practice-cell"><span class="ar">شَارَبَ</span></div><div class="practice-cell"><span class="ar">فَرَاغٌ</span></div><div class="practice-cell"><span class="ar">خَادِعَ</span></div><div class="practice-cell"><span class="ar">قَاتَلَ</span></div><div class="practice-cell"><span class="ar">صَابَرَ</span></div><div class="practice-cell"><span class="ar">تَعَالَ</span></div><div class="practice-cell"><span class="ar">دِينِي</span></div><div class="practice-cell"><span class="ar">فِيهِ</span></div><div class="practice-cell"><span class="ar">أَرِنِي</span></div><div class="practice-cell"><span class="ar">كِتَابِي</span></div><div class="practice-cell"><span class="ar">أَحِيبُ</span></div><div class="practice-cell"><span class="ar">بُوَارِي</span></div><div class="practice-cell"><span class="ar">مَفَاتِيحُ</span></div><div class="practice-cell"><span class="ar">رَازِقِينَ</span></div><div class="practice-cell"><span class="ar">عِبَادِي</span></div><div class="practice-cell"><span class="ar">عَذَابِي</span></div><div class="practice-cell"><span class="ar">تَمَاثِيلُ</span></div><div class="practice-cell"><span class="ar">مَقَادِيرُ</span></div><div class="practice-cell"><span class="ar">أَخِيهِ</span></div><div class="practice-cell"><span class="ar">بَنِيهِ</span></div><div class="practice-cell"><span class="ar">نُوحٌ</span></div><div class="practice-cell"><span class="ar">طُورٌ</span></div><div class="practice-cell"><span class="ar">تُوبُوا</span></div><div class="practice-cell"><span class="ar">نُورٌ</span></div><div class="practice-cell"><span class="ar">قَالُوا</span></div><div class="practice-cell"><span class="ar">يَرْجُو</span></div><div class="practice-cell"><span class="ar">يَقُومُ</span></div><div class="practice-cell"><span class="ar">تَكُونُ</span></div><div class="practice-cell"><span class="ar">هَارُونَ</span></div><div class="practice-cell"><span class="ar">قَارُونَ</span></div><div class="practice-cell"><span class="ar">دَاخِرُونَ</span></div><div class="practice-cell"><span class="ar">سَبَقُونَا</span></div><div class="practice-cell"><span class="ar">بَاسِطُونَ</span></div><div class="practice-cell"><span class="ar">رَاجِعُونَ</span></div></div>
     </div>
 
     <div id="screen-14" class="screen">
@@ -853,41 +958,41 @@
 
         <h3 style="text-align:center;">Surah 112 — Al-Ikhlas</h3>
         <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-112-grid" data-score-key="screen-14-surah-112" onclick="handleTestButton(this)">Start Test</button>
-        <div class="score-progress-container" data-score-key="screen-14-surah-112">
+        <div class="score-progress-container" data-score-key="screen-14-surah-112" data-populated="1">
             <div class="score-info">
-                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
-                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">15</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">15</span></span>
                 <span class="completion-badge">✓ Completed</span>
             </div>
             <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
         </div>
-        <div class="ayah-grid" id="surah-112-grid"></div>
+        <div class="ayah-grid" id="surah-112-grid"><div class="practice-cell"><span class="ar">قُلْ هُوَ اللَّهُ أَحَدٌ</span></div><div class="practice-cell"><span class="ar">اللَّهُ الصَّمَدُ</span></div><div class="practice-cell"><span class="ar">لَمْ يَلِدْ وَلَمْ يُولَدْ</span></div><div class="practice-cell"><span class="ar">وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ</span></div></div>
         <div class="status-bar" id="status-screen-14-surah-112"></div>
 
         <h3 style="text-align:center;margin-top:30px;">Surah 113 — Al-Falaq</h3>
         <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-113-grid" data-score-key="screen-14-surah-113" onclick="handleTestButton(this)">Start Test</button>
-        <div class="score-progress-container" data-score-key="screen-14-surah-113">
+        <div class="score-progress-container" data-score-key="screen-14-surah-113" data-populated="1">
             <div class="score-info">
-                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
-                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">15</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">15</span></span>
                 <span class="completion-badge">✓ Completed</span>
             </div>
             <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
         </div>
-        <div class="ayah-grid" id="surah-113-grid"></div>
+        <div class="ayah-grid" id="surah-113-grid"><div class="practice-cell"><span class="ar">قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ</span></div><div class="practice-cell"><span class="ar">مِن شَرِّ مَا خَلَقَ</span></div><div class="practice-cell"><span class="ar">وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ</span></div><div class="practice-cell"><span class="ar">وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ</span></div><div class="practice-cell"><span class="ar">وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ</span></div></div>
         <div class="status-bar" id="status-screen-14-surah-113"></div>
 
         <h3 style="text-align:center;margin-top:30px;">Surah 114 — An-Nas</h3>
         <button class="btn btn-start-test" data-screen="screen-14" data-grid="surah-114-grid" data-score-key="screen-14-surah-114" onclick="handleTestButton(this)">Start Test</button>
-        <div class="score-progress-container" data-score-key="screen-14-surah-114">
+        <div class="score-progress-container" data-score-key="screen-14-surah-114" data-populated="1">
             <div class="score-info">
-                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">0</span></span>
-                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">0</span></span>
+                <span>Score: <span class="score-value correct-count">0</span> / <span class="total-count">15</span></span>
+                <span class="best-score-badge">Best: <span class="best-score-val">0</span> / <span class="total-count-b">15</span></span>
                 <span class="completion-badge">✓ Completed</span>
             </div>
             <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
         </div>
-        <div class="ayah-grid" id="surah-114-grid"></div>
+        <div class="ayah-grid" id="surah-114-grid"><div class="practice-cell"><span class="ar">قُلْ أَعُوذُ بِرَبِّ النَّاسِ</span></div><div class="practice-cell"><span class="ar">مَلِكِ النَّاسِ</span></div><div class="practice-cell"><span class="ar">إِلَهِ النَّاسِ</span></div><div class="practice-cell"><span class="ar">مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ</span></div><div class="practice-cell"><span class="ar">الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ</span></div><div class="practice-cell"><span class="ar">مِنَ الْجِنَّةِ وَالنَّاسِ</span></div></div>
         <div class="status-bar" id="status-screen-14-surah-114"></div>
     </div>
 
@@ -950,8 +1055,7 @@
             (window.vaq = window.vaq || []).push(arguments);
         };
     </script>
-    <script defer src="/mt-demo/script.js" data-endpoint="/mt-demo"
-            onerror="console.warn('Vercel Analytics script failed to load from /mt-demo/script.js — check vercel.json rewrite and that /mt-demo path is reachable.');"></script>
+    <script defer="" src="/mt-demo/script.js" data-endpoint="/mt-demo" onerror="console.warn('Vercel Analytics script failed to load from /mt-demo/script.js — check vercel.json rewrite and that /mt-demo path is reachable.');"></script>
 
     <!-- ============================================================
          SERVICE WORKER REGISTRATION (fixes analytics + offline)
@@ -1172,22 +1276,57 @@
         }
 
         /** Returns an installed Arabic voice (ar-SA preferred), or null. Handles "ar_SA" (Android). */
+        function isArabicVoice(v){ const lang=normLang(v.lang); const name=(v.name||'').toLowerCase(); return lang==='ar'||lang.indexOf('ar-')===0||/arabic|عرب/.test(name); }
+        /* Browsers do NOT expose voice gender. We infer it from well-known voice names:
+           Apple: Majed = male, Laila/Salma = female. Google/Microsoft: names containing
+           Tariq/Tarik/Hamza/Omar/Khalid etc. = male. Unknown names = 'unknown', never assumed female. */
+        function voiceGender(v){ const n=(' '+(v.name||'').toLowerCase()+' '); if(/\bmajed\b|\btariq\b|\btarik\b|\bhamza\b|\bomar\b|\bkhalid\b|\bahmed\b|\bmale\b|\bman\b/.test(n)) return 'male'; if(/\blaila\b|\blayla\b|\bsalma\b|\bzeina\b|\bamina\b|\bfemale\b|\bwoman\b/.test(n)) return 'female'; if(/microsoft\s+(naayf|hameed)/.test(n)) return 'male'; if(/microsoft\s+(salma|zariyah)/.test(n)) return 'female'; return 'unknown'; }
         function pickArabicVoice() {
             if (!window.speechSynthesis) return null;
             const voices = getVoicesSafe();
-            let arSA = null, arAny = null;
-            for (let i = 0; i < voices.length; i++) {
-                const v = voices[i];
-                const lang = normLang(v.lang);
-                const name = (v.name || '').toLowerCase();
-                const isAr = lang === 'ar' || lang.indexOf('ar-') === 0 || /arabic|عرب/.test(name);
-                if (!isAr) continue;
-                if (!arSA && lang.indexOf('ar-sa') === 0) arSA = v;
-                if (!arAny) arAny = v;
-            }
-            return arSA || arAny || null;
+            let arSA=null, arAny=null;
+            for (let i=0;i<voices.length;i++){ const v=voices[i]; if(!isArabicVoice(v)) continue; if(!arSA&&normLang(v.lang).indexOf('ar-sa')===0) arSA=v; if(!arAny) arAny=v; }
+            return arSA||arAny||null;
+        }
+        function pickMaleArabicVoice(){
+            const voices=getVoicesSafe().filter(isArabicVoice);
+            const male=voices.filter(function(v){return voiceGender(v)==='male';});
+            if(male.length) return male.find(function(v){return normLang(v.lang).indexOf('ar-sa')===0;})||male[0];
+            return null;
         }
         function hasArabicVoice() { return !!pickArabicVoice(); }
+        function hasMaleArabicVoice(){ return !!pickMaleArabicVoice(); }
+        /* Per-platform download / install destination. A web page CANNOT silently install an
+           OS/browser TTS voice — there is no browser API for it — so we deep-link to the exact
+           OS settings screen (Android: TTS intent, Windows: ms-settings:speech, iOS/macOS: system
+           settings) and give the step-by-step guide. The online Arabic voice still plays meanwhile. */
+        function voiceDownloadLink(){
+            const p=detectPlatform();
+            if(p==='android') return {href:'intent:#Intent;action=com.android.settings.TTS_SETTINGS;end', label:'Open Android TTS settings', note:'In TTS settings → ⚙️ Speech Services by Google → Install voice data → العربية (Arabic).'};
+            if(p==='windows') return {href:'ms-settings:speech', label:'Open Windows Speech settings', note:'Speech → Manage voices → Add voices → Arabic (Saudi Arabia). Pick a male voice if listed.'};
+            if(p==='ios') return {href:'App-Prefs:root=ACCESSIBILITY&path=SPEECH', label:'Open iPhone Spoken Content', note:'Accessibility → Spoken Content → Voices → Arabic → download Majed (male).'};
+            if(p==='mac') return {href:'x-apple.systempreferences:com.apple.preference.universalaccess', label:'Open Mac Accessibility', note:'Accessibility → Spoken Content → System voice → Manage Voices → Arabic → Majed (male).'};
+            if(p==='linux') return {href:'https://www.google.com/chrome/', label:'Get Chrome (built-in Arabic voices)', note:'Chrome / Edge include online Arabic voices — no install needed.'};
+            return {href:'https://support.google.com/accessibility/answer/7329962', label:'Voice download help', note:'Install an Arabic TTS voice in your OS settings, then restart the browser.'};
+        }
+        let voiceCheckDone=false;
+        function checkMaleArabicVoice(auto){
+            return whenVoicesReady().then(function(){
+                const male=pickMaleArabicVoice(), any=pickArabicVoice();
+                const banner=document.getElementById('voice-status-banner'), title=document.getElementById('voice-status-title'), sub=document.getElementById('voice-status-sub'), link=document.getElementById('voice-status-link'), openBtn=document.getElementById('voice-status-open');
+                if(!banner) return {male:!!male, any:!!any};
+                if(male){ title.textContent='✅ Male Arabic voice ready — '+male.name; sub.textContent='The app will use it for letters and words.'; link.style.display='none'; openBtn.style.display='none'; banner.classList.remove('show'); }
+                else if(any){ title.textContent='⚠️ Arabic voice found, but no male voice detected ('+any.name+')'; sub.textContent='The app will still speak using this voice + the online voice. To get a male voice, install one below — the browser cannot install it automatically.'; const d=voiceDownloadLink(); link.href=d.href; link.textContent=d.label; link.style.display=''; link.title=d.note; sub.textContent+=' '+d.note; openBtn.style.display=detectPlatform()==='android'?'':'none'; banner.classList.add('show'); }
+                else { title.textContent='⚠️ No male Arabic voice installed'; sub.textContent='The app will use the free online Arabic voice for now. Browsers cannot install a voice automatically, so tap below to open the exact settings screen and download one.'; const d=voiceDownloadLink(); link.href=d.href; link.textContent=d.label; link.style.display=''; link.title=d.note; sub.textContent+=' '+d.note; openBtn.style.display=detectPlatform()==='android'?'':'none'; banner.classList.add('show'); }
+                voiceCheckDone=true; return {male:!!male, any:!!any};
+            });
+        }
+        function wireVoiceBanner(){
+            const re=document.getElementById('voice-status-recheck'); if(re) re.addEventListener('click', function(){ checkMaleArabicVoice(false); });
+            const dis=document.getElementById('voice-status-dismiss'); if(dis) dis.addEventListener('click', function(){ const b=document.getElementById('voice-status-banner'); if(b) b.classList.remove('show'); });
+            const op=document.getElementById('voice-status-open'); if(op) op.addEventListener('click', function(){ openTtsSettings(); });
+            const link=document.getElementById('voice-status-link'); if(link) link.addEventListener('click', function(e){ if((link.getAttribute('href')||'').indexOf('intent:')===0){ e.preventDefault(); openTtsSettings(); } });
+        }
 
         // Desktop browsers load their voice list asynchronously — wait for it (max 1.5 s).
         let voicesReadyPromise = null;
@@ -1246,9 +1385,11 @@
                         ? 'An Arabic voice is installed, but it did not play. Try the test button below, restart your browser, or install another voice.'
                         : 'No Arabic voice is installed on this device. The app tries a free <strong>online Arabic voice</strong> automatically' +
                           (online ? '' : ' — but you appear to be <strong>offline</strong>, so there is no sound right now') +
-                          '. For offline use and best quality, install one:') + '</p><ol>';
+                          '. For offline use and best quality, install a male voice:') + '</p><ol>';
             for (let i = 0; i < steps.length; i++) h += '<li>' + steps[i] + '</li>';
             h += '</ol><p style="font-size:0.85rem;color:var(--text-light);">Also check that your device volume is up and the tab is not muted.</p>';
+            const dl = voiceDownloadLink();
+            h += '<p><a href="'+dl.href+'" target="_blank" rel="noopener" style="display:inline-block;background:linear-gradient(180deg,#e8c33a,#c9a227);color:#1a2233;font-weight:800;padding:10px 14px;border-radius:10px;text-decoration:none">⬇ Download / Install male Arabic voice</a></p><p style="font-size:0.85rem;color:var(--text-light);">'+dl.note+'<br>Browsers cannot install a voice automatically — this link opens the exact settings screen.</p>';
             return h;
         }
 
@@ -1378,7 +1519,7 @@
 
             function speakLocal() {
                 const voices = getVoicesSafe();
-                const voice = pickArabicVoice();
+                const voice = pickMaleArabicVoice() || pickArabicVoice();
                 // Voice list loaded but no Arabic in it → straight to the online voice.
                 if (!hasSynth || (voices.length && !voice)) { goOnline(); return; }
 
@@ -2916,6 +3057,9 @@
                 populateCustomScores();
                 refreshAllBestScores();
                 wireGlobalHandlers();
+                wireVoiceBanner();
+                checkMaleArabicVoice(true);
+                if (window.speechSynthesis) { try{ window.speechSynthesis.addEventListener('voiceschanged', function(){ cachedVoice=null; if(voiceCheckDone) checkMaleArabicVoice(false); }); }catch(e){} }
                 if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
                 if (!SpeechRecognition) {
@@ -2949,6 +3093,8 @@
         window.closeQrOverlay = closeQrOverlay;
         window.handleQrOverlayClick = handleQrOverlayClick;
         window.showVoiceWizard = showVoiceWizard;
+        window.checkMaleArabicVoice = checkMaleArabicVoice;
+        window.pickMaleArabicVoice = pickMaleArabicVoice;
         window.closeVoiceWizard = closeVoiceWizard;
         window.openTtsSettings = openTtsSettings;
         window.testArabicVoice = testArabicVoice;
@@ -2962,5 +3108,6 @@
         }
     })();
     </script>
-</body>
-</html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
+
+</body></html>
