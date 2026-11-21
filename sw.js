@@ -1,47 +1,43 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.19 — Keep the Surah / Juz index “Jump to” + “Continue”
-   changes safe (new index.html).
+   v2.4.20 — Ship the FIXED “Jump to” / “Continue” tabs on the
+   Surah / Juz index (new index.html).
 
    Changes in this deployment:
      index.html (Surah index + Juz index):
-       • Two tabs directly below the Translation row:
-         “Jump to” and “Continue”.
-       • Jump to: pick Page / Surah / Juz, enter a number,
-         Go opens that page / surah / juz.
-         Page 1–604 · Surah 1–114 · Juz 1–30.
-       • Continue: shows the last reader page that was opened
-         and Resume reopens that exact page.
-       • The last page is saved in localStorage under
-         'qc.lastReaderPage' on every reader-page render and
-         again on pagehide / visibilitychange (app hidden or
-         closed), so Continue survives closing the app or
-         leaving the Surah / Juz index.
+       • FIX: the Jump to / Continue tabs could look dead. The old
+         code marked tabs as wired with a DOM attribute
+         (dataset.wired); if the page HTML was ever re-saved, that
+         attribute was baked in and no click handlers were attached.
+         Wiring state now lives in JS only, and ONE delegated
+         document-level click handler drives both tabs.
+       • Jump to: Page 1–604 · Surah 1–114 · Juz 1–30.
+       • Continue: Resume reopens the last reader page, saved in
+         localStorage under 'qc.lastReaderPage' on every render and
+         on pagehide / visibilitychange.
 
    Why this SW update is required — and what it protects:
-     • The old shell cache (qc-shell-2.4.18) still holds the
-       PREVIOUS index.html without Jump to / Continue. Without
-       a version bump, browsers / installed PWAs could keep
-       serving that stale copy and the new tabs would appear
-       to be missing, even though the new index.html was
-       deployed.
-     • Bumping VERSION to 2.4.19 creates fresh
-       qc-shell-2.4.19 / qc-text-2.4.19 / qc-fonts-2.4.19 /
-       qc-runtime-2.4.19 caches. ACTIVATE deletes the old
+     • The old shell cache (qc-shell-2.4.19) still holds the
+       PREVIOUS index.html with the broken tab wiring. Without a
+       version bump, browsers / installed PWAs could keep serving
+       that stale copy and the tabs would still look dead.
+     • Bumping VERSION to 2.4.20 creates fresh
+       qc-shell-2.4.20 / qc-text-2.4.20 / qc-fonts-2.4.20 /
+       qc-runtime-2.4.20 caches. ACTIVATE deletes the old
        versioned caches, and INSTALL pre-caches the NEW
-       index.html with { cache: 'reload' }, so the new tabs
-       are fetched, not resurrected from the old cache.
-     • Continue does NOT live in any Cache Storage entry.
-       It lives only in localStorage ('qc.lastReaderPage').
-       This SW never reads, writes, clears, or otherwise
-       touches localStorage, and no SW handler in this file
-       deletes localStorage. Clearing / updating caches
-       therefore cannot erase the saved Continue page.
-     • The persistent qc-audio cache is still preserved —
-       users keep downloaded surahs / translation audio.
-       CLEAR_CACHES now also preserves qc-audio for the
-       same reason (see MESSAGES below).
+       index.html with { cache: 'reload' }.
+     • Continue lives only in localStorage ('qc.lastReaderPage').
+       This SW never reads, writes or clears localStorage, so
+       cache updates cannot erase the saved Continue page.
+     • The persistent qc-audio cache is preserved — users keep
+       downloaded surahs / translation audio. CLEAR_CACHES also
+       preserves qc-audio.
+     • Hosts used by the page that this SW deliberately does NOT
+       intercept (they pass straight to the network): Adhan audio
+       (cdn.islamic.network is cached via the audio handler;
+       islamcan.com is not), api.bigdatacloud.net and
+       geocoding-api.open-meteo.com (prayer-time location lookups).
 
    Changes in this deployment (previous release, retained):
 
@@ -68,7 +64,7 @@
 
    Cache invalidation:
      qc-shell-* / qc-text-* / qc-fonts-* / qc-runtime-* are
-     bumped to 2.4.19 so the new index.html (with Jump to /
+     bumped to 2.4.20 so the fixed index.html (Jump to /
      Continue) is fetched. The persistent qc-audio cache is
      preserved — users keep their downloaded surahs and
      translation audio. localStorage ('qc.lastReaderPage')
@@ -97,7 +93,7 @@
 
 'use strict';
 
-const VERSION = '2.4.19';
+const VERSION = '2.4.20';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
