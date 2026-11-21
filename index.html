@@ -7234,6 +7234,7 @@ function isAcousticWordShapeMatch(w, seg) {
 }
 
 async function runMFAInference(w, seg, heard) {
+  if (!wantMic) return false;   // never run alignment after Stop / background
   if (!seg || !w || !heard) return false;
   const T = getBaseMsPerLetter();
   const expectedMs = Math.max(60, w.norm.length * (T || 110));
@@ -7652,7 +7653,7 @@ function showPermissionHelp(msg){
 
 let audioCtx=null, audioUnlocked=false;
 function unlockAudio(){
-  if(audioUnlocked){ return audioCtx; }
+  if(audioUnlocked){ try{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); _ctxSuspendedByUs = false; }catch(_){} return audioCtx; }
   try{
     audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==='suspended') audioCtx.resume();
@@ -7839,6 +7840,16 @@ volIcon.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === '
 window.addEventListener('resize', schedulePositionAudioOverlay);
 window.addEventListener('orientationchange', schedulePositionAudioOverlay);
 
+/* ── Hard-shutdown bookkeeping ───────────────────────────────
+   micEpoch   : bumped by every releaseMicStream(). A getUserMedia()
+                that resolves AFTER a release is stopped immediately.
+   micSession : bumped by every stop / hard shutdown. startReciting()
+                aborts if it changed while it was awaiting.          */
+let micEpoch = 0;
+let micSession = 0;
+const _micTestClosers = new Set();
+let _ctxSuspendedByUs = false;
+
 async function ensureMicStream(){
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
@@ -7857,9 +7868,16 @@ async function ensureMicStream(){
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
   try{
     lastMicError = null;
+    const _epoch = micEpoch;
     const s = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true }
     });
+    if(_epoch !== micEpoch){
+      // Stop / background / mode change happened while the permission
+      // prompt or device was opening — never leave this stream live.
+      try{ s.getTracks().forEach(t => t.stop()); }catch(_){}
+      return null;
+    }
     micStream = s;
     attachMicTrackListeners(s);
     const rmsOk = rmsAnalyser.start(s);
@@ -7872,6 +7890,7 @@ async function ensureMicStream(){
 }
 function muteMicStream(){ if(micStream){ try{ micStream.getAudioTracks().forEach(t => { t.enabled = false; }); }catch(e){} } rmsAnalyser.stop(); }
 function releaseMicStream(){
+  micEpoch++;
   detachMicTrackListeners();
   if(micTrackMutedTimer){ clearTimeout(micTrackMutedTimer); micTrackMutedTimer = null; }
   rmsAnalyser.stop();
@@ -7926,7 +7945,7 @@ function handleMicTrackIssue(kind){
   if(kind === 'ended'){
     (async () => {
       const s = await ensureMicStream().catch(() => null);
-      if(!wantMic) return;
+      if(!wantMic){ releaseMicStream(); return; }
       if(s){
         showToast('🔄 Microphone reconnected.', 2600);
         micDiagnosedWorking = false;
@@ -8186,7 +8205,9 @@ async function openMicTestModal(){
   let heardSomething = false;
   let testRms = null;
 
-  const close = () => { try{ cleanup(); }catch(_){} bg.remove(); };
+  let _mtClosed = false;
+  const close = () => { _mtClosed = true; _micTestClosers.delete(close); try{ cleanup(); }catch(_){} bg.remove(); };
+  _micTestClosers.add(close);
   bg.addEventListener('click', e => { if(e.target === bg) close(); });
   bg.querySelector('#mtClose').addEventListener('click', close);
   bg.querySelector('#mtRetry').addEventListener('click', () => { close(); setTimeout(() => openMicTestModal(), 100); });
@@ -8230,6 +8251,7 @@ async function openMicTestModal(){
 
   try{
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if(_mtClosed){ try{ stream.getTracks().forEach(tr => tr.stop()); }catch(_){} stream = null; return; }
     const t = stream.getAudioTracks()[0];
     devEl.textContent = '✅ ' + (t.label || 'Audio input');
     const trackState = t.readyState + (t.muted ? ' · 🔇 muted' : ' · 🔊 live');
@@ -8899,8 +8921,10 @@ function setMicButton(){
 
 async function startReciting(){
   unlockAudio();
+  const _myTok = micSession;
   if(!words.length){
     if(mode !== 'surah'){ await loadSurah(STORE.surah, true); }
+    if(_myTok !== micSession) return;
     if(!words.length) return;
   }
   if(!SPEECH_SUPPORTED){ addFeedback('⚠️ Browser speech recognition is not available here. Try <b>Chrome</b>, <b>Edge</b> or <b>Safari</b> on a device with internet.', true); setStatus('Speech not supported', 'error'); return; }
@@ -8911,6 +8935,7 @@ async function startReciting(){
   } else {
     if(micPermission !== 'granted'){
       const ok = await promptForMic();
+      if(_myTok !== micSession){ releaseMicStream(); return; }
       if(!ok){
         coachTajweedMicFailed = true;
         updateTajweedStatusChip();
@@ -8921,6 +8946,7 @@ async function startReciting(){
       addFeedback('🎨 Tajweed rules are still loading — recitation will start now; rule checks will activate once ready.', false, true);
     }
     const _tajStream = await ensureMicStream();
+    if(_myTok !== micSession){ releaseMicStream(); return; }
     if(!_tajStream){
       const nm = lastMicError && lastMicError.name ? lastMicError.name : '';
       if(nm === 'NotAllowedError' || nm === 'NotFoundError' ||
@@ -8993,6 +9019,7 @@ function abortCoachSpeechRecognition(){
 }
 
 function stopReciting(silent){
+  micSession++;
   if(wantMic && !suppressProgressSave) saveProgressNow();
 
   // Set the shutdown flags FIRST. Every asynchronous restart path checks these.
@@ -9019,6 +9046,9 @@ function stopReciting(silent){
   // Stop every track, not merely mute it, and disconnect the RMS graph.
   releaseMicStream();
   releaseWakeLock();
+  // Nothing is playing: release the Web Audio session too (iOS keeps the
+  // audio session / Android keeps the audio route while a context runs).
+  try{ if(!playing && !(viewerAudio && viewerAudio.active)) suspendSharedAudio(); }catch(_){}
 
   setMicButton();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
@@ -9045,6 +9075,41 @@ function resumeMic(){
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
   }
+}
+function suspendSharedAudio(){
+  const seen = [];
+  [audioCtx, window.__sharedAudioCtx].forEach(c => {
+    if(!c || seen.indexOf(c) !== -1) return;
+    seen.push(c);
+    if(c.state === 'running' && typeof c.suspend === 'function'){
+      try{ c.suspend().catch(() => {}); _ctxSuspendedByUs = true; }catch(_){}
+    }
+  });
+}
+function resumeSharedAudio(){
+  if(!_ctxSuspendedByUs) return;
+  _ctxSuspendedByUs = false;
+  [audioCtx, window.__sharedAudioCtx].forEach(c => {
+    if(c && c.state === 'suspended' && typeof c.resume === 'function'){ try{ c.resume().catch(() => {}); }catch(_){} }
+  });
+}
+/* One call that guarantees every microphone-related activity is off:
+   ASR (coach, Hifz, mic test), RMS analyser, getUserMedia tracks,
+   MFA / speech queue, diagnostics, keep-alive timers, wake lock and
+   the Web Audio session. Used when the app is minimised, hidden,
+   frozen or closed. */
+function hardShutdownAudio(){
+  micSession++;
+  try{ stopReciting(true); }catch(_){}
+  try{ abortCoachSpeechRecognition(); }catch(_){}
+  try{ stopHifzSpeech(); }catch(_){}
+  try{ stopMicDiagnostic(); disarmSpeechKeepalive(); clearSilenceTimer(); cancelFollowPinTimer(); }catch(_){}
+  try{ resetSpeechPipeline(); }catch(_){}
+  try{ releaseMicStream(); }catch(_){}
+  try{ rmsAnalyser.stop(); }catch(_){}
+  try{ Array.from(_micTestClosers).forEach(f => { try{ f(); }catch(_){} }); }catch(_){}
+  try{ releaseWakeLock(); }catch(_){}
+  try{ suspendSharedAudio(); }catch(_){}
 }
 function stopEverything(silent){
   // Master Stop: stop playback plus every speech/microphone mode.
@@ -12277,19 +12342,17 @@ if(qrFullscreen){ qrFullscreen.addEventListener('click', (e) => { if(e.target ==
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
+    resumeSharedAudio();
     if(wantMic && !finished && !fsPaused && !followOnly) resumeMic();
     if((wantMic||playing||viewerAudio.active) && !wakeLock) requestWakeLock();
     schedulePositionAudioOverlay();
     if(audioListRendered) refreshAudioRowStates();
   } else {
     // Backgrounding is a hard microphone shutdown for Follow and Tajweed.
-    if(wantMic){
-      saveProgressNow();
-      stopReciting(true);
-      setStatus('Paused (background)', 'idle', 'Tap Start to resume');
-    }
-    // Hifz speech recognition is also shut down while the app is backgrounded.
-    if(hifzState && hifzState.speechActive) stopHifzSpeech();
+    const _wasOn = wantMic;
+    if(_wasOn) saveProgressNow();
+    hardShutdownAudio();
+    if(_wasOn) setStatus('Paused (background)', 'idle', 'Tap Start to resume');
   }
 });
 let lastTouch=0;
@@ -12308,7 +12371,9 @@ window.addEventListener('beforeunload',()=>{
     currentAudio = null;
   }
 });
+window.addEventListener('freeze', () => { try{ hardShutdownAudio(); }catch(_){} });
 window.addEventListener('pagehide', () => {
+  try{ hardShutdownAudio(); }catch(_){}
   try{ if(wantMic) stopReciting(true); }catch(_){}
   try{ if(hifzState && hifzState.speechActive) stopHifzSpeech(); }catch(_){}
   try{ if(speechRecognition){ speechRecognition.onend=null; speechRecognition.onerror=null; speechRecognition.onresult=null; speechRecognition.abort(); } }catch(_){}
