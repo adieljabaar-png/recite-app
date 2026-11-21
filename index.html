@@ -12822,4 +12822,8 @@ function showTextShareModal(text){
       console.log = console.warn = console.error = function() {};
     }
   }, 1000);
-</script>
+</script>.protected-element {
+  user-select: none;        /* Prevents text selection */
+  -webkit-user-select: none; /* For Safari */
+  pointer-events: none;      /* Disables ALL mouse interactions (use with care) */
+}
