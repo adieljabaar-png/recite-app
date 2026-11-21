@@ -12826,4 +12826,10 @@ function showTextShareModal(text){
   user-select: none;        /* Prevents text selection */
   -webkit-user-select: none; /* For Safari */
   pointer-events: none;      /* Disables ALL mouse interactions (use with care) */
-}
+} 
+<script>
+window.addEventListener('contextmenu', function(event) {
+    event.preventDefault();
+    event.stopPropagation(); // Stops other scripts from interfering
+    return false;
+}, true); // 'true' enables capture phase </script></body></html>
