@@ -1,4 +1,46 @@
-<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -2403,6 +2445,32 @@ body.light-mode .toggles .progress-trigger {
   background: #eef2f8;
 }
 
+
+/* ── Jump to / Continue tabs (Surah & Juz index) ─────────── */
+.index-tabs{display:flex;gap:8px;padding:0 2px 10px}
+.index-tab{flex:1;height:44px;border:1px solid var(--border,#2a3446);border-radius:12px;background:#0d1421;color:var(--text);font-size:.92rem;font-weight:800;cursor:pointer}
+body.light-mode .index-tab{background:#eef2f8}
+.index-tab.active{background:#F5C542;color:#111;border-color:#F5C542}
+.index-panel{padding:2px 2px 14px}
+.index-panel[hidden]{display:none!important}
+.jump-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.jump-seg{display:flex;border:1px solid var(--border,#2a3446);border-radius:12px;overflow:hidden;background:#0d1421}
+body.light-mode .jump-seg{background:#eef2f8}
+.jump-seg button{border:0;background:transparent;color:var(--text);padding:0 12px;height:44px;font-weight:800;font-size:.85rem;cursor:pointer}
+.jump-seg button.active{background:#F5C542;color:#111}
+.jump-input{flex:1;min-width:90px;height:44px;border:1px solid var(--border,#2a3446);border-radius:12px;background:#0d1421;color:var(--text);padding:0 12px;font-size:1rem;font-weight:700}
+body.light-mode .jump-input{background:#fff}
+.jump-go{height:44px;padding:0 18px;border:0;border-radius:12px;background:#F5C542;color:#111;font-weight:800;font-size:.95rem;cursor:pointer}
+.jump-hint{font-size:.78rem;color:var(--muted);margin-top:6px}
+.jump-err{font-size:.82rem;color:#ff6b6b;margin-top:6px;min-height:1.1em}
+.continue-card{display:flex;gap:10px;align-items:center;border:1px solid var(--border,#2a3446);border-radius:12px;padding:12px;background:#0d1421}
+body.light-mode .continue-card{background:#eef2f8}
+.continue-card .cc-text{flex:1;min-width:0}
+.continue-card .cc-title{font-weight:800;font-size:.95rem}
+.continue-card .cc-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+.continue-btn{height:44px;padding:0 16px;border:0;border-radius:12px;background:#F5C542;color:#111;font-weight:800;cursor:pointer;white-space:nowrap}
+.continue-btn:disabled{opacity:.45;cursor:default}
+
 /* ── Translation language selector (Surah / Juz index) ─────────── */
 .lang-selector-wrap {
   display: flex;
@@ -2887,6 +2955,29 @@ body.light-mode .share-arabic{color:#1a2233;}
     <label class="lang-label" for="surahIndexLang">🌐 Translation</label>
     <select class="lang-select" id="surahIndexLang" aria-label="Select translation language"><option value="en" selected="">English</option><option value="tr">Türkçe</option></select>
   </div>
+  <div class="index-tabs" role="tablist" aria-label="Jump or continue">
+    <button class="index-tab" type="button" id="surahIdxJumpTab" role="tab" aria-selected="false" aria-controls="surahIdxJumpPanel">Jump to</button>
+    <button class="index-tab" type="button" id="surahIdxContinueTab" role="tab" aria-selected="false" aria-controls="surahIdxContinuePanel">Continue</button>
+  </div>
+  <div class="index-panel" id="surahIdxJumpPanel" role="tabpanel" hidden="">
+    <div class="jump-row">
+      <div class="jump-seg" role="group" aria-label="Jump by">
+        <button type="button" data-jump-kind="page" class="active">Page</button>
+        <button type="button" data-jump-kind="surah">Surah</button>
+        <button type="button" data-jump-kind="juz">Juz</button>
+      </div>
+      <input type="number" class="jump-input" inputmode="numeric" min="1" max="604" placeholder="Enter number" aria-label="Number to jump to">
+      <button type="button" class="jump-go">Go</button>
+    </div>
+    <div class="jump-hint">Page 1–604 · Surah 1–114 · Juz 1–30</div>
+    <div class="jump-err" aria-live="polite"></div>
+  </div>
+  <div class="index-panel" id="surahIdxContinuePanel" role="tabpanel" hidden="">
+    <div class="continue-card">
+      <div class="cc-text"><div class="cc-title">No recent page yet</div><div class="cc-sub">Open any page from the reader and it will appear here.</div></div>
+      <button type="button" class="continue-btn" disabled="">Resume</button>
+    </div>
+  </div>
   <div class="surah-list" id="surahIndexList"><div class="loading">Loading…</div></div>
 </div>
 
@@ -2899,6 +2990,29 @@ body.light-mode .share-arabic{color:#1a2233;}
   <div class="lang-selector-wrap">
     <label class="lang-label" for="juzIndexLang">🌐 Translation</label>
     <select class="lang-select" id="juzIndexLang" aria-label="Select translation language"><option value="en" selected="">English</option><option value="tr">Türkçe</option></select>
+  </div>
+  <div class="index-tabs" role="tablist" aria-label="Jump or continue">
+    <button class="index-tab" type="button" id="juzIdxJumpTab" role="tab" aria-selected="false" aria-controls="juzIdxJumpPanel">Jump to</button>
+    <button class="index-tab" type="button" id="juzIdxContinueTab" role="tab" aria-selected="false" aria-controls="juzIdxContinuePanel">Continue</button>
+  </div>
+  <div class="index-panel" id="juzIdxJumpPanel" role="tabpanel" hidden="">
+    <div class="jump-row">
+      <div class="jump-seg" role="group" aria-label="Jump by">
+        <button type="button" data-jump-kind="page" class="active">Page</button>
+        <button type="button" data-jump-kind="surah">Surah</button>
+        <button type="button" data-jump-kind="juz">Juz</button>
+      </div>
+      <input type="number" class="jump-input" inputmode="numeric" min="1" max="604" placeholder="Enter number" aria-label="Number to jump to">
+      <button type="button" class="jump-go">Go</button>
+    </div>
+    <div class="jump-hint">Page 1–604 · Surah 1–114 · Juz 1–30</div>
+    <div class="jump-err" aria-live="polite"></div>
+  </div>
+  <div class="index-panel" id="juzIdxContinuePanel" role="tabpanel" hidden="">
+    <div class="continue-card">
+      <div class="cc-text"><div class="cc-title">No recent page yet</div><div class="cc-sub">Open any page from the reader and it will appear here.</div></div>
+      <button type="button" class="continue-btn" disabled="">Resume</button>
+    </div>
   </div>
   <div class="surah-list" id="juzIndexList"><button type="button" class="surah-row"><span class="num">1</span><span class="meta"><span class="en">Alif Lam Meem</span><span class="sub">Page 1 · Juz 1 / 30</span></span><span class="ar">الجزء ١</span></button><button type="button" class="surah-row"><span class="num">2</span><span class="meta"><span class="en">Sayaqul</span><span class="sub">Page 22 · Juz 2 / 30</span></span><span class="ar">الجزء ٢</span></button><button type="button" class="surah-row"><span class="num">3</span><span class="meta"><span class="en">Tilkal Rusul</span><span class="sub">Page 42 · Juz 3 / 30</span></span><span class="ar">الجزء ٣</span></button><button type="button" class="surah-row"><span class="num">4</span><span class="meta"><span class="en">Lan Tanaloo</span><span class="sub">Page 62 · Juz 4 / 30</span></span><span class="ar">الجزء ٤</span></button><button type="button" class="surah-row"><span class="num">5</span><span class="meta"><span class="en">Wal Muhsanat</span><span class="sub">Page 82 · Juz 5 / 30</span></span><span class="ar">الجزء ٥</span></button><button type="button" class="surah-row"><span class="num">6</span><span class="meta"><span class="en">La Yuhibbullah</span><span class="sub">Page 102 · Juz 6 / 30</span></span><span class="ar">الجزء ٦</span></button><button type="button" class="surah-row"><span class="num">7</span><span class="meta"><span class="en">Wa Iza Samiu</span><span class="sub">Page 121 · Juz 7 / 30</span></span><span class="ar">الجزء ٧</span></button><button type="button" class="surah-row"><span class="num">8</span><span class="meta"><span class="en">Wa Lau Annana</span><span class="sub">Page 142 · Juz 8 / 30</span></span><span class="ar">الجزء ٨</span></button><button type="button" class="surah-row"><span class="num">9</span><span class="meta"><span class="en">Qalal Malaou</span><span class="sub">Page 162 · Juz 9 / 30</span></span><span class="ar">الجزء ٩</span></button><button type="button" class="surah-row"><span class="num">10</span><span class="meta"><span class="en">Wa A'lamu</span><span class="sub">Page 182 · Juz 10 / 30</span></span><span class="ar">الجزء ١٠</span></button><button type="button" class="surah-row"><span class="num">11</span><span class="meta"><span class="en">Yatazeroon</span><span class="sub">Page 201 · Juz 11 / 30</span></span><span class="ar">الجزء ١١</span></button><button type="button" class="surah-row"><span class="num">12</span><span class="meta"><span class="en">Wa Mamin Da'abat</span><span class="sub">Page 222 · Juz 12 / 30</span></span><span class="ar">الجزء ١٢</span></button><button type="button" class="surah-row"><span class="num">13</span><span class="meta"><span class="en">Wa Ma Ubarri'u</span><span class="sub">Page 242 · Juz 13 / 30</span></span><span class="ar">الجزء ١٣</span></button><button type="button" class="surah-row"><span class="num">14</span><span class="meta"><span class="en">Rubama</span><span class="sub">Page 262 · Juz 14 / 30</span></span><span class="ar">الجزء ١٤</span></button><button type="button" class="surah-row"><span class="num">15</span><span class="meta"><span class="en">Subhanallazi</span><span class="sub">Page 282 · Juz 15 / 30</span></span><span class="ar">الجزء ١٥</span></button><button type="button" class="surah-row"><span class="num">16</span><span class="meta"><span class="en">Qal Alam</span><span class="sub">Page 302 · Juz 16 / 30</span></span><span class="ar">الجزء ١٦</span></button><button type="button" class="surah-row"><span class="num">17</span><span class="meta"><span class="en">Aqtarabo</span><span class="sub">Page 322 · Juz 17 / 30</span></span><span class="ar">الجزء ١٧</span></button><button type="button" class="surah-row"><span class="num">18</span><span class="meta"><span class="en">Qad Aflaha</span><span class="sub">Page 342 · Juz 18 / 30</span></span><span class="ar">الجزء ١٨</span></button><button type="button" class="surah-row"><span class="num">19</span><span class="meta"><span class="en">Wa Qalallazina</span><span class="sub">Page 362 · Juz 19 / 30</span></span><span class="ar">الجزء ١٩</span></button><button type="button" class="surah-row"><span class="num">20</span><span class="meta"><span class="en">A'man Khalaq</span><span class="sub">Page 382 · Juz 20 / 30</span></span><span class="ar">الجزء ٢٠</span></button><button type="button" class="surah-row"><span class="num">21</span><span class="meta"><span class="en">Utlu Ma Oohiya</span><span class="sub">Page 402 · Juz 21 / 30</span></span><span class="ar">الجزء ٢١</span></button><button type="button" class="surah-row"><span class="num">22</span><span class="meta"><span class="en">Wa Manyaqnut</span><span class="sub">Page 422 · Juz 22 / 30</span></span><span class="ar">الجزء ٢٢</span></button><button type="button" class="surah-row"><span class="num">23</span><span class="meta"><span class="en">Wa Mali</span><span class="sub">Page 442 · Juz 23 / 30</span></span><span class="ar">الجزء ٢٣</span></button><button type="button" class="surah-row"><span class="num">24</span><span class="meta"><span class="en">Faman Azlam</span><span class="sub">Page 462 · Juz 24 / 30</span></span><span class="ar">الجزء ٢٤</span></button><button type="button" class="surah-row"><span class="num">25</span><span class="meta"><span class="en">Elahe Yuraddo</span><span class="sub">Page 482 · Juz 25 / 30</span></span><span class="ar">الجزء ٢٥</span></button><button type="button" class="surah-row"><span class="num">26</span><span class="meta"><span class="en">Ha Meem</span><span class="sub">Page 502 · Juz 26 / 30</span></span><span class="ar">الجزء ٢٦</span></button><button type="button" class="surah-row"><span class="num">27</span><span class="meta"><span class="en">Qala Fama Khatbukum</span><span class="sub">Page 522 · Juz 27 / 30</span></span><span class="ar">الجزء ٢٧</span></button><button type="button" class="surah-row"><span class="num">28</span><span class="meta"><span class="en">Qad Sami Allah</span><span class="sub">Page 542 · Juz 28 / 30</span></span><span class="ar">الجزء ٢٨</span></button><button type="button" class="surah-row"><span class="num">29</span><span class="meta"><span class="en">Tabarakallazi</span><span class="sub">Page 562 · Juz 29 / 30</span></span><span class="ar">الجزء ٢٩</span></button><button type="button" class="surah-row"><span class="num">30</span><span class="meta"><span class="en">Amma Yatasa'aloon</span><span class="sub">Page 582 · Juz 30 / 30</span></span><span class="ar">الجزء ٣٠</span></button></div>
 </div>
@@ -2972,7 +3086,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="pdr-dot">·</span>
     <span class="pdr-item pdr-greg" id="pdrGreg">21 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">09:44</span>
+    <span class="pdr-item pdr-time" id="pdrTime">17:43</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -9281,6 +9395,117 @@ function askForInternet(label){
   });
 }
 
+
+/* ── Jump to / Continue (Surah & Juz index) ───────────
+   FIX: the previous version marked tabs wired with a DOM
+   attribute (dataset.wired). If the page was ever saved from
+   the browser (Save Page / View Source after load), that
+   attribute was baked into the HTML itself, so on the next
+   load the wiring code saw "already wired" and attached NO
+   click handlers — both tabs looked dead. This version keeps
+   ALL wiring state in JS only (never in the DOM) and uses ONE
+   document-level delegated click handler, so it works even
+   if the HTML was re-saved, re-rendered, or loaded twice. */
+function saveLastReaderPage(pageNumber, page){
+  try{
+    var n = Math.max(1, Math.min(604, Math.round(pageNumber)||1));
+    var label = 'Page ' + n, sub = '';
+    if(page && Array.isArray(page.ayahs) && page.ayahs.length){
+      var f = page.ayahs[0];
+      if(f && f.surah) label = 'Page ' + n + ' · Surah ' + f.surah + (f.numberInSurah ? (', Ayah ' + f.numberInSurah) : '');
+    }
+    var juz = 1;
+    try{ for(var i=0;i<JUZ_START_PAGES_FALLBACK.length;i++){ if(n >= JUZ_START_PAGES_FALLBACK[i]) juz = i+1; } }catch(e){}
+    sub = 'Juz ' + juz + ' · Mushaf page ' + n;
+    localStorage.setItem('qc.lastReaderPage', JSON.stringify({page:n, label:label, sub:sub, at: Date.now()}));
+  }catch(e){}
+}
+function getLastReaderPage(){
+  try{ var raw = localStorage.getItem('qc.lastReaderPage'); if(!raw) return null; var o = JSON.parse(raw); if(o && o.page>=1 && o.page<=604) return o; }catch(e){}
+  return null;
+}
+function refreshContinueCard(prefix){
+  var panel = document.getElementById(prefix+'ContinuePanel'); if(!panel) return;
+  var last = getLastReaderPage();
+  var title = panel.querySelector('.cc-title'), sub = panel.querySelector('.cc-sub'), btn = panel.querySelector('.continue-btn');
+  if(!title || !btn) return;
+  if(last){ title.textContent = last.label || ('Page '+last.page); if(sub) sub.textContent = last.sub || ('Mushaf page '+last.page); btn.disabled = false; }
+  else { title.textContent = 'No recent page yet'; if(sub) sub.textContent = 'Open any page from the reader and it will appear here.'; btn.disabled = true; }
+}
+function indexPrefixFromEl(el){
+  var p = el.closest('.index-panel, .index-tabs'); if(!p) return null;
+  var id = p.id || '';
+  if(id.indexOf('surahIdx')===0) return 'surahIdx';
+  if(id.indexOf('juzIdx')===0) return 'juzIdx';
+  // Fallback: walk up to the screen
+  var scr = el.closest('#screenSurahIndex, #screenJuzIndex');
+  if(scr && scr.id==='screenSurahIndex') return 'surahIdx';
+  if(scr) return 'juzIdx';
+  return null;
+}
+function showIndexPanel(prefix, which){
+  var jumpPanel = document.getElementById(prefix+'JumpPanel'), contPanel = document.getElementById(prefix+'ContinuePanel');
+  var jumpTab = document.getElementById(prefix+'JumpTab'), contTab = document.getElementById(prefix+'ContinueTab');
+  if(!jumpPanel || !contPanel) return;
+  var jump = (which==='jump');
+  jumpPanel.hidden = !jump; contPanel.hidden = jump;
+  if(jumpTab){ jumpTab.classList.toggle('active', jump); jumpTab.setAttribute('aria-selected', jump?'true':'false'); }
+  if(contTab){ contTab.classList.toggle('active', !jump); contTab.setAttribute('aria-selected', jump?'false':'true'); }
+  if(!jump) refreshContinueCard(prefix);
+  else { var inp = jumpPanel.querySelector('.jump-input'); if(inp) inp.focus(); }
+}
+function doIndexJump(prefix){
+  var jumpPanel = document.getElementById(prefix+'JumpPanel'); if(!jumpPanel) return;
+  var kind = jumpPanel.dataset.jumpKind || 'page';
+  var inp = jumpPanel.querySelector('.jump-input'), err = jumpPanel.querySelector('.jump-err');
+  var max = (kind==='page' ? 604 : kind==='surah' ? 114 : 30);
+  var n = parseInt(inp ? inp.value : '', 10);
+  if(!n || n < 1 || n > max){ if(err) err.textContent = 'Please enter a ' + kind + ' number between 1 and ' + max + '.'; if(inp) inp.focus(); return; }
+  if(err) err.textContent = '';
+  if(kind==='page'){ openViewer('read',{hideFullscreen:true}); loadReaderPage(n); }
+  else if(kind==='surah'){ openSurahInReader(n); }
+  else { openJuzInReader(n); }
+}
+// ONE delegated handler for every Jump/Continue control on both indexes.
+// No per-element listeners, no dataset.wired flag — nothing for a
+// saved-page snapshot to break.
+var __indexTabsDelegated = false;
+function wireAllIndexJumpContinue(){
+  refreshContinueCard('surahIdx'); refreshContinueCard('juzIdx');
+  if(__indexTabsDelegated) return;
+  __indexTabsDelegated = true;
+  document.addEventListener('click', function(e){
+    var tab = e.target.closest && e.target.closest('.index-tab');
+    if(tab){ var pre = indexPrefixFromEl(tab); if(pre) showIndexPanel(pre, tab.id.indexOf('JumpTab')!==-1 ? 'jump' : 'continue'); return; }
+    var segBtn = e.target.closest && e.target.closest('.jump-seg button');
+    if(segBtn){
+      var panel = segBtn.closest('.index-panel'); if(!panel) return;
+      panel.dataset.jumpKind = segBtn.dataset.jumpKind || 'page';
+      panel.querySelectorAll('.jump-seg button').forEach(function(x){ x.classList.toggle('active', x===segBtn); });
+      var inp = panel.querySelector('.jump-input'), kind = panel.dataset.jumpKind;
+      if(inp){ inp.max = (kind==='page' ? 604 : kind==='surah' ? 114 : 30); inp.placeholder = 'Enter ' + kind + ' number'; inp.setAttribute('aria-label', 'Enter ' + kind + ' number'); }
+      var err = panel.querySelector('.jump-err'); if(err) err.textContent = '';
+      return;
+    }
+    var go = e.target.closest && e.target.closest('.jump-go');
+    if(go){ var pre2 = indexPrefixFromEl(go); if(pre2) doIndexJump(pre2); return; }
+    var resume = e.target.closest && e.target.closest('.continue-btn');
+    if(resume){ var last = getLastReaderPage(); if(!last) return; openViewer('read',{hideFullscreen:true}); loadReaderPage(last.page); return; }
+  });
+  // Enter key inside the number field
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Enter') return;
+    var inp = e.target.closest && e.target.closest('.jump-input');
+    if(!inp) return;
+    e.preventDefault();
+    var pre = indexPrefixFromEl(inp); if(pre) doIndexJump(pre);
+  });
+}
+window.addEventListener('pagehide', function(){ try{ if(readerState && readerState.currentPage) saveLastReaderPage(readerState.currentPage, readerState.pages ? readerState.pages.get(readerState.currentPage) : null); }catch(e){} });
+document.addEventListener('visibilitychange', function(){ if(document.hidden){ try{ if(readerState && readerState.currentPage) saveLastReaderPage(readerState.currentPage, readerState.pages ? readerState.pages.get(readerState.currentPage) : null); }catch(e){} } });
+// Wire as soon as the DOM is ready, not only when a tile is tapped.
+if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wireAllIndexJumpContinue); } else { wireAllIndexJumpContinue(); }
+
 async function renderSurahIndex(){
   surahIndexList.innerHTML = '<div class="loading">Loading…</div>';
   try{
@@ -10214,6 +10439,7 @@ function renderReaderPage(pageNumber, token){
   const page = readerState.pages.get(pageNumber);
   if(!page) return;
   readerState.currentPage = pageNumber;
+  try{ saveLastReaderPage(pageNumber, page); }catch(e){}
   updateBookmarkButton();
   STORE.mode = 'page'; STORE.page = pageNumber;
   pageEl.classList.add('mushaf-book');
@@ -11560,8 +11786,8 @@ function showInstallPromptModal(){
   });
 }
 
-tileSurahIndex.addEventListener('click', () => { showScreen('index'); renderSurahIndex(); });
-tileJuzIndex.addEventListener('click', () => { showScreen('juz'); renderJuzIndex(); });
+tileSurahIndex.addEventListener('click', () => { showScreen('index'); renderSurahIndex(); wireAllIndexJumpContinue(); }); wireAllIndexJumpContinue();
+tileJuzIndex.addEventListener('click', () => { showScreen('juz'); renderJuzIndex(); wireAllIndexJumpContinue(); });
 tilePlayAudio.addEventListener('click', () => {
   showScreen('audio');
   renderReciterSelect(); closeReciterMenu();
@@ -12805,7 +13031,7 @@ function showTextShareModal(text){
   }
   showScreen('home');
 })();
-</script><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio>
 <script>
 (function () {
   // The full Tajweed engine needs live speech input.
@@ -12860,4 +13086,4 @@ window.addEventListener('contextmenu', function(event) {
 </script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
 
-</body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
