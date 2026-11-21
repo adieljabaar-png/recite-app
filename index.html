@@ -5039,11 +5039,20 @@ const rmsAnalyser = (function(){
     const list = samplesIn(t0, t1);
     if (!list.length) return { durationMs: 0 };
     const threshold = MIN_RMS * 1.3;
-    let best = 0, run = 0;
+    /* Real timestamps, not a fixed 30 ms per sample: phone timers drift and
+       throttle, which used to undercount long vowels. A gap > 100 ms between
+       two voiced samples means audio was lost, so the run restarts. */
+    let best = 0, runStart = -1, lastT = -1;
     for (let i = 0; i < list.length; i++){
       const s = list[i];
-      if (s.rms > threshold && s.harmonicity > 0.5){ run += SAMPLE_MS; if (run > best) best = run; }
-      else run = 0;
+      if (s.rms > threshold && s.harmonicity > 0.5){
+        if (runStart < 0 || s.t - lastT > 100) runStart = s.t;
+        lastT = s.t;
+        const d = (s.t - runStart) + SAMPLE_MS;
+        if (d > best) best = d;
+      } else {
+        runStart = -1;
+      }
     }
     return { durationMs: best };
   }
@@ -5740,6 +5749,25 @@ function removeTajweedColorsFromCoach(){
   coachTajweedApplied = false;
 }
 
+var _acousticMode = null;        // null | 'full' | 'transcript'
+var _acousticMissStreak = 0;
+/* Called after every Tajweed word check. Three consecutive words with no usable
+   microphone segment mean the waveform stream is silent or not reaching the
+   engine (typical when the phone gives the mic to speech recognition), so rule
+   results are transcript-only estimates and must not be read as verified. */
+function noteAcousticMode(available){
+  if (available){
+    _acousticMissStreak = 0;
+    if (_acousticMode !== 'full'){ _acousticMode = 'full'; try{ updateTajweedStatusChip(); }catch(_){} }
+    return;
+  }
+  _acousticMissStreak++;
+  if (_acousticMissStreak >= 3 && _acousticMode !== 'transcript'){
+    _acousticMode = 'transcript';
+    try{ updateTajweedStatusChip(); }catch(_){}
+    addFeedback('ℹ️ <b>No microphone audio is reaching the Tajweed engine</b> (the phone may have given the mic to speech recognition). Madd, Ghunnah, Qalqalah and the other timing/sound rules are <b>transcript estimates only — not verified</b>.', false, true);
+  }
+}
 function updateTajweedStatusChip(){
   const chip = document.getElementById('tajweedStatusChip');
   if(!chip) return;
@@ -5769,7 +5797,12 @@ function updateTajweedStatusChip(){
     chip.setAttribute('aria-label', 'Loading Tajweed rule checks');
     return;
   }
-  if(acousticReady){
+  if(acousticReady && wantMic && _acousticMode === 'transcript'){
+    chip.className = 'toggle tj-status-error';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Transcript only · mic silent';
+    chip.title = 'The microphone stream is open but no usable audio is reaching the waveform analyser (often because speech recognition holds the mic). Madd, Ghunnah, Qalqalah and other sound rules are transcript estimates and are NOT verified.';
+    chip.setAttribute('aria-label', 'Tajweed running in transcript-only mode; acoustic rules not verified');
+  } else if(acousticReady){
     chip.className = 'toggle tj-status-ready';
     chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · mic clues';
     chip.title = 'All 12 annotated Tajweed categories are available. ASR aligns words with Quran text and the microphone supplies word-level RMS/spectral clues. Acoustic checks are provisional estimates, not phoneme-level Tajweed certification; uncertain findings are shown as yellow warnings for teacher/listener review.';
@@ -6430,6 +6463,10 @@ const TAJWEED_ERROR_NAMES = {
   'madd-obligatory-end':    'Madd (obligatory) — end-of-ayah too short',
   'madd-obligatory-timing': 'Madd (obligatory) — too short (timing)',
   'madd-obligatory-batch':  'Madd (obligatory) — too short (fast batch)',
+  'madd-normal-long':       'Madd (normal) — held too long',
+  'madd-permissible-long':  'Madd (permissible) — held too long',
+  'madd-obligatory-long':   'Madd (obligatory) — held too long',
+  'madd-necessary-long':    'Madd (necessary) — held too long',
   'madd-normal-end':        'Madd (normal) — end-of-ayah too short',
   'madd-permissible-end':   'Madd (permissible) — end-of-ayah too short',
   'madd-necessary-end':     'Madd (necessary) — end-of-ayah too short',
@@ -6664,6 +6701,7 @@ function runStrict1Checks(idx, heard, opts){
 
   /* 2. RMS + alignment context (graceful fallback when mic RMS is unavailable) */
   const align = checkTajweedAudioAlignment(w, heard);
+  noteAcousticMode(!!align.available);
   updateTajweedStatusChip();
 
   /* 3. Segment-based Madd timing */
@@ -6686,6 +6724,17 @@ function runStrict1Checks(idx, heard, opts){
           (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : '');
         if (vowelMs < required * 0.65) markStrict1Error(w, tag, _maddMsg);
         else markStrict1Warning(w, tag, _maddMsg);
+      } else if (!isEndOfAyah && T_mora !== null){
+        /* Over-long madd (warning only). Skipped at ayah end (waqf may be longer)
+           and when the segment is much longer than one word, because the segment
+           can then span several words and the longest vowel may belong elsewhere. */
+        const maxMs = maddMaxMs(kind);
+        const wordSized = w.audio.durationMs <= (w.norm.length * T_mora + maxMs) * 1.3;
+        if (isFinite(maxMs) && wordSized && vowelMs > maxMs){
+          markStrict1Warning(w, 'madd-' + kind + '-long',
+            'estimated vowel-run ' + Math.round(vowelMs) + ' ms > ' + Math.round(maxMs) +
+            ' ms (held too long; provisional phone-mic estimate)');
+        }
       }
     }
 
@@ -7870,7 +7919,7 @@ async function ensureMicStream(){
     lastMicError = null;
     const _epoch = micEpoch;
     const s = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: false, autoGainControl: true }
+      audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
     });
     if(_epoch !== micEpoch){
       // Stop / background / mode change happened while the permission
@@ -9020,6 +9069,7 @@ function abortCoachSpeechRecognition(){
 
 function stopReciting(silent){
   micSession++;
+  _acousticMode = null; _acousticMissStreak = 0;
   if(wantMic && !suppressProgressSave) saveProgressNow();
 
   // Set the shutdown flags FIRST. Every asynchronous restart path checks these.
