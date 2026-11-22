@@ -1,10 +1,24 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.24 — Ship the FIXED “Jump to” / “Continue” tabs on the
+   v2.4.21 — Ship AUTO-ROTATE on all screens “Jump to” / “Continue” tabs on the
    Surah / Juz index (new index.html).
 
-   Changes in this deployment:
+   Changes in this deployment (v2.4.21 — AUTO-ROTATE):
+     index.html (all screens):
+       • All screens now follow the device's auto-rotate setting.
+         The page releases any orientation lock
+         (screen.orientation.unlock()), re-fires resize on
+         orientationchange, and adds landscape CSS (wider canvas,
+         safe-area padding, modals/viewers capped to rotated height,
+         compact layout for short landscape phones).
+       • This SW forces orientation:"any" in the manifest it serves
+         (see manifestFresh), so an installed PWA cannot stay stuck
+         in portrait because of a stale / portrait-only manifest.json.
+         It also serves an "orientation":"any" fallback manifest.
+       • qc-audio and localStorage ('qc.lastReaderPage') untouched.
+
+   Changes in this deployment (v2.4.20, retained):
      index.html (Surah index + Juz index):
        • FIX: the Jump to / Continue tabs could look dead. The old
          code marked tabs as wired with a DOM attribute
@@ -18,13 +32,13 @@
          on pagehide / visibilitychange.
 
    Why this SW update is required — and what it protects:
-     • The old shell cache (qc-shell-2.4.19) still holds the
+     • The old shell cache (qc-shell-2.4.20) still holds the
        PREVIOUS index.html with the broken tab wiring. Without a
        version bump, browsers / installed PWAs could keep serving
        that stale copy and the tabs would still look dead.
-     • Bumping VERSION to 2.4.20 creates fresh
-       qc-shell-2.4.20 / qc-text-2.4.20 / qc-fonts-2.4.20 /
-       qc-runtime-2.4.20 caches. ACTIVATE deletes the old
+     • Bumping VERSION to 2.4.21 creates fresh
+       qc-shell-2.4.21 / qc-text-2.4.21 / qc-fonts-2.4.21 /
+       qc-runtime-2.4.21 caches. ACTIVATE deletes the old
        versioned caches, and INSTALL pre-caches the NEW
        index.html with { cache: 'reload' }.
      • Continue lives only in localStorage ('qc.lastReaderPage').
@@ -64,7 +78,7 @@
 
    Cache invalidation:
      qc-shell-* / qc-text-* / qc-fonts-* / qc-runtime-* are
-     bumped to 2.4.20 so the fixed index.html (Jump to /
+     bumped to 2.4.21 so the auto-rotate index.html (Jump to /
      Continue) is fetched. The persistent qc-audio cache is
      preserved — users keep their downloaded surahs and
      translation audio. localStorage ('qc.lastReaderPage')
@@ -93,7 +107,7 @@
 
 'use strict';
 
-const VERSION = '2.4.20';
+const VERSION = '2.4.21';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -121,6 +135,7 @@ const SHELL_URLS = [
   './',
   './index.html',
   './index_3.html',
+  './index_39.html',
   './read.html',
   './manifest.json',
   './icon-192.png',
@@ -522,9 +537,18 @@ async function manifestFresh(req){
       clearTimeout(timer);
     }
     if(res && res.ok){
-      const clone = res.clone();
-      cache.put('./manifest.json', clone).catch(() => {});
-      return res;
+      try{
+        const data = await res.clone().json();
+        // AUTO-ROTATE: never let a portrait-only manifest lock the installed app.
+        data.orientation = 'any';
+        const fixed = new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/manifest+json; charset=utf-8' } });
+        cache.put('./manifest.json', fixed.clone()).catch(() => {});
+        return fixed;
+      }catch(_){
+        const clone = res.clone();
+        cache.put('./manifest.json', clone).catch(() => {});
+        return res;
+      }
     }
     throw new Error('bad response');
   }catch(_){ /* fall through to cache */ }
@@ -542,6 +566,7 @@ async function manifestFresh(req){
       start_url: './',
       scope: './',
       display: 'standalone',
+      orientation: 'any',
       background_color: '#0d1119',
       theme_color: '#0d1119',
       icons: []
