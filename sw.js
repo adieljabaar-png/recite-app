@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.21 — Ship AUTO-ROTATE on all screens “Jump to” / “Continue” tabs on the
+   v2.4.22 — Ship AUTO-ROTATE on all screens “Jump to” / “Continue” tabs on the
    Surah / Juz index (new index.html).
 
    Changes in this deployment (v2.4.21 — AUTO-ROTATE):
