@@ -1,113 +1,32 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker
-   ============================================================
-   v2.4.22 — Ship AUTO-ROTATE on all screens “Jump to” / “Continue” tabs on the
-   Surah / Juz index (new index.html).
+   Quran Recitation Coach — Service Worker  v2.4.22
 
-   Changes in this deployment (v2.4.21 — AUTO-ROTATE):
-     index.html (all screens):
-       • All screens now follow the device's auto-rotate setting.
-         The page releases any orientation lock
-         (screen.orientation.unlock()), re-fires resize on
-         orientationchange, and adds landscape CSS (wider canvas,
-         safe-area padding, modals/viewers capped to rotated height,
-         compact layout for short landscape phones).
-       • This SW forces orientation:"any" in the manifest it serves
-         (see manifestFresh), so an installed PWA cannot stay stuck
-         in portrait because of a stale / portrait-only manifest.json.
-         It also serves an "orientation":"any" fallback manifest.
-       • qc-audio and localStorage ('qc.lastReaderPage') untouched.
+   What changed in 2.4.22:
+     • Cache version bumped so installed apps fetch the updated
+       index.html (notification fix, Tajweed error-name fix).
+     • Push: added a 'pushsubscriptionchange' handler that silently
+       re-subscribes (same VAPID key as index.html) and re-posts the
+       subscription to /api/subscribe, so notifications keep working
+       when the browser rotates the subscription.
+     • The IndoPak font database (cdn.jsdelivr.net / raw.githubusercontent.com)
+       is now cached, so it also loads offline.
 
-   Changes in this deployment (v2.4.20, retained):
-     index.html (Surah index + Juz index):
-       • FIX: the Jump to / Continue tabs could look dead. The old
-         code marked tabs as wired with a DOM attribute
-         (dataset.wired); if the page HTML was ever re-saved, that
-         attribute was baked in and no click handlers were attached.
-         Wiring state now lives in JS only, and ONE delegated
-         document-level click handler drives both tabs.
-       • Jump to: Page 1–604 · Surah 1–114 · Juz 1–30.
-       • Continue: Resume reopens the last reader page, saved in
-         localStorage under 'qc.lastReaderPage' on every render and
-         on pagehide / visibilitychange.
+   What this SW never touches (user data is safe across updates):
+     • localStorage (progress, bookmarks, streaks, settings,
+       'qc.lastReaderPage', 'qc.downloads', theme, mode, etc.)
+     • IndexedDB
+     • The persistent 'qc-audio' cache (downloaded surahs and
+       translation audio). Activation and CLEAR_CACHES only delete
+       old versioned shell/text/font/runtime caches.
 
-   Why this SW update is required — and what it protects:
-     • The old shell cache (qc-shell-2.4.20) still holds the
-       PREVIOUS index.html with the broken tab wiring. Without a
-       version bump, browsers / installed PWAs could keep serving
-       that stale copy and the tabs would still look dead.
-     • Bumping VERSION to 2.4.21 creates fresh
-       qc-shell-2.4.21 / qc-text-2.4.21 / qc-fonts-2.4.21 /
-       qc-runtime-2.4.21 caches. ACTIVATE deletes the old
-       versioned caches, and INSTALL pre-caches the NEW
-       index.html with { cache: 'reload' }.
-     • Continue lives only in localStorage ('qc.lastReaderPage').
-       This SW never reads, writes or clears localStorage, so
-       cache updates cannot erase the saved Continue page.
-     • The persistent qc-audio cache is preserved — users keep
-       downloaded surahs / translation audio. CLEAR_CACHES also
-       preserves qc-audio.
-     • Hosts used by the page that this SW deliberately does NOT
-       intercept (they pass straight to the network): Adhan audio
-       (cdn.islamic.network is cached via the audio handler;
-       islamcan.com is not), api.bigdatacloud.net and
-       geocoding-api.open-meteo.com (prayer-time location lookups).
-
-   Changes in this deployment (previous release, retained):
-
-     index.html (Home / Dashboard):
-       • Added a new "Read Arabic" tile on the dashboard that
-         links to ./read.html.
-       • Shrank the Daily Streak tile to the same size as the
-         Hifz tile (removed grid-column:span 2 behaviour).
-
-     read.html (new — Read Arabic page):
-       • New page styled to match the Recite app: same CSS
-         variables, dark/light theme, radial background,
-         Amiri/Amiri Quran Arabic fonts, gold accent.
-       • Header: [Back] [Read Arabic] [ℹ️ info] [🌙☀️ theme]
-         — NO book icon, NO "mic off" text.
-       • Removed from the menu: install, share, scan-QR —
-         those features are simply not present on this page.
-       • Replaced the old menu with an info icon next to the
-         moon/sun; tapping it opens the same slide-up info
-         modal style as the coach screen.
-       • Moon + sun theme toggle pill behaves exactly like
-         the Recite app (saved to localStorage under
-         'read-arabic-theme').
-
-   Cache invalidation:
-     qc-shell-* / qc-text-* / qc-fonts-* / qc-runtime-* are
-     bumped to 2.4.21 so the auto-rotate index.html (Jump to /
-     Continue) is fetched. The persistent qc-audio cache is
-     preserved — users keep their downloaded surahs and
-     translation audio. localStorage ('qc.lastReaderPage')
-     is untouched by this SW.
-
-   Previously-retained features (unchanged):
-
-     • Microphone diagnostic system with four failure modes:
-       track health (mute / ended), RMS silence, ASR death when
-       audio is proven present, and a 12 s fallback. The
-       diagnostic stops after the first successful ASR result
-       so subsequent Start Reciting calls do not trigger extra
-       getUserMedia re-calls. Includes a "Test microphone" menu
-       item with live RMS level, live transcript, and copy-
-       diagnostic button.
-
-     • Translation audio sources (EveryAyah, Islamic Network,
-       QuranEnc for English and Turkish) are handled via the
-       persistent qc-audio cache.
-
-     • serveRangeFromCached early-returns for opaque responses
-       (QuranEnc without CORS) — they cannot be sliced or
-       measured, so the SW returns the full cached response
-       instead of throwing when the player requests a Range.
+   Not intercepted (straight to network): /api/*, /my-analytics/*,
+   /_vercel/*, adhan from islamcan.com, bigdatacloud and open-meteo
+   location lookups.
    ============================================================ */
 
 'use strict';
 
-const VERSION = '2.4.21';
+const VERSION = '2.4.22';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -149,6 +68,11 @@ const HOST_QURANENC             = 'd.quranenc.com';
 const HOST_ISLAMIC_NETWORK      = 'cdn.islamic.network';
 const HOST_GOOGLE_FONTS_CSS     = 'fonts.googleapis.com';
 const HOST_GOOGLE_FONTS_STATIC  = 'fonts.gstatic.com';
+const HOST_JSDELIVR             = 'cdn.jsdelivr.net';
+const HOST_GITHUB_RAW           = 'raw.githubusercontent.com';
+
+/* Must match VAPID_PUBLIC_KEY in index.html. */
+const VAPID_PUBLIC_KEY = 'BHpU2OJZjHoYab_-F8I369UTsJjx9ArleSiggsdQ2dcch4mTQFQLTEvanyto6J5f8xFh-tshGyGsJNiDj9xy1aE';
 
 /* 600 entries covers surah + page translations across all five
    supported languages without thrashing. */
@@ -287,6 +211,30 @@ self.addEventListener('push', event => {
   }));
 });
 
+function urlBase64ToUint8Array(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil((async () => {
+    try{
+      const sub = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+    }catch(_){}
+  })());
+});
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || './';
@@ -336,6 +284,11 @@ self.addEventListener('fetch', event => {
 
   if(url.hostname === HOST_EVERYAYAH || url.hostname === HOST_QURANENC || url.hostname === HOST_ISLAMIC_NETWORK){
     event.respondWith(audioFromDownloadCache(req));
+    return;
+  }
+
+  if((url.hostname === HOST_JSDELIVR || url.hostname === HOST_GITHUB_RAW) && url.pathname.indexOf('quran8vs/IndoPak') !== -1){
+    event.respondWith(cacheFirst(req, FONTS_CACHE));
     return;
   }
 
