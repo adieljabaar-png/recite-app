@@ -238,7 +238,9 @@ font-family:'IndoPakNastaleeq','Amiri',serif;font-size:1.05em;line-height:2.1;pa
 -webkit-text-stroke:0.6px currentColor;
 }
 /* header / footer: Indo-Pak look, Arabic-Indic digits stay in a font that has them */
-body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header-row,
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header-row{
+font-family:'Amiri','Amiri Quran','IndoPakNastaleeq',serif;font-size:.66em;line-height:1.9;-webkit-text-stroke:0.2px currentColor;
+}
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-footer-row{
 font-family:'Amiri','Amiri Quran','IndoPakNastaleeq',serif;font-size:.78em;line-height:1.9;-webkit-text-stroke:0.2px currentColor;
 }
@@ -246,6 +248,14 @@ body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-ayah-mark{
 font-family:'Amiri','Amiri Quran',serif;font-size:.55em;line-height:1.7;-webkit-text-stroke:0;
 }
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-ruku-mark{font-family:'IndoPakNastaleeq','Amiri',serif;}
+
+/* Dashboard tile: name top-left, icon top-right, tab names listed below with dots */
+#tileDashboard{display:grid !important;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr;align-items:start;column-gap:8px;row-gap:6px;padding:12px 12px !important;}
+#tileDashboard .tile-title{grid-column:1;grid-row:1;align-self:center;text-align:left;}
+#tileDashboard .tile-icon{grid-column:2;grid-row:1;justify-self:end;width:36px !important;height:36px !important;font-size:1.2rem !important;border-radius:10px !important;}
+#tileDashboard .tile-list{grid-column:1 / -1;grid-row:2;display:flex;flex-direction:column;gap:2px;width:100%;min-width:0;position:relative;margin:0;text-align:left;}
+#tileDashboard .tile-list-item{display:block;position:relative;padding-left:12px;font-size:.68rem;font-weight:600;line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#tileDashboard .tile-list-item::before{content:'';position:absolute;left:1px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:currentColor;}
 </style>
 <title>Quran Recitation Coach</title>
 <script>
@@ -994,7 +1004,7 @@ body.light-mode.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-page{
 display:flex;align-items:center;justify-content:space-between;gap:8px;
 padding:2px 2px 8px;margin-bottom:12px;
 border-bottom:1px solid currentColor;
-font-family:'Amiri','Amiri Quran',serif;font-size:.82em;line-height:1.25;
+font-family:'Amiri','Amiri Quran',serif;font-size:.7em;line-height:1.25;
 direction:ltr;-webkit-text-stroke:0.2px currentColor;
 }
 .mushaf-book-header-row .mbh-left,
@@ -2906,7 +2916,12 @@ body.light-mode .share-arabic{color:#1a2233;}
     <button class="tile" id="tileDashboard" type="button">
       <span class="tile-icon">📊</span>
       <span class="tile-title">Dashboard</span>
-      <span class="tile-sub">Stats, Progress &amp; Tools</span>
+      <span class="tile-list" aria-label="Tabs inside Dashboard">
+        <span class="tile-list-item">Day Streak</span>
+        <span class="tile-list-item">Read Arabic</span>
+        <span class="tile-list-item">Hifz Test</span>
+        <span class="tile-list-item">Tajweed Colors</span>
+      </span>
     </button>
   </div>
 
@@ -10100,7 +10115,8 @@ async function renderSurahIndex(){
   }
 }
 const JUZ_NAMES = ['Alif Lam Meem','Sayaqul','Tilkal Rusul','Lan Tanaloo','Wal Muhsanat','La Yuhibbullah','Wa Iza Samiu','Wa Lau Annana','Qalal Malaou','Wa A\'lamu','Yatazeroon','Wa Mamin Da\'abat','Wa Ma Ubarri\'u','Rubama','Subhanallazi','Qal Alam','Aqtarabo','Qad Aflaha','Wa Qalallazina','A\'man Khalaq','Utlu Ma Oohiya','Wa Manyaqnut','Wa Mali','Faman Azlam','Elahe Yuraddo','Ha Meem','Qala Fama Khatbukum','Qad Sami Allah','Tabarakallazi','Amma Yatasa\'aloon'];
-const JUZ_NAMES_AR = ['الم','سيقول','تلك الرسل','لن تنالوا','والمحصنات','لا يحب الله','وإذا سمعوا','ولو أننا','قال الملأ','واعلموا','يعتذرون','وما من دابة','وما أبرئ','ربما','سبحان الذي','قال ألم','اقترب','قد أفلح','وقال الذين','أمن خلق','اتل ما أوحي','ومن يقنت','وما لي','فمن أظلم','إليه يرد','حم','قال فما خطبكم','قد سمع الله','تبارك الذي','عم يتساءلون'];
+const SURAH_NAMES_AR = ['الفاتحة','البقرة','آل عمران','النساء','المائدة','الأنعام','الأعراف','الأنفال','التوبة','يونس','هود','يوسف','الرعد','إبراهيم','الحجر','النحل','الإسراء','الكهف','مريم','طه','الأنبياء','الحج','المؤمنون','النور','الفرقان','الشعراء','النمل','القصص','العنكبوت','الروم','لقمان','السجدة','الأحزاب','سبأ','فاطر','يس','الصافات','ص','الزمر','غافر','فصلت','الشورى','الزخرف','الدخان','الجاثية','الأحقاف','محمد','الفتح','الحجرات','ق','الذاريات','الطور','النجم','القمر','الرحمن','الواقعة','الحديد','المجادلة','الحشر','الممتحنة','الصف','الجمعة','المنافقون','التغابن','الطلاق','التحريم','الملك','القلم','الحاقة','المعارج','نوح','الجن','المزمل','المدثر','القيامة','الإنسان','المرسلات','النبأ','النازعات','عبس','التكوير','الانفطار','المطففين','الانشقاق','البروج','الطارق','الأعلى','الغاشية','الفجر','البلد','الشمس','الليل','الضحى','الشرح','التين','العلق','القدر','البينة','الزلزلة','العاديات','القارعة','التكاثر','العصر','الهمزة','الفيل','قريش','الماعون','الكوثر','الكافرون','النصر','المسد','الإخلاص','الفلق','الناس'];
+const JUZ_NAMES_AR = ['الٓمٓ','سيقول','تلك الرسل','لن تنالوا','والمحصنات','لا يحب الله','وإذا سمعوا','ولو أننا','قال الملأ','واعلموا','يعتذرون','وما من دابة','وما أبرئ','ربما','سبحان الذي','قال ألم','اقترب','قد أفلح','وقال الذين','أمن خلق','اتل ما أوحي','ومن يقنت','وما لي','فمن أظلم','إليه يرد','حٓمٓ','قال فما خطبكم','قد سمع الله','تبارك الذي','عم يتساءلون'];
 const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
 function renderJuzIndex(){
   juzIndexList.innerHTML = '';
@@ -11071,8 +11087,8 @@ function renderReaderPage(pageNumber, token){
   const firstAyah = page.ayahs[0] || {};
   const pageJuz = firstAyah.juz || 1;
   const pageManzil = firstAyah.manzil || 1;
-  const juzNameAr = JUZ_NAMES_AR[pageJuz - 1] || (JUZ_NAMES[pageJuz - 1] || ('Juz ' + pageJuz));
-  const surahLeft = (firstAyah.surahName || ('Surah ' + (firstAyah.surah || ''))) + ' ' + toAr(firstAyah.surah || '');
+  const juzNameAr = JUZ_NAMES_AR[pageJuz - 1] || '';
+  const surahLeft = (SURAH_NAMES_AR[(firstAyah.surah || 1) - 1] || '') + ' ' + toAr(firstAyah.surah || 1);
   const juzRight  = juzNameAr + ' ' + toAr(pageJuz);
   const headerRow = document.createElement('div');
   headerRow.className = 'mushaf-book-header-row';
