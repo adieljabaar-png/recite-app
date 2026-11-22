@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker
    ============================================================
-   v2.4.23 — Ship the FIXED “Jump to” / “Continue” tabs on the
+   v2.4.24 — Ship the FIXED “Jump to” / “Continue” tabs on the
    Surah / Juz index (new index.html).
 
    Changes in this deployment:
