@@ -3940,7 +3940,6 @@ const matchLevel = 'strict';
 let followOnly   = localStorage.getItem('qc.followOnly') !== '0';
 let hideText     = localStorage.getItem('qc.hideText') === '1';
 let revealAllText = false;
-let beepOn       = !followOnly;
 let theme        = localStorage.getItem('qc.theme') || 'dark';
 let viewerShowTranslation = localStorage.getItem('qc.viewerTranslation') === '1';
 
@@ -4364,6 +4363,311 @@ function tryMuqattaatProgress(heard, hPhon, hPhonLoose, w){
 
 
 
+
+
+/* ===== MUQATTAAT FAST PATH (Follow + Tajweed) =====================
+   Pre-armed variant tables + stateless early matcher. Runs on EVERY
+   ASR result (interim AND final) the moment the pointer sits on a
+   Muqattaat word, so "Bismillah + letters" is recognised in the same
+   utterance: Bismillah tokens are swallowed silently, the letters are
+   matched against every spelling / letter-name / Latin transliteration,
+   and the pointer jumps on immediately (no waiting for the last-token
+   hold-back or for the final result). */
+const MUQ_LATIN_NAMES = {
+  'ا': ['alif','alef','aleph','alf','elif','alif','aliff','aleef','alyf','a','aa','alifu','alifa'],
+  'ل': ['lam','laam','lamm','lām','lamu','laamu','l','lm','lem','laem'],
+  'م': ['mim','meem','mem','miim','mimm','meemu','mimu','m','mm','meam'],
+  'ص': ['sad','saad','suad','sod','swad','saadu','sadu','s'],
+  'ر': ['ra','raa','rah','raaa','ro','r','raau'],
+  'ك': ['kaf','kaaf','kaff','kef','kaf','k','kafu'],
+  'ه': ['ha','haa','hah','hā','h','haaa','hu'],
+  'ح': ['ha','haa','hah','ḥa','ḥā','7a','h','hha','haa'],
+  'ي': ['ya','yaa','yah','ye','y','yaaa','yaau'],
+  'ع': ['ain','ayn','aeen','ayin','ein','eyn','a\'in','3ain','aen','ayyin'],
+  'ط': ['ta','taa','tah','tta','ṭa','ṭā','t','taaa'],
+  'س': ['sin','seen','siin','sen','seeen','seenu'],
+  'ق': ['qaf','qaaf','qaff','kaf','gaf','gaaf','q','qafu'],
+  'ن': ['nun','noon','nuun','noun','nunn','n','noonu']
+};
+/* whole-word Latin spellings (no spaces), keyed by Arabic muqattaat word */
+const MUQ_LATIN_WORDS = {
+  'الم': ['alm','alim','alif lam mim','alif laam meem','alif-lam-mim','aleef laam meem','alamm','alam'],
+  'المص': ['almas','almsd','almas','alif lam mim sad','alif laam meem saad','almaas'],
+  'الر': ['alr','alra','alif lam ra','alif laam raa','alir','alra'],
+  'المر': ['almr','almra','alif lam mim ra','alif laam meem raa','almar'],
+  'كهيعص': ['kahyas','kaf ha ya ain sad','kaaf haa yaa ayn saad','kahiyas','kaf ha ya ayn sad','kahyaas','kaha yaa ain saad'],
+  'طه': ['taha','ta ha','taa haa','tahaa','twaha','ta-ha'],
+  'طسم': ['tasm','ta sin mim','taa seen meem','taseem','tasim','taa seen mim'],
+  'طس': ['tas','ta sin','taa seen','taseen','tasin'],
+  'يس': ['yasin','ya sin','yaa seen','yaseen','yasen','yasseen','yaa-seen'],
+  'ص': ['sad','saad','suad','swad'],
+  'حم': ['ham','ha mim','haa meem','haameem','hamim','hameem','ha-mim'],
+  'عسق': ['asq','ain sin qaf','ayn seen qaaf','ainseenqaf','aynsinqaf','aseeq','asaq'],
+  'ق': ['qaf','qaaf','kaf','gaf'],
+  'ن': ['nun','noon','nuun','noun']
+};
+/* extra Arabic ASR spellings of whole words (letters run together / fused) */
+const MUQ_ARABIC_EXTRA = {
+  'الم': ['الم','الف لام ميم','ألف لام ميم','آلم','ألم','الفلاميم','الفلاممم','ألفلاميم','الف لام ميمم','الف لم ميم','الف لام مم','الف ل م','اليف لام ميم','الي لام ميم','الف لان ميم','ا ل م','الم الم'],
+  'المص': ['المص','الف لام ميم صاد','ألف لام ميم صاد','المصاد','المس','المصد','الف لام ميم ص','المضاد'],
+  'الر': ['الر','الف لام را','ألف لام راء','الف لام راء','الرا','الراء','ألر','آلر','الف لام ر'],
+  'المر': ['المر','الف لام ميم را','ألف لام ميم راء','المرا','المراء','ألمر','آلمر'],
+  'كهيعص': ['كهيعص','كاف ها يا عين صاد','كاف ها يا عين ص','كهيعس','كافهايعينصاد','كاف هاء ياء عين صاد','كاف ها يع صاد','كهعص','كهيعاص','كهيأص'],
+  'طه': ['طه','طاها','طا ها','طاء هاء','طها','تاها','تا ها','طاهه','طهه','طاهاء'],
+  'طسم': ['طسم','طا سين ميم','طاء سين ميم','طاسين ميم','طاسينميم','طسيم','تاسين ميم','تسم'],
+  'طس': ['طس','طا سين','طاء سين','طاسين','طاس','تاسين','تس'],
+  'يس': ['يس','يا سين','ياء سين','ياسين','ياسن','ياسينن','يسن','ياسيين','يسين'],
+  'ص': ['ص','صاد','صــاد','صاض','ساد','صد','صادد','صاذ'],
+  'حم': ['حم','حا ميم','حاء ميم','حاميم','حاامييم','حاميم','هاميم','ها ميم','هم','حمم','حاءميم','حاميمم'],
+  'عسق': ['عسق','عين سين قاف','عينسينقاف','عين سين كاف','عيس قاف','عسك','عنسق','عين س ق'],
+  'ق': ['ق','قاف','كاف','قاااف','قف','قاف قاف'],
+  'ن': ['ن','نون','نوون','نونن','نن','نو']
+};
+const MUQ_BIS_NORM = ['بسم','الله','الرحمن','الرحيم'];
+const MUQ_BIS_KEY  = 'بسماللهالرحمنالرحيم';
+function muqLatinToAr(tok){
+  /* Latin / transliterated token -> Arabic spelling, or '' if no idea */
+  const t = String(tok||'').toLowerCase().replace(/[’'`´ʿʾ\-_.,]/g,'').replace(/[āàáâä]/g,'a').replace(/[īìíîï]/g,'i').replace(/[ūùúûü]/g,'u').replace(/ḥ/g,'h').replace(/ṭ/g,'t').replace(/[^a-z0-9]/g,'');
+  if(!t) return '';
+  return t;
+}
+function _muqIsLatin(tok){ return /[A-Za-zÀ-ɏḀ-ỿ]/.test(tok) && !/[؀-ۿ]/.test(tok); }
+function _muqCartesian(lists, cap){
+  let acc = [''];
+  for(let i = 0; i < lists.length; i++){
+    const nxt = [];
+    for(let a = 0; a < acc.length && nxt.length < cap; a++)
+      for(let b = 0; b < lists[i].length && nxt.length < cap; b++) nxt.push(acc[a] + lists[i][b]);
+    acc = nxt;
+  }
+  return acc;
+}
+/* Build once per muqattaat word: every acceptable spelling, in norm/phon/loose form. */
+function armMuqattaat(w){
+  if(!w || !w.isMuqattaat) return w;
+  const letters = w.muqattaatLetters || [];
+  const norms = new Set(), phons = new Set(), loose = new Set(), latin = new Set();
+  const addAr = (str) => {
+    const n = normArCached(str);
+    if(!n) return;
+    norms.add(n); phons.add(phonArCached(n));
+    try{ loose.add(phonLooseArCached(n)); }catch(_){}
+  };
+  addAr(w.raw); norms.add(w.norm);
+  (MUQ_ARABIC_EXTRA[w.norm] || []).forEach(addAr);
+  /* every combination of letter-name variants, concatenated */
+  const nameLists = letters.map(l => {
+    const arr = (LETTER_NAMES[l] || [l]).map(n => normArCached(n)).filter(Boolean);
+    return arr.length ? Array.from(new Set(arr)) : [l];
+  });
+  _muqCartesian(nameLists, 600).forEach(addAr);
+  /* Latin transliterations: whole word + every combination of letter names */
+  (MUQ_LATIN_WORDS[w.norm] || []).forEach(x => latin.add(muqLatinToAr(x)));
+  const lat = letters.map(l => MUQ_LATIN_NAMES[l] || []).filter(a => a.length);
+  if(lat.length === letters.length) _muqCartesian(lat, 800).forEach(x => latin.add(muqLatinToAr(x)));
+  w.muqNorms = Array.from(norms); w.muqPhons = Array.from(phons).filter(Boolean);
+  w.muqLoose = Array.from(loose).filter(Boolean); w.muqLatin = latin;
+  /* per-letter Latin name lookup for sequential matching */
+  w.muqLatinLetter = letters.map(l => new Set((MUQ_LATIN_NAMES[l] || []).map(muqLatinToAr)));
+  return w;
+}
+/* strip a leading Bismillah (whole tokens, fused tokens, or a prefix glued
+   onto the letters, e.g. "الرحيمالم"); returns remaining norm string */
+function _muqStripBis(norm){
+  let n = norm, guard = 0;
+  while(n && guard++ < 6){
+    let hit = false;
+    for(let i = 0; i < MUQ_BIS_NORM.length; i++){
+      const b = MUQ_BIS_NORM[i];
+      if(n.startsWith(b) && (n.length > b.length || true)){ n = n.slice(b.length); hit = true; break; }
+    }
+    if(!hit) break;
+  }
+  return n;
+}
+function _muqIsBisToken(norm){
+  if(!norm) return false;
+  /* exact words or consecutive-word fusions only (a plain substring test would
+     wrongly swallow real letters such as الر / حم that occur inside Bismillah) */
+  for(let a = 0; a < MUQ_BIS_NORM.length; a++){
+    let acc = '';
+    for(let b = a; b < MUQ_BIS_NORM.length; b++){ acc += MUQ_BIS_NORM[b]; if(acc === norm) return true; }
+  }
+  for(let i = 0; i < MUQ_BIS_NORM.length; i++){
+    const b = MUQ_BIS_NORM[i];
+    if(Math.abs(b.length - norm.length) <= 1 && b.length >= 4 && lev(b, norm) <= 1) return true;
+  }
+  return false;
+}
+/* does the joined candidate (already normalised Arabic) equal / closely match
+   a pre-armed whole-word spelling? */
+function _muqWholeMatch(w, cNorm, cPhon, cLoose){
+  if(!cNorm) return false;
+  if(w.muqNorms.indexOf(cNorm) !== -1) return true;
+  if(cPhon && w.muqPhons.indexOf(cPhon) !== -1) return true;
+  if(cLoose && w.muqLoose.indexOf(cLoose) !== -1) return true;
+  /* fuzzy: only for forms of 4+ letters (full letter-name spellings),
+     so 2-3 letter words like الم / حم / طه stay exact (no false hits). */
+  if(cNorm.length >= 4){
+    for(let i = 0; i < w.muqNorms.length; i++){
+      const v = w.muqNorms[i];
+      if(v.length >= 4 && Math.abs(v.length - cNorm.length) <= 1 && lev(v, cNorm) <= 1) return true;
+    }
+    for(let i = 0; i < w.muqPhons.length; i++){
+      const v = w.muqPhons[i];
+      if(cPhon && v.length >= 4 && Math.abs(v.length - cPhon.length) <= 1 && lev(v, cPhon) <= 1) return true;
+    }
+  }
+  return false;
+}
+/* Stateless scan of tokens[from..] for the Muqattaat word `w`.
+   Returns the index AFTER the last token used (0 = no match), skipping any
+   leading Bismillah tokens. `latinAllowed` keeps Arabic-script strictness
+   unchanged where Latin makes no sense. */
+function muqScan(w, tokens, from){
+  if(!w || !w.isMuqattaat || !w.muqNorms) return 0;
+  let j = from;
+  let sawBis = false;
+  /* 1. skip Bismillah (whole / fused / glued prefix) */
+  const stripped = [];           /* [{idx, norm, rawAr}] tokens after Bismillah */
+  for(let k = j; k < tokens.length; k++){
+    const raw = tokens[k];
+    if(_muqIsLatin(raw)){
+      const lt = muqLatinToAr(raw);
+      if(!stripped.length && /^(bism|bismi|bismillah|bismillahi|bismilah|bismillahir|allah|allahi|llah|rahman|rahmani|arrahman|alrahman|rahim|rahimi|arrahim|alrahim|ar|ir|er)/.test(lt) && !/^(alif|alf)/.test(lt)){ sawBis = true; continue; }
+      stripped.push({ idx:k, norm:'', lat: lt, raw }); continue;
+    }
+    const n = normArCached(raw);
+    if(!n){ continue; }
+    if(!stripped.length){
+      if(_muqIsBisToken(n)){ sawBis = true; continue; }
+      const rest = _muqStripBis(n);
+      if(rest !== n){ sawBis = true; if(!rest) continue; stripped.push({ idx:k, norm:rest, raw:rest }); continue; }
+    }
+    stripped.push({ idx:k, norm:n, raw });
+  }
+  if(!stripped.length) return 0;
+  const first = stripped[0];
+  /* 2. whole-word: join 1..N consecutive tokens starting at the first non-Bismillah token */
+  const maxN = Math.min(stripped.length, Math.max(2, (w.muqattaatLetters||[]).length + 1));
+  let best = 0;
+  for(let n = 1; n <= maxN; n++){
+    let cNorm = '', latinJoin = '', allLatin = true, anyLatin = false;
+    for(let t = 0; t < n; t++){
+      const it = stripped[t];
+      if(it.lat !== undefined){ latinJoin += it.lat; anyLatin = true; }
+      else { allLatin = false; cNorm += it.norm; latinJoin += ''; }
+    }
+    if(anyLatin && allLatin){
+      if(w.muqLatin.has(latinJoin)) best = stripped[n-1].idx + 1;
+      else {
+        /* fuzzy Latin: tolerate 1 edit on 5+ char strings */
+        if(latinJoin.length >= 5){
+          for(const v of w.muqLatin){ if(Math.abs(v.length - latinJoin.length) <= 1 && v.length >= 5 && lev(v, latinJoin) <= 1){ best = stripped[n-1].idx + 1; break; } }
+        }
+      }
+      continue;
+    }
+    if(anyLatin) continue;
+    const cPhon = phonArCached(cNorm);
+    let cLoose = ''; try{ cLoose = phonLooseArCached(cNorm); }catch(_){}
+    if(_muqWholeMatch(w, cNorm, cPhon, cLoose)) best = stripped[n-1].idx + 1;
+  }
+  if(best) return best;
+  /* 3. per-letter sequence (handles Arabic names and Latin names token by token) */
+  const letters = w.muqattaatLetters || [];
+  if(letters.length >= 1 && stripped.length >= 1){
+    const tmp = { isMuqattaat:true, muqattaatLetters: letters, muqattaatCursor: 0, norm: w.norm, phon: w.phon };
+    let li = 0, lastIdx = -1;
+    for(let t = 0; t < stripped.length && li < letters.length; t++){
+      const it = stripped[t];
+      if(it.lat !== undefined){
+        /* Latin letter name or a fused run of them */
+        let ok = false;
+        for(let span = Math.min(letters.length - li, 4); span >= 1 && !ok; span--){
+          /* fused latin tokens: try matching token as concatenation of next `span` names */
+          const lists = [];
+          for(let q = 0; q < span; q++) lists.push(Array.from(w.muqLatinLetter[li + q] || []));
+          if(lists.some(l => !l.length)) continue;
+          const combos = _muqCartesian(lists, 400);
+          if(combos.indexOf(it.lat) !== -1){ li += span; lastIdx = it.idx; ok = true; }
+        }
+        if(!ok) break;
+        continue;
+      }
+      tmp.muqattaatCursor = li;
+      const hP = phonArCached(it.norm);
+      let hL = null; try{ hL = phonLooseArCached(it.norm); }catch(_){}
+      const r = tryMuqattaatProgress(it.norm, hP, hL, tmp);
+      if(r === 'no-match') break;
+      li = tmp.muqattaatCursor; lastIdx = it.idx;
+      if(r === 'complete') { li = letters.length; break; }
+    }
+    if(li >= letters.length && lastIdx >= 0) return lastIdx + 1;
+  }
+  return 0;
+}
+/* Called per ASR result BEFORE normal grading. If the pointer is on a
+   Muqattaat word and the result (Bismillah + letters, in any spelling)
+   matches, commit it at once and return the new 'already' token count so
+   the remaining tokens (next ayah words) are graded normally. */
+/* Commit the Muqattaat word at ptr as done and move on at once. */
+function muqAdvanceNow(w, seg){
+  commitCorrect(ptr, seg || null);
+  try{ lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null; }catch(_){}
+  advancePast(1);
+  pendingHeard.length = 0;
+  try{ consecutiveReds = 0; }catch(_){}
+  noteFollowProgress();
+  w.muqattaatCursor = (w.muqattaatLetters||[]).length;
+  w._muqStuckCount = 0;
+}
+/* True when the heard token is the word AFTER the Muqattaat word — the
+   reciter has already moved on, so never keep waiting for the letters. */
+function muqNextWordMatches(heard, hPhon, hPhonLoose){
+  const nw = words[ptr + 1];
+  if(!nw || nw.isMuqattaat || !heard || heard.length < 3) return false;
+  return isMatchWord(heard, hPhon, hPhonLoose, nw) || (followOnly && followAlPrefixMatch(heard, nw));
+}
+function muqEarlyConsume(toks, already){
+  if(ptr >= words.length) return already;
+  const w = words[ptr];
+  if(!w || !w.isMuqattaat) return already;
+  if(!w.muqNorms) armMuqattaat(w);
+  const end = muqScan(w, toks, already);
+  if(!end || end <= already){
+    /* no letters yet: swallow a leading Bismillah so it is never graded as
+       wrong words, and stay armed for the letters that follow */
+    let k = already, last = already;
+    for(; k < toks.length; k++){
+      const raw = toks[k];
+      let isB = false;
+      if(_muqIsLatin(raw)) isB = /^(bism|bismillah|bismilah|bismillahi|allah|rahman|arrahman|alrahman|rahim|arrahim|alrahim|ir|ar)/.test(muqLatinToAr(raw)) && !/^(alif|alf)/.test(muqLatinToAr(raw));
+      else { const n = normArCached(raw); if(!n){ continue; } isB = _muqIsBisToken(n); }
+      if(!isB) break;
+      last = k + 1;
+    }
+    /* NO-WAIT: letters not recognised, but the next ayah's first word is
+       already being recited -> accept the Muqattaat and carry on from it. */
+    try{
+      const maxGap = (w.muqattaatLetters || []).length + 2;
+      for(let t = last; t < toks.length && t - last <= maxGap; t++){
+        if(_muqIsLatin(toks[t])) continue;
+        const hn = normArCached(toks[t]);
+        if(!hn) continue;
+        if(muqNextWordMatches(hn, phonArCached(toks[t]), followOnly ? phonLooseArCached(toks[t]) : null)){
+          muqAdvanceNow(w, null);
+          try{ recTokens.length = 0; recCursor = 0; }catch(_){}
+          return t;
+        }
+      }
+    }catch(e){ console.warn('[Muqattaat] look-ahead error:', e); }
+    return last;
+  }
+  muqAdvanceNow(w, null);
+  try{ recTokens.length = 0; recCursor = 0; }catch(_){}
+  return end;
+}
 
 function isStrongPartialPrefix(heard){
   if(ptr >= words.length) return false;
@@ -5246,7 +5550,7 @@ function renderHifzMushaf(){
       if(!nrm){ span.classList.add('hifz-visible'); line.appendChild(span); return; }
       const info = { el: span, raw: tok, aIdx, wIdx, revealed: false, norm: nrm, phon: phonArCached(tok) };
       const muq = detectMuqattaat(hifzState.surah, a.numberInSurah, nrm);
-      if(muq){ info.isMuqattaat = true; info.muqattaatLetters = muq; info.muqattaatCursor = 0; }
+      if(muq){ info.isMuqattaat = true; info.muqattaatLetters = muq; info.muqattaatCursor = 0; try{ armMuqattaat(info); }catch(_){} }
       hifzState.words.push(info);
       if(mode === 'silent'){ span.classList.add('hifz-hidden'); }
       else if(mode === 'blank'){ if(wIdx >= toks.length - 3) span.classList.add('hifz-hidden'); else span.classList.add('hifz-visible'); }
@@ -7041,6 +7345,22 @@ async function runSpeechResultProcessing(snap) {
     if (!bestAlt || !bestTranscript) continue;
     const toks = bestTranscript.split(/\s+/).filter(Boolean);
     if (!toks.length) continue;
+    /* MUQATTAAT FAST PATH (Follow + Tajweed): Bismillah + letters recognised
+       at once on interim AND final results, incl. the last token. */
+    try {
+      const a0 = interimProgress.get(i) || 0;
+      let a1 = muqEarlyConsume(toks, a0);
+      if (a1 === a0 && alternatives.length > 1 && ptr < words.length && words[ptr] && words[ptr].isMuqattaat) {
+        for (let ai2 = 0; ai2 < alternatives.length && a1 === a0; ai2++) {
+          const t2 = (alternatives[ai2].transcript || '').trim();
+          if (!t2 || t2 === bestTranscript) continue;
+          const tk2 = t2.split(/\s+/).filter(Boolean);
+          const r2 = muqEarlyConsume(tk2, a0);
+          if (r2 > a0) { a1 = r2; }
+        }
+      }
+      if (a1 > a0) { interimProgress.set(i, a1); scheduleHUD(); }
+    } catch (e) { console.warn('[Muqattaat] fast path error:', e); }
     if (isFinal) {
       const already = interimProgress.get(i) || 0;
       interimProgress.delete(i);
@@ -7078,7 +7398,7 @@ async function runSpeechResultProcessing(snap) {
       scheduleHUD();
     } else {
       const bestConf = (typeof bestAlt.confidence === 'number') ? bestAlt.confidence : 0;
-      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && toks.length >= 2;
+      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && toks.length >= 2 && !(ptr < words.length && words[ptr] && words[ptr].isMuqattaat);
       if (canCommitInterim) {
         const already = interimProgress.get(i) || 0;
         const safeEnd = Math.max(already, toks.length - 1);
@@ -7126,6 +7446,11 @@ async function runSpeechResultProcessing(snap) {
 function scoreAlternativeToks(toks, startPtr){
   if(!toks || !toks.length) return 0;
   if(!words.length || startPtr >= words.length) return 0;
+  { const mw = words[startPtr];
+    if(mw && mw.isMuqattaat){
+      if(!mw.muqNorms) armMuqattaat(mw);
+      if(muqScan(mw, toks, 0)) return 9;
+    } }
   let score = 0, ti = 0, wi = startPtr;
   const maxAhead = followOnly ? 3 : Math.min(6, words.length - startPtr);
   while(ti < toks.length && wi < startPtr + maxAhead){
@@ -7168,6 +7493,13 @@ function buildPhraseObjects(rec) {
     if (!clean || seen.has(clean)) continue;
     seen.add(clean);
     try { phrases.push(new PhraseCtor(clean, 6.0)); } catch (_) {}
+  }
+  if (words[ptr] && words[ptr].isMuqattaat) {
+    const mw = words[ptr];
+    const extra = (MUQ_ARABIC_EXTRA[mw.norm] || []).slice();
+    const spelled = (mw.muqattaatLetters || []).map(l => (LETTER_NAMES[l] || [l])[0]).join(' ');
+    extra.push(spelled, 'بسم الله الرحمن الرحيم ' + mw.norm, 'بسم الله الرحمن الرحيم ' + spelled);
+    extra.forEach(x => { const c = String(x).replace(/[^\u0621-\u064A\s]/g, '').trim(); if (c && !seen.has(c)) { seen.add(c); try { phrases.push(new PhraseCtor(c, 8.0)); } catch (_) {} } });
   }
   const ayahPhrase = [];
   for (let i = ptr; i < end; i++) { const clean = cleanWord(words[i]); if (clean) ayahPhrase.push(clean); }
@@ -7318,6 +7650,15 @@ function gradeFollowFast(tokens, startIdx){
         pendingHeard.length = 0;
         used++; continue;
       }
+      if (mr === 'partial') { used++; continue; }
+      /* Reciter already on the next word -> move on and grade this token there. */
+      if (muqNextWordMatches(heard, hPhon, hPhonLoose)) { muqAdvanceNow(w, null); ti--; continue; }
+      if (!_muqIsBisToken(heard)) w._muqStuckCount = (w._muqStuckCount || 0) + 1;
+      if (w._muqStuckCount >= 3) {
+        muqAdvanceNow(w, null);
+        addFeedback('⏭️ Muqattaat letters not heard clearly — moving on.', false, true);
+        used++; continue;
+      }
       noteFollowWrongToken();
       used++; continue;
     }
@@ -7450,10 +7791,13 @@ async function gradeFull(tokens, startIdx){
             mqW._muqStuckCount = 0;
             used++; continue;
           }
-          mqW._muqStuckCount = (mqW._muqStuckCount || 0) + 1;
-          if (mqW._muqStuckCount === 6) {
-            const names = (mqW.muqattaatLetters || []).map(l => (LETTER_NAMES[l] || [l])[0]).join(' · ');
-            addFeedback('⚠️ Muqattaat not recognised — try the letter names one by one: ' + escapeHtml(names), false, true);
+          if (mr === 'partial') { used++; continue; }
+          /* Reciter already on the next word -> move on and grade this token there. */
+          if (muqNextWordMatches(heard, hPhon, hPhonLoose)) { muqAdvanceNow(mqW, null); ti--; continue; }
+          if (!_muqIsBisToken(heard)) mqW._muqStuckCount = (mqW._muqStuckCount || 0) + 1;
+          if (mqW._muqStuckCount >= 3) {
+            muqAdvanceNow(mqW, null);
+            addFeedback('⏭️ Muqattaat letters not heard clearly — moving on.', false, true);
           }
           used++; continue;
         }
@@ -7554,14 +7898,52 @@ async function gradeFull(tokens, startIdx){
       const w = words[ptr];
       if (followOnly) { noteFollowWrongToken(); used++; continue; }
       const plausibleAttempt = w && isPlausiblePronunciationAttempt(heard, hPhon, w);
-      if(plausibleAttempt && w && !w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
-        if(seg) w.audio = seg;
-        w.el.classList.add('error');
-        w.el.classList.remove('current','correct','corrected','model','located','warned');
-        errors++;
-        const m = { idx: mistakeCounter++, correct: w.raw.replace(TASHKEEL,''), heard: rawTok, verse: w.verse, kind: 'misread' };
-        mistakes.push(m); appendMistake(m); scheduleHUD();
-        if(beepOn) beepThrottled('error');
+
+      /* NO-STALL look-ahead: the reciter has clearly moved on to one of the
+         next 1-2 words (same ayah). Mark the skipped word(s), commit the
+         word that was heard and advance immediately. */
+      if(!plausibleAttempt && heard.length >= 3){
+        let la = 0;
+        for(let k = 1; k <= 2; k++){
+          const fw = words[ptr + k];
+          if(!fw || fw.verse !== w.verse || fw.isMuqattaat) break;
+          if(isMatchWord(heard, hPhon, null, fw)){ la = k; break; }
+        }
+        if(la > 0){
+          for(let q = 0; q < la; q++){
+            const sw = words[ptr + q];
+            if(sw && !sw.el.classList.contains('error') && !sw.el.classList.contains('skipped')){
+              recordMistake(ptr + q, 'skipped', '');
+              markSkippedWord(ptr + q);
+            }
+          }
+          const tgt = ptr + la;
+          commitCorrect(tgt, seg);
+          runStrict1Checks(tgt, heard, { timingReliable: false, skipTiming: true, rawHeard: rawTok });
+          advancePast(la + 1);
+          pendingHeard.length = 0; consecutiveReds = 0;
+          lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
+          noteFollowProgress();
+          used++; continue;
+        }
+      }
+
+      if(plausibleAttempt && w){
+        /* Mark red (once) but NEVER hold the pointer on a marked word:
+           advance straight away so the next word is listened for. */
+        if(!w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
+          if(seg) w.audio = seg;
+          w.el.classList.add('error');
+          w.el.classList.remove('current','correct','corrected','model','located','warned');
+          errors++;
+          const m = { idx: mistakeCounter++, correct: w.raw.replace(TASHKEEL,''), heard: rawTok, verse: w.verse, kind: 'misread' };
+          mistakes.push(m); appendMistake(m); scheduleHUD();
+        }
+        advancePast(1);
+        pendingHeard.length = 0; consecutiveReds = 0;
+        lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
+        noteFollowProgress();
+        used++; continue;
       }
       noteFollowWrongToken();
       lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
@@ -7713,24 +8095,6 @@ function unlockAudio(){
   }catch(e){}
   return audioCtx;
 }
-function beep(kind){
-  if(IS_ANDROID && wantMic) return;
-  try{
-    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') audioCtx.resume();
-    const t0=audioCtx.currentTime;
-    const tone=(f,st,dur,vol)=>{
-      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-      o.type=kind==='error'?'square':'sine'; o.frequency.value=f;
-      g.gain.setValueAtTime(0.0001,t0+st); g.gain.exponentialRampToValueAtTime(vol,t0+st+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+st+dur);
-      o.connect(g); g.connect(audioCtx.destination); o.start(t0+st); o.stop(t0+st+dur+0.02);
-    };
-    if(kind==='error'){ tone(300,0,0.12,0.18); tone(190,0.13,0.17,0.18); } else tone(760,0,0.10,0.13);
-    if(navigator.vibrate) navigator.vibrate(kind==='error'?[40,50,80]:30);
-  }catch(e){}
-}
-let lastBeepAt = -1e9;
-function beepThrottled(kind){ const now = performance.now(); if(now - lastBeepAt < 300) return; lastBeepAt = now; beep(kind); }
 let _audioPrimed = false;
 const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
 
@@ -8454,7 +8818,6 @@ function clearSilenceTimer(){ clearTimeout(silenceTimer); silenceTimer = null; }
 
 let updatingMutex = false;
 function applyMutexUI(){
-  beepOn = !followOnly;
   if(modeFollowBtn){ modeFollowBtn.classList.toggle('active', followOnly); modeFollowBtn.setAttribute('aria-pressed', followOnly ? 'true' : 'false'); }
   if(modeTajweedBtn){ modeTajweedBtn.classList.toggle('active', !followOnly); modeTajweedBtn.setAttribute('aria-pressed', !followOnly ? 'true' : 'false'); }
   if(hideTextChip) hideTextChip.hidden = !followOnly;
@@ -8470,7 +8833,7 @@ function setRecitationMode(modeName){
   const newFollow = (modeName === 'follow');
   if(newFollow === followOnly && !updatingMutex) return;
   updatingMutex = true;
-  followOnly = newFollow; beepOn = !followOnly;
+  followOnly = newFollow;
   try{ localStorage.setItem('qc.followOnly', followOnly ? '1' : '0'); }catch(e){}
   pendingHeard.length = 0; consecutiveReds = 0;
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false;
@@ -8639,7 +9002,7 @@ function renderVerses(ayahs, translations){
     const nrm = normArCached(tok);
     const w = { raw: tok, norm: nrm, phon: phonArCached(tok), phonLoose: phonLooseArCached(tok), len: nrm.length, el: span, surah: surahId, ayah: ayahNum, verse: surahId + ':' + ayahNum, tjRules: null, normNoSilent: null, _muqStuckCount: 0 };
     const muq = detectMuqattaat(surahId, ayahNum, nrm);
-    if(muq){ w.isMuqattaat = true; w.muqattaatLetters = muq; w.muqattaatCursor = 0; }
+    if(muq){ w.isMuqattaat = true; w.muqattaatLetters = muq; w.muqattaatCursor = 0; armMuqattaat(w); }
     words.push(w);
   }
   function pushDecoration(tok, parent){
@@ -9360,7 +9723,7 @@ async function resumeRecitationSession(modeKey){
   if(!data){ showToast('No saved <b>' + (modeKey === 'follow' ? 'Follow' : 'Tajweed') + '</b> session yet.'); return; }
   suppressProgressSave = true;
   try{
-    followOnly = (modeKey === 'follow'); beepOn = !followOnly;
+    followOnly = (modeKey === 'follow');
     localStorage.setItem('qc.followOnly', followOnly ? '1' : '0');
     lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; silentWarned = false; prevWordAudio = null;
     applyMutexUI(); applyFollowOnlyUI();
