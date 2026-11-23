@@ -1048,16 +1048,27 @@ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 body.page-dark.viewer-read-mode.viewer-translation-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah .translation{background:rgba(255,255,255,.08);}
 body.page-light.viewer-read-mode.viewer-translation-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah .translation{background:rgba(0,0,0,.05);}
+/* Highlight only the first displayed row of a Juz beginning.
+   White text on black; the rest of the ayah keeps its normal colours. */
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start{
-display:block;position:relative;background:transparent !important;color:inherit !important;
-padding:0;margin:10px 0;box-shadow:none !important;opacity:1 !important;
+/* Keep the Juz-start ayah inline so the next ayah can continue immediately
+   in the same text row instead of leaving an empty block/row behind. */
+display:inline !important;position:relative;background:transparent !important;color:inherit !important;
+padding:0;margin:0;box-shadow:none !important;opacity:1 !important;
 }
-body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start::before{
-content:'';position:absolute;left:-6px;right:-6px;top:0;height:2.25em;height:1lh;
-background:#ffffff;border-radius:8px;mix-blend-mode:difference;-webkit-mix-blend-mode:difference;
-pointer-events:none;z-index:0;
-}
+/* Actual first-visual-line wrapper: contrast follows the active theme. */
+/* FIX: the wrapper created by applyJuzFirstVisualLines() is a plain <span class="juz-first-row">
+   (it is NOT an .ayah), so the old ".ayah.juz-first-row" selectors never matched. */
+body.page-light .qv-slot .juz-first-row{color:#fff !important;background:#000 !important;}
+body.page-dark  .qv-slot .juz-first-row{color:#000 !important;background:#fff !important;}
+body.page-light .qv-slot .juz-first-row *{color:#fff !important;background:transparent !important;border-color:#fff !important;}
+body.page-dark  .qv-slot .juz-first-row *{color:#000 !important;background:transparent !important;border-color:#000 !important;}
+.juz-first-row{-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start::before{content:none !important;}
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start .mushaf-ayah-mark{border-color:currentColor !important;}
+/* The non-Mushaf reading/index view uses block ayah rows too. */
+.qv-slot .ayah.juz-start{background:transparent !important;color:inherit !important;padding:0;margin:0;}
+
 .mushaf-page-num{display:block;text-align:center;margin:0 0 14px;padding:0;font-family:'Amiri','Amiri Quran',serif;color:currentColor;font-size:1.05rem;letter-spacing:.14em;opacity:.8;border:none;}
 .mushaf-ruku-mark{
 position:absolute;transform:translate(0,-50%);
@@ -1067,6 +1078,89 @@ pointer-events:none;-webkit-user-select:none;user-select:none;direction:rtl;
 z-index:3;background:transparent;padding:0 .12em;border-radius:999px;
 }
 .mushaf-sajdah-mark{display:inline-block;font-size:.95em;margin:0 .15em;color:currentColor;vertical-align:middle;-webkit-text-stroke:0;opacity:.9;cursor:help;}
+
+/* ===== Reader page frame: wider border, one-sided ع gutter (odd = right, even = left) ===== */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book{
+--page-border-w:7px;            /* thickness of the double border around the Quran text */
+--ruku-gap:clamp(28px,7vw,42px);/* the only side gap: holds the ع marks */
+--edge-gap:0px;                 /* the other side: no gap */
+padding-left:calc(var(--safe-left) + 5px);
+padding-right:calc(var(--safe-right) + 5px);
+}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-inner{padding-left:var(--edge-gap);padding-right:var(--edge-gap);}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-inner.page-odd{padding-right:var(--ruku-gap);}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-inner.page-even{padding-left:var(--ruku-gap);}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-page{
+border-width:var(--page-border-w);padding-left:14px;padding-right:14px;
+}
+
+/* ===== Surah rectangle now holds the Bismillah, neatly fitted ===== */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header{
+display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+padding:4px 8px 6px;overflow:hidden;
+}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-surah-name{text-align:center;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-surah-meta{text-align:center;margin-bottom:2px;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-bismillah-line{
+display:flex;align-items:center;justify-content:center;gap:8px;
+width:100%;margin:0;padding:0;overflow:hidden;white-space:nowrap;text-align:center;
+line-height:2.1;font-size:1.05em;
+}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-surah-name + .mushaf-bismillah-line,
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-surah-meta + .mushaf-bismillah-line{
+margin-top:6px;
+}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-bismillah-line .bism-text{padding:0;flex:0 0 auto;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-bismillah-line .bism-orn{flex:0 0 auto;}
+
+/* ===== Golden rectangle around every Bismillah (inside the Surah rectangle) ===== */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header{
+padding:6px 8px 7px;border:2px solid transparent;border-radius:8px;
+background:linear-gradient(var(--page-bg,#000),var(--page-bg,#000)) padding-box,
+           linear-gradient(135deg,#f8e596 0%,#d4a82a 35%,#8a6410 58%,#e9c45a 100%) border-box;
+box-shadow:0 0 8px rgba(212,168,42,.30);
+}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-header .mushaf-bismillah-line{
+border:2px solid transparent;border-radius:7px;padding:1px 10px;
+background:linear-gradient(var(--page-bg,#000),var(--page-bg,#000)) padding-box,
+           linear-gradient(135deg,#f8e596 0%,#d4a82a 35%,#8a6410 58%,#e9c45a 100%) border-box;
+box-shadow:0 0 7px rgba(212,168,42,.38);
+}
+
+/* ===== Golden ornamental border for the first two pages of the Quran ===== */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-page.mushaf-ornate{
+border:5px double #c9a227;padding:42px 30px 30px;
+box-shadow:0 18px 46px rgba(0,0,0,.55),0 0 14px rgba(212,168,42,.35);
+}
+.mushaf-ornament{position:absolute;inset:0;pointer-events:none;z-index:0;}
+.mushaf-ornament i{position:absolute;display:block;}
+.mushaf-ornament .orn-e{background-repeat:round;}
+.mushaf-ornament .orn-e.t,.mushaf-ornament .orn-e.b{left:0;right:0;height:20px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2740%27%20height%3D%2720%27%20viewBox%3D%270%200%2040%2020%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23f8e596%27%2F%3E%3Cstop%20offset%3D%27.5%27%20stop-color%3D%27%23d4a82a%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%238a6410%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%27M0%201.2H40M0%2018.8H40%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%271.6%27%20fill%3D%27none%27%2F%3E%3Cpath%20d%3D%27M20%203.2%2027.5%2010%2020%2016.8%2012.5%2010Z%27%20fill%3D%27url%28%23g%29%27%20stroke%3D%27%236b4d0b%27%20stroke-width%3D%27.5%27%2F%3E%3Cpath%20d%3D%27M20%206.4%2023.6%2010%2020%2013.6%2016.4%2010Z%27%20fill%3D%27%235a410a%27%2F%3E%3Ccircle%20cx%3D%2720%27%20cy%3D%2710%27%20r%3D%271.2%27%20fill%3D%27%23f8e596%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2710%27%20r%3D%272.6%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2710%27%20r%3D%272.6%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%276.5%27%20cy%3D%2710%27%20r%3D%271.3%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%2733.5%27%20cy%3D%2710%27%20r%3D%271.3%27%20fill%3D%27url%28%23g%29%27%2F%3E%3C%2Fsvg%3E");background-size:auto 100%;background-repeat:round no-repeat;}
+.mushaf-ornament .orn-e.t{top:0;} .mushaf-ornament .orn-e.b{bottom:0;}
+.mushaf-ornament .orn-e.l,.mushaf-ornament .orn-e.r{top:0;bottom:0;width:20px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2720%27%20height%3D%2740%27%20viewBox%3D%270%200%2020%2040%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23f8e596%27%2F%3E%3Cstop%20offset%3D%27.5%27%20stop-color%3D%27%23d4a82a%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%238a6410%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cg%20transform%3D%27translate%2820%200%29%20rotate%2890%29%27%3E%3Cpath%20d%3D%27M0%201.2H40M0%2018.8H40%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%271.6%27%20fill%3D%27none%27%2F%3E%3Cpath%20d%3D%27M20%203.2%2027.5%2010%2020%2016.8%2012.5%2010Z%27%20fill%3D%27url%28%23g%29%27%20stroke%3D%27%236b4d0b%27%20stroke-width%3D%27.5%27%2F%3E%3Cpath%20d%3D%27M20%206.4%2023.6%2010%2020%2013.6%2016.4%2010Z%27%20fill%3D%27%235a410a%27%2F%3E%3Ccircle%20cx%3D%2720%27%20cy%3D%2710%27%20r%3D%271.2%27%20fill%3D%27%23f8e596%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2710%27%20r%3D%272.6%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2710%27%20r%3D%272.6%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%276.5%27%20cy%3D%2710%27%20r%3D%271.3%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%2733.5%27%20cy%3D%2710%27%20r%3D%271.3%27%20fill%3D%27url%28%23g%29%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");background-size:100% auto;background-repeat:no-repeat round;}
+.mushaf-ornament .orn-e.l{left:0;} .mushaf-ornament .orn-e.r{right:0;}
+.mushaf-ornament .orn-line{inset:23px;border:1px solid #c9a227;box-shadow:inset 0 0 0 2px transparent;}
+.mushaf-ornament .orn-c{width:40px;height:40px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2744%27%20height%3D%2744%27%20viewBox%3D%270%200%2044%2044%27%3E%3Cdefs%3E%3CradialGradient%20id%3D%27r%27%20cx%3D%27.4%27%20cy%3D%27.35%27%20r%3D%27.8%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23fbeeaa%27%2F%3E%3Cstop%20offset%3D%27.55%27%20stop-color%3D%27%23d4a82a%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%238a6410%27%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2722%27%20r%3D%2720.5%27%20fill%3D%27url%28%23r%29%27%20stroke%3D%27%235a410a%27%20stroke-width%3D%271%27%2F%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2722%27%20r%3D%2717%27%20fill%3D%27none%27%20stroke%3D%27%235a410a%27%20stroke-width%3D%27.7%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%235a410a%27%20stroke-width%3D%271%27%3E%3Crect%20x%3D%2710.5%27%20y%3D%2710.5%27%20width%3D%2723%27%20height%3D%2723%27%2F%3E%3Crect%20x%3D%2710.5%27%20y%3D%2710.5%27%20width%3D%2723%27%20height%3D%2723%27%20transform%3D%27rotate%2845%2022%2022%29%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2722%27%20r%3D%276%27%20fill%3D%27%23fff1a8%27%20stroke%3D%27%235a410a%27%20stroke-width%3D%27.8%27%2F%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2722%27%20r%3D%272.3%27%20fill%3D%27%238a6410%27%2F%3E%3Cg%20fill%3D%27%235a410a%27%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%274.5%27%20r%3D%271.4%27%2F%3E%3Ccircle%20cx%3D%2722%27%20cy%3D%2739.5%27%20r%3D%271.4%27%2F%3E%3Ccircle%20cx%3D%274.5%27%20cy%3D%2722%27%20r%3D%271.4%27%2F%3E%3Ccircle%20cx%3D%2739.5%27%20cy%3D%2722%27%20r%3D%271.4%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/contain no-repeat;}
+.mushaf-ornament .orn-c.tl{top:-3px;left:-3px;}
+.mushaf-ornament .orn-c.tr{top:-3px;right:-3px;}
+.mushaf-ornament .orn-c.bl{bottom:-3px;left:-3px;}
+.mushaf-ornament .orn-c.br{bottom:-3px;right:-3px;}
+.mushaf-book-page.mushaf-ornate > .mushaf-book-header-row,
+.mushaf-book-page.mushaf-ornate > .mushaf-book-content,
+.mushaf-book-page.mushaf-ornate > .mushaf-book-footer-row{position:relative;z-index:1;}
+
+/* ===== Today · Hijri card: never clip any of its text ===== */
+.hijri-card{height:auto;min-height:76px;padding:9px 10px 10px;}
+.hijri-main .hijri-day-month{white-space:normal;overflow-wrap:anywhere;}
+.hijri-alt{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.55;max-width:100%;direction:rtl;unicode-bidi:isolate;text-align:center;}
+.hijri-main,.hijri-sub{max-width:100%;}
+
+/* ===== Reader zoom (double-tap / pinch, 1x to 1.5x) ===== */
+/* The whole page (frame, header, text, ع marks) is scaled uniformly with the CSS `scale` property:
+   nothing reflows, so the words are never distorted. One finger pans while zoomed. */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed{overflow:auto !important;direction:ltr;touch-action:pan-x pan-y !important;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed .mushaf-inner{transform-origin:0 0;padding-bottom:110px;}
+
 .toast{
 position:fixed;top:calc(var(--safe-top) + 18px);left:50%;
 transform:translateX(-50%) translateY(-18px);
@@ -8771,7 +8865,7 @@ function renderVerses(ayahs, translations){
         const bl = document.createElement('div');
         bl.className = 'ayah bismillah-line';
         bl.dataset.surah = surahId; bl.dataset.ayah = '0';
-        if(JUZ_START_VERSE[surahId + ':' + ayahNum]) bl.classList.add('juz-start');
+        if(Number(surahId) !== 1 && JUZ_START_VERSE[surahId + ':' + ayahNum]) bl.classList.add('juz-start');
         bisTokens.forEach(tok => pushWord(tok, surahId, 0, bl));
         inner.appendChild(bl);
       }
@@ -8783,7 +8877,7 @@ function renderVerses(ayahs, translations){
     const line=document.createElement('div');
     line.className='ayah';
     line.dataset.surah = surahId; line.dataset.ayah = displayAyah;
-    if(JUZ_START_VERSE[surahId + ':' + ayahNum]) line.classList.add('juz-start');
+    if(Number(surahId) !== 1 && JUZ_START_VERSE[surahId + ':' + ayahNum]) line.classList.add('juz-start');
     const toks = text.split(/\s+/).filter(Boolean);
     toks.forEach(tok => {
       if(!normArCached(tok)){ pushDecoration(tok, line); return; }
@@ -10657,7 +10751,9 @@ function placeRukuMarks(inner, content){
   const frame = content.closest('.mushaf-book-page') || content.parentElement;
   const innerRect = inner.getBoundingClientRect();
   const frameRect = frame ? frame.getBoundingClientRect() : innerRect;
-  const rightOffset = (innerRect.right - frameRect.left) + 4;
+  const zf = (inner.offsetWidth ? innerRect.width / inner.offsetWidth : 1) || 1;   /* current page zoom */
+  const rightOffset = ((innerRect.right - frameRect.left) / zf) + 4;
+  const isOddPage = inner.classList.contains('page-odd');
   const nextPageData = readerState.pages.get(readerState.currentPage + 1);
   for(let i = 0; i < list.length; i++){
     const el = list[i];
@@ -10684,14 +10780,21 @@ function placeRukuMarks(inner, content){
     const anchor = medallion || el;
     const r = anchor.getBoundingClientRect();
     if(!r || !r.width) continue;
-    const top = (r.top + r.height / 2) - innerRect.top;
+    const top = ((r.top + r.height / 2) - innerRect.top) / zf;
     if(!isFinite(rightOffset) || !isFinite(top)) continue;
     const m = document.createElement('span');
     m.className = 'mushaf-ruku-mark';
     m.textContent = 'ع';
     m.setAttribute('aria-hidden', 'true');
-    m.style.left = 'auto';
-    m.style.right = Math.round(rightOffset) + 'px';
+    if(isOddPage){
+      /* odd page: gap on the right of the frame */
+      m.style.right = 'auto';
+      m.style.left = Math.round(((frameRect.right - innerRect.left) / zf) + 4) + 'px';
+    } else {
+      /* even page: gap on the left of the frame */
+      m.style.left = 'auto';
+      m.style.right = Math.round(rightOffset) + 'px';
+    }
     m.style.top = Math.round(top) + 'px';
     inner.appendChild(m);
   }
@@ -10707,6 +10810,90 @@ function scheduleRukuReplace(){
 }
 window.addEventListener('resize', scheduleRukuReplace);
 window.addEventListener('orientationchange', scheduleRukuReplace);
+/* Wrap only the first rendered line of each Juz-start ayah. The old ::first-line
+   rule did not work because these ayah elements are inline. */
+function applyJuzFirstVisualLines(root){
+  if(!root) return;
+  root.querySelectorAll('.ayah.juz-start:not([data-juz-row-done="1"])').forEach(el=>{
+    const textNode=Array.from(el.childNodes).find(n=>n.nodeType===Node.TEXT_NODE && n.textContent.trim());
+    if(textNode){
+      const value=textNode.textContent; const range=document.createRange();
+      let firstTop=null, end=0, lastSpace=0;
+      let firstCy=null, allOnRow=true;
+      for(let i=0;i<value.length;i++){
+        range.setStart(textNode,i);range.setEnd(textNode,i+1);
+        const rect=range.getBoundingClientRect();
+        if(!rect.width || !rect.height) continue;      /* skip combining marks / collapsed chars */
+        const cy=(rect.top+rect.bottom)/2;
+        if(firstCy===null) firstCy=cy;
+        if(Math.abs(cy-firstCy)>rect.height*0.6){ allOnRow=false; end=i; break; }  /* first char of the next visual line: row ends right before it */
+        end=i+1;
+      }
+      if(end>0){
+        if(end<value.length) textNode.splitText(end);
+        const wrap=document.createElement('span');wrap.className='juz-first-row';
+        textNode.parentNode.insertBefore(wrap,textNode);wrap.appendChild(textNode);
+        /* verse fits on one row: take the ayah number medallion (and sajdah sign) with it */
+        if(allOnRow){
+          let sib=wrap.nextSibling;
+          while(sib && sib.nodeType===1 && !sib.classList.contains('translation')){
+            const nxt=sib.nextSibling; wrap.appendChild(sib); sib=nxt;
+          }
+        }
+      }
+    }else{
+      const children=Array.from(el.children); let top=null; const selected=[];
+      for(const child of children){
+        const r=child.getBoundingClientRect(); if(!r.width&&!r.height) continue;
+        if(top===null) top=r.top;
+        if(Math.abs(r.top-top)>2) break;
+        selected.push(child);
+      }
+      if(selected.length){
+        const wrap=document.createElement('span');wrap.className='juz-first-row';
+        el.insertBefore(wrap,selected[0]);selected.forEach(n=>wrap.appendChild(n));
+      }
+    }
+    el.dataset.juzRowDone='1';
+  });
+}
+/* Remove the wrappers again (used on resize / after fonts load) so the first row is re-measured. */
+function resetJuzFirstRows(){
+  document.querySelectorAll('.juz-first-row').forEach(w=>{const p=w.parentNode;if(p){while(w.firstChild)p.insertBefore(w.firstChild,w);w.remove();p.normalize();}});
+  document.querySelectorAll('.ayah.juz-start').forEach(e=>delete e.dataset.juzRowDone);
+}
+/* Shrink the Bismillah (if needed) so it always fits inside the Surah rectangle on one line. */
+function fitBismillahInHeaders(){
+  document.querySelectorAll('.mushaf-book-header .mushaf-bismillah-line').forEach(b=>{
+    b.style.fontSize='';
+    const avail=b.clientWidth; if(!avail) return;
+    let size=parseFloat(getComputedStyle(b).fontSize), guard=0;
+    while(b.scrollWidth>avail+0.5 && size>10 && guard++<60){ size-=0.5; b.style.fontSize=size+'px'; }
+  });
+}
+let readerLayoutTimer=null;
+function scheduleReaderLayoutFix(){
+  clearTimeout(readerLayoutTimer);
+  readerLayoutTimer=setTimeout(()=>{
+    fitBismillahInHeaders();
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{
+      fitBismillahInHeaders(); resetJuzFirstRows(); scheduleJuzFirstVisualLines(); scheduleRukuReplace();
+    }).catch(()=>{});
+  },60);
+}
+window.addEventListener('resize',()=>{ clearTimeout(readerLayoutTimer); readerLayoutTimer=setTimeout(fitBismillahInHeaders,120); });
+window.addEventListener('orientationchange',()=>{ setTimeout(fitBismillahInHeaders,200); });
+let juzLineFrame=0;
+function scheduleJuzFirstVisualLines(){
+  if(juzLineFrame) cancelAnimationFrame(juzLineFrame);
+  juzLineFrame=requestAnimationFrame(()=>{juzLineFrame=0;const slot=document.querySelector('.qv-slot');if(slot)applyJuzFirstVisualLines(slot);});
+}
+if(!window.__juzLineObserver){
+  window.__juzLineObserver=new MutationObserver(scheduleJuzFirstVisualLines);
+  window.__juzLineObserver.observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('resize',()=>{ resetJuzFirstRows(); scheduleJuzFirstVisualLines(); });
+  document.addEventListener('DOMContentLoaded',scheduleJuzFirstVisualLines);
+}
 function renderReaderPage(pageNumber, token){
   const page = readerState.pages.get(pageNumber);
   if(!page) return;
@@ -10717,7 +10904,17 @@ function renderReaderPage(pageNumber, token){
   pageEl.classList.add('mushaf-book');
   pageEl.innerHTML = '';
   const inner = document.createElement('div'); inner.className = 'mushaf-inner';
+  /* odd pages keep their side gap on the RIGHT, even pages on the LEFT (for the ع marks) */
+  inner.classList.add((pageNumber % 2 === 1) ? 'page-odd' : 'page-even');
+  applyZoomToInner(inner);
   const frame = document.createElement('div'); frame.className = 'mushaf-book-page';
+  if(pageNumber === 1 || pageNumber === 2){
+    /* the first two pages of the Quran get the golden decorative border */
+    frame.classList.add('mushaf-ornate');
+    const orn = document.createElement('div'); orn.className = 'mushaf-ornament'; orn.setAttribute('aria-hidden','true');
+    orn.innerHTML = '<i class="orn-e t"></i><i class="orn-e b"></i><i class="orn-e l"></i><i class="orn-e r"></i><i class="orn-line"></i><i class="orn-c tl"></i><i class="orn-c tr"></i><i class="orn-c bl"></i><i class="orn-c br"></i>';
+    frame.appendChild(orn);
+  }
   const firstAyah = page.ayahs[0] || {};
   const pageJuz = firstAyah.juz || 1;
   const pageManzil = firstAyah.manzil || 1;
@@ -10741,8 +10938,10 @@ function renderReaderPage(pageNumber, token){
       const metaBits = [];
       if(a.surahEnglishName) metaBits.push(escapeHtml(a.surahEnglishName));
       if(a.surahNumberOfAyahs) metaBits.push(a.surahNumberOfAyahs + ' ayahs');
-      metaBits.push('Surah ' + a.surah);
-      h.innerHTML = '<div class="mushaf-surah-name">' + escapeHtml(a.surahName) + '</div><div class="mushaf-surah-meta">' + metaBits.join(' · ') + '</div>';
+      /* the word "Surah" (and its number) is no longer shown in the rectangle */
+      let hdrName = a.surahName || '';
+      if(!hdrName && !shouldShowBismillah(a.surah)) hdrName = SURAH_NAMES_AR[a.surah - 1] || '';  /* Surah 9 has no Bismillah: keep its name so the box is not empty */
+      h.innerHTML = (hdrName ? '<div class="mushaf-surah-name">' + escapeHtml(hdrName) + '</div>' : '') + (metaBits.length ? '<div class="mushaf-surah-meta">' + metaBits.join(' · ') + '</div>' : '');
       content.appendChild(h);
       if(shouldShowBismillah(a.surah)){
         const b = document.createElement('div'); b.className = 'mushaf-bismillah-line';
@@ -10750,7 +10949,7 @@ function renderReaderPage(pageNumber, token){
         const t = document.createElement('span'); t.className = 'bism-text'; t.textContent = IP_BISMILLAH;
         const o2 = document.createElement('span'); o2.className = 'bism-orn'; o2.setAttribute('aria-hidden','true'); o2.textContent = '۞';
         b.appendChild(o1); b.appendChild(t); b.appendChild(o2);
-        content.appendChild(b);
+        h.appendChild(b);   /* Bismillah now lives INSIDE the Surah rectangle */
       }
     }
     let text = String(a.text == null ? '' : a.text);
@@ -10766,7 +10965,7 @@ function renderReaderPage(pageNumber, token){
     span.dataset.verse = verseKey; span.dataset.page = String(pageNumber);
     if(typeof a.ruku === 'number') span.dataset.ruku = String(a.ruku);
     if(a.surahNumberOfAyahs) span.dataset.surahAyahs = String(a.surahNumberOfAyahs);
-    if(JUZ_START_VERSE[verseKey]) span.classList.add('juz-start');
+    if(Number(a.surah) !== 1 && JUZ_START_VERSE[verseKey]) span.classList.add('juz-start');
     span.appendChild(document.createTextNode(text + ' '));
     const mark = document.createElement('span'); mark.className = 'mushaf-ayah-mark'; mark.textContent = toAr(displayAyah);
     span.appendChild(mark);
@@ -10777,8 +10976,9 @@ function renderReaderPage(pageNumber, token){
   frame.appendChild(content);
   const footer = document.createElement('div'); footer.className = 'mushaf-book-footer-row'; footer.textContent = 'منزل ' + toAr(pageManzil);
   frame.appendChild(footer);
-  inner.appendChild(frame); pageEl.appendChild(inner); pageEl.scrollTop = 0;
+  inner.appendChild(frame); pageEl.appendChild(inner); pageEl.scrollTo({top:0,left:0,behavior:'instant'});
   scheduleRukuReplace();
+  scheduleReaderLayoutFix();
   if(surahsOnPage.length === 1) qvTitle.textContent = surahsOnPage[0].surahEnglishName + ' · ' + surahsOnPage[0].surahName;
   else if(surahsOnPage.length > 1) qvTitle.textContent = surahsOnPage.map(a => a.surahEnglishName).join(' · ');
   else qvTitle.textContent = 'Page ' + pageNumber;
@@ -10944,6 +11144,7 @@ function openViewer(mode, opts){
     return;
   }
   viewerReturnScreen = currentScreenName;
+  resetReaderZoom();
   viewerOpen = true;
   viewerMode = mode;
   quranViewer.hidden = false;
@@ -11371,10 +11572,10 @@ function readerGestureStart(e){
 }
 function readerGestureMove(e){
   if(!readerGesture || e.pointerId !== readerGesture.id) return;
-  const g = readerGesture; g.x = e.clientX; g.y = e.clientY;
+  const g = readerGesture; if(g.pinched) return; g.x = e.clientX; g.y = e.clientY;
   const dx = g.x - g.x0; const dy = g.y - g.y0;
   if(!g.moved && (Math.abs(dx) > 8 || Math.abs(dy) > 8)){ g.moved = true; if(g.holdTimer){ clearTimeout(g.holdTimer); g.holdTimer = null; } }
-  if(!g.dragging){ if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.1){ g.dragging = true; try{ pageEl.setPointerCapture(e.pointerId); }catch(_){} hideViewerChromeNow(); } }
+  if(!g.dragging && !(readerZoom > 1.001)){ if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.1){ g.dragging = true; try{ pageEl.setPointerCapture(e.pointerId); }catch(_){} hideViewerChromeNow(); } }
   if(g.dragging) applyPageDrag(dx);
 }
 function readerGestureEnd(e){
@@ -11405,6 +11606,89 @@ function readerGestureCancel(e){
   if(g.dragging) snapPageBack();
 }
 pageEl.addEventListener('pointerdown', readerGestureStart);
+/* ===== Reader zoom: double-tap toggles 1x <-> 1.5x, two-finger pinch zooms between 1x and 1.5x ===== */
+const READER_ZOOM_MAX = 1.5;
+var readerZoom = 1;
+const readerPtrs = new Map();
+let readerPinch = null, readerLastTap = null, readerPinchRaf = 0, readerPinchNext = null;
+function applyZoomToInner(inner){
+  if(!inner) return;
+  if(readerZoom > 1.001){ inner.style.transformOrigin = '0 0'; inner.style.scale = String(readerZoom); }
+  else { inner.style.scale = ''; inner.style.transformOrigin = ''; }
+}
+function setReaderZoom(z, fx, fy){
+  z = Math.max(1, Math.min(READER_ZOOM_MAX, z));
+  const old = readerZoom;
+  if(Math.abs(z - old) < 0.0005) return;
+  const inner = getMushafInner();
+  if(!inner){ readerZoom = z; return; }
+  const pr = pageEl.getBoundingClientRect();
+  if(fx == null) fx = pr.left + pr.width / 2;
+  if(fy == null) fy = pr.top + pr.height / 2;
+  const ir = inner.getBoundingClientRect();              /* top-left of the page = scale origin */
+  const ux = (fx - ir.left) / old, uy = (fy - ir.top) / old;   /* point under the fingers, in unscaled page units */
+  readerZoom = z;
+  pageEl.classList.toggle('reader-zoomed', z > 1.001);
+  applyZoomToInner(inner);
+  const prevSB = pageEl.style.scrollBehavior; pageEl.style.scrollBehavior = 'auto';
+  if(z > 1.001){
+    pageEl.scrollLeft += ir.left - (fx - ux * z);
+    pageEl.scrollTop  += ir.top  - (fy - uy * z);
+  } else { pageEl.scrollLeft = 0; }
+  pageEl.style.scrollBehavior = prevSB;
+}
+function resetReaderZoom(){
+  readerZoom = 1; readerPinch = null; readerLastTap = null; readerPtrs.clear();
+  pageEl.classList.remove('reader-zoomed');
+  const inner = getMushafInner(); if(inner) applyZoomToInner(inner);
+}
+function readerZoomActive(){ return viewerOpen && viewerMode === 'read'; }
+pageEl.addEventListener('pointerdown', e => {
+  if(!readerZoomActive()) return;
+  if(e.isPrimary) readerPtrs.clear();           /* drop stale pointers from a missed pointerup */
+  readerPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if(readerPtrs.size === 2){
+    const [a, b] = Array.from(readerPtrs.values());
+    readerPinch = { d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), z0: readerZoom };
+    readerLastTap = null;
+    const g = readerGesture;                    /* a pinch must never turn the page or bookmark a verse */
+    if(g){ g.pinched = true; g.consumed = true; if(g.holdTimer){ clearTimeout(g.holdTimer); g.holdTimer = null; } if(g.dragging){ g.dragging = false; snapPageBack(); } }
+  }
+});
+pageEl.addEventListener('pointerup', e => {     /* double-tap detection (runs before readerGestureEnd clears the gesture) */
+  if(!readerZoomActive()) return;
+  const g = readerGesture;
+  if(!g || e.pointerId !== g.id || g.moved || g.dragging || g.consumed || g.pinched) { if(g && g.pinched) readerLastTap = null; return; }
+  const now = performance.now();
+  if(now - g.t0 > 350) { readerLastTap = null; return; }
+  if(readerLastTap && now - readerLastTap.t < 350 && Math.hypot(e.clientX - readerLastTap.x, e.clientY - readerLastTap.y) < 40){
+    readerLastTap = null;
+    setReaderZoom(readerZoom > 1.25 ? 1 : READER_ZOOM_MAX, e.clientX, e.clientY);
+  } else readerLastTap = { t: now, x: e.clientX, y: e.clientY };
+});
+document.addEventListener('pointermove', e => {
+  const p = readerPtrs.get(e.pointerId); if(!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  if(!readerPinch || readerPtrs.size < 2) return;
+  const [a, b] = Array.from(readerPtrs.values());
+  const d = Math.hypot(a.x - b.x, a.y - b.y);
+  readerPinchNext = { z: readerPinch.z0 * d / readerPinch.d0, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  if(!readerPinchRaf) readerPinchRaf = requestAnimationFrame(() => {
+    readerPinchRaf = 0; const n = readerPinchNext; if(n && readerPinch) setReaderZoom(n.z, n.cx, n.cy);
+  });
+}, {passive:true});
+function readerPointerUp(e){
+  if(!readerPtrs.has(e.pointerId)) return;
+  readerPtrs.delete(e.pointerId);
+  if(readerPinch && readerPtrs.size < 2){
+    readerPinch = null; readerPinchNext = null;
+    if(readerPinchRaf){ cancelAnimationFrame(readerPinchRaf); readerPinchRaf = 0; }
+  }
+}
+document.addEventListener('pointerup', readerPointerUp);
+document.addEventListener('pointercancel', readerPointerUp);
+/* iOS Safari: stop the browser's own page-zoom gesture inside the reader */
+document.addEventListener('gesturestart', e => { if(readerZoomActive()) e.preventDefault(); }, {passive:false});
 document.addEventListener('pointermove', readerGestureMove, {passive:true});
 document.addEventListener('pointerup', readerGestureEnd);
 document.addEventListener('pointercancel', readerGestureCancel);
