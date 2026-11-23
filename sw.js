@@ -1,7 +1,7 @@
 /* ============================================================
    Quran Recitation Coach — Service Worker  v2.4.22
 
-   What changed in 2.4.22:
+   What changed in 2.4.23:
      • Cache version bumped so installed apps fetch the updated
        index.html (notification fix, Tajweed error-name fix).
      • Push: added a 'pushsubscriptionchange' handler that silently
