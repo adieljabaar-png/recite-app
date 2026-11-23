@@ -1158,8 +1158,12 @@ box-shadow:0 18px 46px rgba(0,0,0,.55),0 0 14px rgba(212,168,42,.35);
 /* ===== Reader zoom (double-tap / pinch, 1x to 1.5x) ===== */
 /* The whole page (frame, header, text, ع marks) is scaled uniformly with the CSS `scale` property:
    nothing reflows, so the words are never distorted. One finger pans while zoomed. */
-body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed{overflow:auto !important;direction:ltr;touch-action:pan-x pan-y !important;}
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed{overflow:auto !important;direction:ltr;touch-action:pan-x pan-y !important;scroll-behavior:auto !important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+/* every child must allow horizontal panning too: touch-action is the intersection of the element and its ancestors */
+body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed *{touch-action:pan-x pan-y !important;}
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book.reader-zoomed .mushaf-inner{transform-origin:0 0;padding-bottom:110px;}
+/* invisible box that gives the zoomed page a real (layout) scroll width/height on every device */
+.reader-zoom-sizer{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;opacity:0;}
 
 .toast{
 position:fixed;top:calc(var(--safe-top) + 18px);left:50%;
@@ -10977,6 +10981,7 @@ function renderReaderPage(pageNumber, token){
   const footer = document.createElement('div'); footer.className = 'mushaf-book-footer-row'; footer.textContent = 'منزل ' + toAr(pageManzil);
   frame.appendChild(footer);
   inner.appendChild(frame); pageEl.appendChild(inner); pageEl.scrollTo({top:0,left:0,behavior:'instant'});
+  if(readerZoom > 1.001) syncZoomSizer();
   scheduleRukuReplace();
   scheduleReaderLayoutFix();
   if(surahsOnPage.length === 1) qvTitle.textContent = surahsOnPage[0].surahEnglishName + ' · ' + surahsOnPage[0].surahName;
@@ -11616,6 +11621,32 @@ function applyZoomToInner(inner){
   if(readerZoom > 1.001){ inner.style.transformOrigin = '0 0'; inner.style.scale = String(readerZoom); }
   else { inner.style.scale = ''; inner.style.transformOrigin = ''; }
 }
+/* Scroll range of the zoomed page is set by a real sized box instead of relying on the overflow of a CSS-scaled child
+   (some mobile browsers ignore that overflow sideways, which made left/right panning stick). */
+let readerZoomSizer = null, readerZoomRO = null;
+function syncZoomSizer(){
+  const inner = getMushafInner();
+  const on = readerZoom > 1.001 && !!inner;
+  if(!on){
+    if(readerZoomSizer){ readerZoomSizer.style.width = '0'; readerZoomSizer.style.height = '0'; }
+    if(readerZoomRO) readerZoomRO.disconnect();
+    return;
+  }
+  if(!readerZoomSizer || readerZoomSizer.parentNode !== pageEl){
+    readerZoomSizer = document.createElement('div');
+    readerZoomSizer.className = 'reader-zoom-sizer';
+    readerZoomSizer.setAttribute('aria-hidden', 'true');
+    pageEl.appendChild(readerZoomSizer);
+  }
+  readerZoomSizer.style.width  = Math.ceil(inner.offsetLeft + inner.offsetWidth  * readerZoom) + 'px';
+  readerZoomSizer.style.height = Math.ceil(inner.offsetTop  + inner.offsetHeight * readerZoom) + 'px';
+  if('ResizeObserver' in window){
+    if(!readerZoomRO) readerZoomRO = new ResizeObserver(() => { if(readerZoom > 1.001) syncZoomSizer(); });
+    readerZoomRO.disconnect(); readerZoomRO.observe(inner);
+  }
+}
+window.addEventListener('resize', () => { if(readerZoom > 1.001) syncZoomSizer(); });
+window.addEventListener('orientationchange', () => { setTimeout(() => { if(readerZoom > 1.001) syncZoomSizer(); }, 250); });
 function setReaderZoom(z, fx, fy){
   z = Math.max(1, Math.min(READER_ZOOM_MAX, z));
   const old = readerZoom;
@@ -11630,6 +11661,7 @@ function setReaderZoom(z, fx, fy){
   readerZoom = z;
   pageEl.classList.toggle('reader-zoomed', z > 1.001);
   applyZoomToInner(inner);
+  syncZoomSizer();
   const prevSB = pageEl.style.scrollBehavior; pageEl.style.scrollBehavior = 'auto';
   if(z > 1.001){
     pageEl.scrollLeft += ir.left - (fx - ux * z);
@@ -11641,6 +11673,7 @@ function resetReaderZoom(){
   readerZoom = 1; readerPinch = null; readerLastTap = null; readerPtrs.clear();
   pageEl.classList.remove('reader-zoomed');
   const inner = getMushafInner(); if(inner) applyZoomToInner(inner);
+  syncZoomSizer();
 }
 function readerZoomActive(){ return viewerOpen && viewerMode === 'read'; }
 pageEl.addEventListener('pointerdown', e => {
@@ -11678,6 +11711,7 @@ document.addEventListener('pointermove', e => {
   });
 }, {passive:true});
 function readerPointerUp(e){
+  if(readerPan && readerPan.id === e.pointerId) readerPan = null;
   if(!readerPtrs.has(e.pointerId)) return;
   readerPtrs.delete(e.pointerId);
   if(readerPinch && readerPtrs.size < 2){
@@ -11687,6 +11721,26 @@ function readerPointerUp(e){
 }
 document.addEventListener('pointerup', readerPointerUp);
 document.addEventListener('pointercancel', readerPointerUp);
+/* Fallback one-finger pan while zoomed. When the browser pans natively it fires pointercancel and stops sending
+   pointermove, so this never runs. It only takes over on devices where the native sideways pan is blocked
+   (pointermove keeps arriving), and then scrolls the page by hand in both directions. */
+let readerPan = null;
+pageEl.addEventListener('pointerdown', e => {
+  if(!readerZoomActive() || !(readerZoom > 1.001) || e.pointerType === 'mouse' || readerPtrs.size !== 1){ readerPan = null; return; }
+  readerPan = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, on: false };
+});
+document.addEventListener('pointermove', e => {
+  const p = readerPan; if(!p || e.pointerId !== p.id) return;
+  if(!(readerZoom > 1.001) || readerPtrs.size !== 1 || readerPinch){ readerPan = null; return; }
+  if(!p.on){
+    if(Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 24) return;   /* give native panning the first chance */
+    p.on = true; p.lx = e.clientX; p.ly = e.clientY; return;
+  }
+  const dx = e.clientX - p.lx, dy = e.clientY - p.ly; p.lx = e.clientX; p.ly = e.clientY;
+  const sb = pageEl.style.scrollBehavior; pageEl.style.scrollBehavior = 'auto';
+  pageEl.scrollLeft -= dx; pageEl.scrollTop -= dy;
+  pageEl.style.scrollBehavior = sb;
+}, {passive:true});
 /* iOS Safari: stop the browser's own page-zoom gesture inside the reader */
 document.addEventListener('gesturestart', e => { if(readerZoomActive()) e.preventDefault(); }, {passive:false});
 document.addEventListener('pointermove', readerGestureMove, {passive:true});
