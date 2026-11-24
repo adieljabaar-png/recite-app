@@ -1319,6 +1319,13 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{background:rgba(12
 .toggle.hide-text.active{border-color:rgba(255,176,32,.7);background:rgba(255,176,32,.12);color:#fff;}
 body.light-mode .toggle.hide-text.active{background:rgba(198,138,0,.12);border-color:rgba(198,138,0,.6);color:#7a5500;}
 .toggle.disabled{opacity:.4;pointer-events:none}
+.toggle.ondevice-chip{cursor:pointer;-webkit-appearance:none;font-family:inherit;font-weight:700;border-color:rgba(79,140,255,.55);color:#cfe0ff;transition:transform .12s, opacity .2s}
+.toggle.ondevice-chip:active{transform:scale(.97)}
+.toggle.ondevice-chip[data-state="ready"]{cursor:default;border-color:rgba(60,200,140,.5);color:#9be8c4}
+.toggle.ondevice-chip[data-state="installing"]{opacity:.75;cursor:progress}
+.toggle.ondevice-chip[hidden]{display:none!important}
+body.light-mode .toggle.ondevice-chip{color:#1a3f8f}
+body.light-mode .toggle.ondevice-chip[data-state="ready"]{color:#0d6b43}
 .toggles{display:flex;gap:7px;flex-wrap:wrap;padding-bottom:3px}
 .barwrap{height:5px;background:#0b101b;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .bar{height:100%;width:0%;background:linear-gradient(90deg,#4f8cff,#2fd07a);transition:width .3s}
@@ -3166,6 +3173,7 @@ body.light-mode .share-arabic{color:#1a2233;}
     <span class="tj-rule">Ikhfa</span>
   </div>
 </div>
+    <button class="toggle ondevice-chip" id="onDeviceChip" type="button" hidden=""></button>
     <span class="toggle" id="tajweedStatusChip" hidden="" role="status" aria-live="polite" aria-atomic="true"></span>
     <label class="toggle hide-text" id="hideTextChip">
       <input type="checkbox" id="chkHideText"> Hide text
@@ -3667,6 +3675,88 @@ const IS_IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|What
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 const SPEECH_SUPPORTED = !!SpeechRecognitionCtor;
 const SPEECH_LANG = 'ar-SA';
+/* ── On-device Arabic voice pack (Chrome 139+) ─────────────────────────
+   The pack is a browser component: the page cannot bundle it, it can only
+   ask the browser to install it (one tap, one time per browser).
+   states: unknown | checking | ready | needs-download | installing | unsupported */
+const SR_STATIC = window.SpeechRecognition || null;
+const ON_DEVICE_API = !!(SR_STATIC && typeof SR_STATIC.available === 'function' && typeof SR_STATIC.install === 'function');
+let onDeviceState = 'unknown';
+let _localFallbackDone = false;
+const ON_DEVICE_INSTALL_TIMEOUT_MS = 120000;
+async function checkOnDevicePack(){
+  if(!ON_DEVICE_API){ onDeviceState = 'unsupported'; renderOnDeviceChip(); return; }
+  if(onDeviceState === 'installing') return;
+  onDeviceState = 'checking'; renderOnDeviceChip();
+  try{
+    const r = await SR_STATIC.available({ langs: [SPEECH_LANG], processLocally: true });
+    onDeviceState = (r === 'available') ? 'ready' : (r === 'downloading' ? 'needs-download' : 'unsupported');
+  }catch(e){ onDeviceState = 'unsupported'; }
+  renderOnDeviceChip();
+}
+async function installOnDevicePack(){
+  if(!ON_DEVICE_API || onDeviceState === 'installing' || onDeviceState === 'ready') return;
+  onDeviceState = 'installing'; renderOnDeviceChip();
+  let timedOut = false;
+  const installP = (async () => {
+    try{ return await SR_STATIC.install({ langs: [SPEECH_LANG], processLocally: true }); }
+    catch(e){ return false; }
+  })();
+  installP.then(() => { if(timedOut) checkOnDevicePack(); });
+  await Promise.race([
+    installP,
+    new Promise(res => setTimeout(() => { timedOut = true; res(false); }, ON_DEVICE_INSTALL_TIMEOUT_MS))
+  ]);
+  if(timedOut) onDeviceState = 'needs-download';
+  else { onDeviceState = 'checking'; await checkOnDevicePack(); }
+  renderOnDeviceChip();
+  if(onDeviceState === 'ready'){
+    showToast('✅ Arabic voice pack ready. Follow now listens on this device.' + (wantMic ? ' It starts working the next time you tap Start.' : ''), 3600);
+  } else {
+    showToast('⚠️ The voice pack could not be downloaded. Follow will keep using online recognition.', 4200);
+  }
+}
+function renderOnDeviceChip(){
+  const chip = document.getElementById('onDeviceChip');
+  if(!chip) return;
+  if(!chip.__wired){ chip.__wired = true; chip.addEventListener('click', () => { if(onDeviceState === 'needs-download') installOnDevicePack(); }); }
+  const show = followOnly && (onDeviceState === 'needs-download' || onDeviceState === 'installing' || onDeviceState === 'ready');
+  chip.hidden = !show;
+  if(!show) return;
+  chip.setAttribute('data-state', onDeviceState);
+  if(onDeviceState === 'needs-download'){
+    chip.disabled = false;
+    chip.textContent = '⬇ Download Arabic voice pack';
+    chip.title = 'One-time download. Lets Follow recognise words on this device, faster and without uploading audio.';
+    chip.setAttribute('aria-label', 'Download the Arabic voice pack for on-device Follow. One-time download.');
+  } else if(onDeviceState === 'installing'){
+    chip.disabled = true;
+    chip.textContent = 'Downloading voice pack…';
+    chip.setAttribute('aria-label', 'Downloading the Arabic voice pack');
+  } else {
+    chip.disabled = true;
+    chip.textContent = '✓ On-device voice';
+    chip.title = 'Follow is recognising speech on this device.';
+    chip.setAttribute('aria-label', 'On-device voice recognition is active for Follow');
+  }
+}
+function fallbackFromOnDevice(){
+  if(_localFallbackDone || !speechRecognition || !speechRecognition.__local) return false;
+  _localFallbackDone = true;
+  onDeviceState = 'unsupported'; renderOnDeviceChip();
+  try{ const o = speechRecognition; o.onstart = null; o.onresult = null; o.onerror = null; o.onend = null; o.abort(); }catch(_){}
+  speechRecognition = null;
+  try{
+    speechRecognition = createSpeechRecognition(false, true);
+    if(!speechRecognition) return false;
+    speechRecognition.maxAlternatives = followOnly ? 3 : 6;
+    speechStarting = true; speechRecognition.start();
+    recRunning = true; lastResultAt = performance.now();
+    armSpeechKeepalive();
+    addFeedback('ℹ️ On-device recognition is not working on this device. Using online recognition instead.', false, true);
+    return true;
+  }catch(e){ speechStarting = false; return false; }
+}
 const TASHKEEL = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\uFEFF\u0640]/g;
 const STRICT_FEATURES = {
   madd:      () => localStorage.getItem('qc.strictMadd')           !== '0',
@@ -3976,6 +4066,39 @@ function toleranceFor(L){
   return L >= t.length ? t[t.length - 1] : t[L];
 }
 function confidenceFloor(){ return 0.35; }
+/* ── Pace tracking (Follow only) ───────────────────────────────────────
+   Words per second from recent pointer advances. At a fast pace the
+   tolerance for the word AT the pointer loosens by 1 (words of 4+ letters). */
+const FOLLOW_PACE_WINDOW_MS = 6000;
+const FOLLOW_PACE_FAST_ON   = 2.6;
+const FOLLOW_PACE_FAST_OFF  = 2.0;
+const FOLLOW_PACE_STALE_MS  = 3000;
+let followPaceLog = [];
+let followPaceFast = false;
+function paceReset(){ followPaceLog.length = 0; followPaceFast = false; }
+function notePaceCommit(n){
+  if(!followOnly || n <= 0) return;
+  const now = performance.now();
+  followPaceLog.push({ t: now, n: n });
+  const cut = now - FOLLOW_PACE_WINDOW_MS;
+  while(followPaceLog.length && followPaceLog[0].t < cut) followPaceLog.shift();
+  if(followPaceLog.length < 3){ followPaceFast = false; return; }
+  let total = 0;
+  for(let i = 0; i < followPaceLog.length; i++) total += followPaceLog[i].n;
+  const first = followPaceLog[0];
+  const spanMs = now - first.t;
+  if(spanMs < 1200){ return; }
+  const wps = (total - first.n) / (spanMs / 1000);
+  if(!followPaceFast && wps >= FOLLOW_PACE_FAST_ON) followPaceFast = true;
+  else if(followPaceFast && wps < FOLLOW_PACE_FAST_OFF) followPaceFast = false;
+}
+function followPaceIsFast(){
+  if(!followOnly || !followPaceFast || !followPaceLog.length) return false;
+  return (performance.now() - followPaceLog[followPaceLog.length - 1].t) < FOLLOW_PACE_STALE_MS;
+}
+function paceTolBonus(L, w){
+  return (followOnly && L >= 4 && words[ptr] === w && followPaceIsFast()) ? 1 : 0;
+}
 const FOLLOW_SIMILAR_CLASSES = [['س','ص'],['ت','ط'],['د','ض'],['ذ','ز','ظ'],['ح','ه','خ'],['ع','غ'],['ق','ك'],['ا','ء','ؤ','ئ'],['ي','ى'],['ة','ه'],['ث','س']];
 const FOLLOW_SIMILAR_MAP = {};
 FOLLOW_SIMILAR_CLASSES.forEach(g => g.forEach(ch => { FOLLOW_SIMILAR_MAP[ch] = g[0]; }));
@@ -4001,7 +4124,7 @@ function isMatchWord(hNorm, hPhon, hPhonLoose, w){
   if(hNorm === wNorm) return true;
   const L = la > lb ? la : lb;
   if(L < 2) return false;
-  const tol = toleranceFor(L);
+  const tol = toleranceFor(L) + paceTolBonus(L, w);
   const lenDiff = la > lb ? la - lb : lb - la;
   if(lenDiff > tol + 1) return false;
   if(lev(hNorm, wNorm) <= tol) return true;
@@ -4709,6 +4832,7 @@ let recCursor = 0;
 let pendingHeard = [];
 let consecutiveReds = 0;
 const interimProgress = new Map();
+const interimPrev = new Map();   /* previous interim tokens per result index (stable-prefix commits) */
 
 
 
@@ -5253,7 +5377,7 @@ function recPush(newToks){
 }
 function recReset(){
   recTokens = []; recCursor = 0; pendingHeard = []; consecutiveReds = 0;
-  interimProgress.clear(); followWrongTokens = 0; cancelFollowPinTimer();
+  interimProgress.clear(); interimPrev.clear(); paceReset(); followWrongTokens = 0; cancelFollowPinTimer();
   lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1;
   prevWordAudio = null;
   if (typeof resetSpeechPipeline === 'function') resetSpeechPipeline();
@@ -7210,7 +7334,7 @@ async function runSpeechResultProcessing(snap) {
     } catch (e) { console.warn('[Muqattaat] fast path error:', e); }
     if (isFinal) {
       const already = interimProgress.get(i) || 0;
-      interimProgress.delete(i);
+      interimProgress.delete(i); interimPrev.delete(i);
       if (i <= lastSpeechResultIndex) continue;
       lastSpeechResultIndex = i;
       const newToks = toks.slice(already);
@@ -7245,10 +7369,17 @@ async function runSpeechResultProcessing(snap) {
       scheduleHUD();
     } else {
       const bestConf = (typeof bestAlt.confidence === 'number') ? bestAlt.confidence : 0;
-      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && toks.length >= 2 && !(ptr < words.length && words[ptr] && words[ptr].isMuqattaat);
+      /* Stable-prefix commit: a token is committed only once it appears at the
+         same position in two consecutive interim results (interims get rewritten). */
+      const prevToks = interimPrev.get(i) || [];
+      interimPrev.set(i, toks.slice());
+      let stable = 0;
+      const stableLim = Math.min(prevToks.length, toks.length);
+      while (stable < stableLim && normArCached(prevToks[stable]) === normArCached(toks[stable])) stable++;
+      const canCommitInterim = (bestConf === 0 || bestConf >= floor) && stable > 0 && !(ptr < words.length && words[ptr] && words[ptr].isMuqattaat);
       if (canCommitInterim) {
         const already = interimProgress.get(i) || 0;
-        const safeEnd = Math.max(already, toks.length - 1);
+        const safeEnd = Math.max(already, stable);
         const newToks = toks.slice(already, safeEnd);
         if (newToks.length) {
           interimProgress.set(i, safeEnd);
@@ -7266,7 +7397,7 @@ async function runSpeechResultProcessing(snap) {
               if (!alt.tr || alt.tr === bestTranscript) continue;
               if (alt.conf > 0 && alt.conf < floor) continue;
               const altToksAll = alt.tr.split(/\s+/).filter(Boolean);
-              const altSafe = Math.max(already, altToksAll.length - 1);
+              const altSafe = Math.max(already, Math.min(stable, altToksAll.length));
               const altToks = altToksAll.slice(already, altSafe);
               if (!altToks.length) continue;
               interimProgress.set(i, altSafe);
@@ -7281,6 +7412,24 @@ async function runSpeechResultProcessing(snap) {
           scheduleHUD();
         }
       }
+      /* Pointer-match fast commit: the next uncommitted interim token is accepted at
+         once when it matches the word the reader is waiting for. Only words that do
+         not match the expected word still need the stable-prefix rule above. */
+      if (followOnly && (bestConf === 0 || bestConf >= floor)) {
+        let a2 = interimProgress.get(i) || 0;
+        let guardN = 0;
+        while (a2 < toks.length && guardN++ < 4 && interimMatchesPointer(toks[a2])) {
+          const ptrBefore = ptr;
+          a2++;
+          interimProgress.set(i, a2);
+          recPush([toks[a2 - 1]]);
+          const usedFast = await grade(recTokens, recCursor);
+          recCursor = Math.min(recCursor + usedFast, recTokens.length);
+          if (recCursor >= recTokens.length) { recTokens.length = 0; recCursor = 0; }
+          scheduleHUD();
+          if (ptr === ptrBefore) break;
+        }
+      }
       const tail = toks.slice(-4).join(' ');
       if (statusHint && tail) statusHint.textContent = '… ' + tail;
     }
@@ -7288,6 +7437,26 @@ async function runSpeechResultProcessing(snap) {
   if (speechRecognition && Math.abs(ptr - (speechRecognition.__lastPhrasePtr || 0)) >= 24) {
     buildPhraseObjects(speechRecognition);
   }
+}
+
+/* Follow fast path: does this heard token directly match the word the reader
+   is waiting for? Same direct-match test as gradeFollowFast step 1, including the
+   exit-confidence check on the last word of an ayah. Used to commit an interim
+   token immediately instead of waiting for a second interim or a final result. */
+function interimMatchesPointer(rawTok){
+  if(!followOnly || ptr >= words.length) return false;
+  const w = words[ptr];
+  if(!w || w.isMuqattaat) return false;
+  const heard = normArCached(rawTok);
+  if(!heard) return false;
+  const hPhon = phonArCached(rawTok);
+  const hPhonLoose = phonLooseArCached(rawTok);
+  if(!(isMatchWord(heard, hPhon, hPhonLoose, w) || followAlPrefixMatch(heard, w) || isFollowConfusionMatch(heard, w))) return false;
+  const nextW = words[ptr + 1];
+  if(!nextW || nextW.verse !== w.verse){
+    if(followExitConfidence(heard, hPhon, hPhonLoose, w) < FOLLOW_TAU_EXIT) return false;
+  }
+  return true;
 }
 
 function scoreAlternativeToks(toks, startPtr){
@@ -7323,22 +7492,32 @@ function scoreAlternativeToks(toks, startPtr){
 }
 
 function buildPhraseObjects(rec) {
-  if (!rec) return false;
+  if (!rec || rec.__noPhrases) return false;
   const PhraseCtor = window.SpeechRecognitionPhrase || window.webkitSpeechRecognitionPhrase;
   if (!PhraseCtor) return false;
   if (!('phrases' in rec)) return false;
   if (!words.length || ptr >= words.length) return false;
   const curVerse = words[ptr].verse;
-  let end = ptr;
-  while (end < words.length && words[end].verse === curVerse) end++;
-  const nextEnd = Math.min(words.length, end + 3);
+  const verseEndFrom = (from) => {
+    if (from >= words.length) return words.length;
+    const v = words[from].verse; let e = from;
+    while (e < words.length && words[e].verse === v) e++;
+    return e;
+  };
+  /* Hints cover the rest of this ayah plus the next two ayahs. */
+  const end1 = verseEndFrom(ptr);
+  const end2 = verseEndFrom(end1);
+  const end3 = verseEndFrom(end2);
+  const nextEnd = Math.min(words.length, end1 + 3);
+  const MAX_SINGLE = 40, MAX_SPAN_WORDS = 30;
   const seen = new Set();
   const phrases = [];
   const cleanWord = (w) => String(w.raw || '').normalize('NFKC').replace(TASHKEEL, '').replace(/[^\u0621-\u064A\s]/g, '').trim();
-  for (let i = ptr; i < nextEnd; i++) {
+  let singles = 0;
+  for (let i = ptr; i < nextEnd && singles < MAX_SINGLE; i++) {
     const clean = cleanWord(words[i]);
     if (!clean || seen.has(clean)) continue;
-    seen.add(clean);
+    seen.add(clean); singles++;
     try { phrases.push(new PhraseCtor(clean, 6.0)); } catch (_) {}
   }
   if (words[ptr] && words[ptr].isMuqattaat) {
@@ -7348,30 +7527,47 @@ function buildPhraseObjects(rec) {
     extra.push(spelled, 'بسم الله الرحمن الرحيم ' + mw.norm, 'بسم الله الرحمن الرحيم ' + spelled);
     extra.forEach(x => { const c = String(x).replace(/[^\u0621-\u064A\s]/g, '').trim(); if (c && !seen.has(c)) { seen.add(c); try { phrases.push(new PhraseCtor(c, 8.0)); } catch (_) {} } });
   }
-  const ayahPhrase = [];
-  for (let i = ptr; i < end; i++) { const clean = cleanWord(words[i]); if (clean) ayahPhrase.push(clean); }
-  if (ayahPhrase.length >= 2) { try { phrases.push(new PhraseCtor(ayahPhrase.join(' '), 6.0)); } catch (_) {} }
+  const addSpan = (from, to, boost) => {
+    const arr = [];
+    for (let i = from; i < to && arr.length < MAX_SPAN_WORDS; i++) { const clean = cleanWord(words[i]); if (clean) arr.push(clean); }
+    if (arr.length >= 2) { try { phrases.push(new PhraseCtor(arr.join(' '), boost)); } catch (_) {} }
+  };
+  addSpan(ptr, end1, 6.0);
+  if (end1 < words.length) addSpan(end1, end2, 4.0);
+  if (end2 < words.length) addSpan(end2, end3, 4.0);
   if (!phrases.length) return false;
-  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; rec.__lastPhraseVerse = curVerse; return true; }
+  try { rec.phrases = phrases; rec.__lastPhrasePtr = ptr; rec.__lastPhraseVerse = curVerse; rec.__phraseCoverEnd = end3; return true; }
   catch (e) { console.warn('[Speech] Failed to set phrases:', e); return false; }
 }
 
 
 
-function createSpeechRecognition(forceNoPhrases){
+function createSpeechRecognition(forceNoPhrases, forceCloud){
   if(!SPEECH_SUPPORTED) return null;
-  if(speechRecognition && !speechRecognition.__dead) return speechRecognition;
-  if(speechRecognition){ try{ speechRecognition.abort(); }catch(_){} speechRecognition = null; }
+  const desiredLocal = !!(followOnly && !forceCloud && onDeviceState === 'ready');
+  if(speechRecognition && !speechRecognition.__dead &&
+     !!speechRecognition.__local === desiredLocal && speechRecognition.__followMode === followOnly) return speechRecognition;
+  if(speechRecognition){
+    try{ const o = speechRecognition; o.onstart = null; o.onresult = null; o.onerror = null; o.onend = null; o.abort(); }catch(_){}
+    speechRecognition = null;
+  }
 
   const rec = new SpeechRecognitionCtor();
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
   rec.interimResults   = true;
-  const phrasesAttached = forceNoPhrases ? false : buildPhraseObjects(rec);
+  /* Follow: use the on-device engine when the voice pack is installed.
+     On-device matching needs no upload round trip, and it is the only mode in
+     which Chrome accepts phrase hints. Cloud Follow sends no phrase hints. */
+  rec.__followMode = followOnly;
+  rec.__local = false;
+  if(desiredLocal && ('processLocally' in rec)){ try{ rec.processLocally = true; rec.__local = true; }catch(_){ rec.__local = false; } }
+  rec.__noPhrases = !!(followOnly && !rec.__local);
+  const phrasesAttached = (forceNoPhrases || rec.__noPhrases) ? false : buildPhraseObjects(rec);
   rec.__hasPhrases = phrasesAttached;
   rec.onstart = () => {
     speechStarting = false; recRunning = true;
-    lastSpeechResultIndex = -1; interimProgress.clear();
+    lastSpeechResultIndex = -1; interimProgress.clear(); interimPrev.clear();
     lastResultAt = performance.now(); armSpeechKeepalive();
     if (rec.__lastPhraseVerse !== (words[ptr] && words[ptr].verse)) buildPhraseObjects(rec);
   };
@@ -7380,6 +7576,10 @@ function createSpeechRecognition(forceNoPhrases){
     const err = event && event.error ? event.error : 'unknown';
     console.warn('[Speech] error:', err);
     if(err === 'no-speech' || err === 'aborted') return;
+    if(err === 'phrases-not-supported'){ retrySpeechWithoutPhrases(); return; }
+    if(rec.__local && (err === 'language-not-supported' || err === 'service-not-allowed' || err === 'network')){
+      if(fallbackFromOnDevice()) return;
+    }
     if(err === 'service-not-allowed'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
@@ -8758,6 +8958,7 @@ function applyHideTextUI(){
   syncRevealButtons();
 }
 function applyFollowOnlyUI(){
+  try{ renderOnDeviceChip(); if(followOnly && onDeviceState === 'unknown') checkOnDevicePack(); }catch(_){}
   if(followOnly){
     mistakesPanel.hidden = true; mistakesList.innerHTML = ''; mistakes = []; mistakeCounter = 0;
     mistakeCountBadge.textContent = '0'; errors = 0;
@@ -9024,11 +9225,19 @@ function advancePast(n){
   if(n <= 0 || ptr >= words.length) return;
   const endPtr = Math.min(words.length, ptr + n);
   const advanced = endPtr - ptr;
+  notePaceCommit(advanced);
   const leaving = new Set();
   for(let i = ptr; i < endPtr; i++){ if(words[i]) leaving.add(words[i].verse); }
   ptr = endPtr;
   const nextVerse = ptr < words.length ? words[ptr].verse : null;
-  try { if (speechRecognition && speechRecognition.__hasPhrases && nextVerse && speechRecognition.__lastPhraseVerse !== nextVerse) buildPhraseObjects(speechRecognition); } catch (_) {}
+  try {
+    const sr = speechRecognition;
+    if (sr && sr.__hasPhrases && !sr.__noPhrases && nextVerse) {
+      const coverEnd = sr.__phraseCoverEnd || 0;
+      const nearEnd = coverEnd < words.length && ptr >= coverEnd - 5;
+      if (sr.__lastPhraseVerse !== nextVerse || nearEnd) buildPhraseObjects(sr);
+    }
+  } catch (_) {}
   leaving.forEach(v => { if(v !== nextVerse) completeVerse(v); });
   updateCurrent(); noteAdvance(advanced); scheduleSaveProgress();
 }
