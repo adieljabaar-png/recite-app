@@ -1,5 +1,14 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.4.22
+   Quran Recitation Coach — Service Worker  v2.4.23
+
+   What changed in 2.4.23:
+     • salaah.html (Learn Salaah) is now pre-cached with the app
+       shell, so it opens offline from the Dashboard 'Salaah' tab
+       (including /salaah.html?theme=dark|light) and so its Back
+       button returns to the cached index.html Dashboard.
+     • REFRESH_MANIFEST also refreshes the cached salaah.html.
+     • Cache version bumped so installed apps fetch the updated
+       index.html and salaah.html.
 
    What changed in 2.5:
      • Cache version bumped so installed apps fetch the updated
@@ -26,7 +35,7 @@
 
 'use strict';
 
-const VERSION = '2.4.22';
+const VERSION = '2.4.23';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -47,7 +56,8 @@ const OWNED_PREFIXES = ['qc-shell-', 'qc-text-', 'qc-fonts-', 'qc-runtime-'];
 /* Pre-cache the shell, manifest, AND the real app icons so they
    are available for the install prompt and offline usage.
 
-   Note: read.html is the new Read Arabic page. index.html is the
+   Note: read.html is the new Read Arabic page. salaah.html is the
+   Learn Salaah app opened from the Dashboard. index.html is the
    main dashboard; index_3.html is the previous dashboard copy
    kept around for old links. */
 const SHELL_URLS = [
@@ -56,6 +66,7 @@ const SHELL_URLS = [
   './index_3.html',
   './index_39.html',
   './read.html',
+  './salaah.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -186,6 +197,7 @@ self.addEventListener('message', event => {
           cache.delete('./index.html',    { ignoreSearch: true }),
           cache.delete('./index_3.html',  { ignoreSearch: true }),
           cache.delete('./read.html',     { ignoreSearch: true }),
+          cache.delete('./salaah.html',   { ignoreSearch: true }),
           cache.delete('./',              { ignoreSearch: true })
         ]);
       }catch(_){}
@@ -536,7 +548,7 @@ async function shellNavigation(req){
     if(res && res.ok && res.type === 'basic'){
       const clone = res.clone();
       // Cache the page that was actually requested (index.html,
-      // index_3.html or read.html) so each page works offline.
+      // index_3.html, read.html or salaah.html) so each page works offline.
       cache.put(req, clone).catch(() => {});
     }
     return res;

@@ -1902,6 +1902,9 @@ body.light-mode .feature-tab{background:linear-gradient(180deg,#ffffff,#eef2f8)}
 .dash-top-tabs .streak-badges{display:none}
 #tileReadArabic .ft-icon{background:rgba(47,208,122,.14);border-color:rgba(47,208,122,.4)}
 #tileReadArabic:hover{border-color:rgba(47,208,122,.6)}
+.dash-top-tabs .streak-bar{grid-column:1 / -1}
+#tileSalaah .ft-icon{background:rgba(79,140,255,.14);border-color:rgba(79,140,255,.4)}
+#tileSalaah:hover{border-color:rgba(79,140,255,.6)}
 @media (max-width:400px){
   .home-feature-tabs{gap:8px}
   .home-feature-tabs .feature-tab,.dash-top-tabs .streak-bar{padding:10px;gap:8px}
@@ -2842,6 +2845,7 @@ body.light-mode .share-arabic{color:#1a2233;}
       <span class="tile-list" aria-label="Tabs inside Dashboard">
         <span class="tile-list-item">Day Streak</span>
         <span class="tile-list-item">Read Arabic</span>
+        <span class="tile-list-item">Salaah</span>
         <span class="tile-list-item">Hifz Test</span>
         <span class="tile-list-item">Tajweed Colors</span>
       </span>
@@ -2884,6 +2888,13 @@ body.light-mode .share-arabic{color:#1a2233;}
       <div class="ft-text">
         <strong>Read Arabic</strong>
         <small>Letters &amp; reading</small>
+      </div>
+    </button>
+    <button class="feature-tab" id="tileSalaah" type="button" onclick="window.location.href='salaah.html?theme='+(document.body.classList.contains('light-mode')?'light':'dark')">
+      <span class="ft-icon">🕌</span>
+      <div class="ft-text">
+        <strong>Salaah</strong>
+        <small>Learn to pray</small>
       </div>
     </button>
   </div>
@@ -12714,6 +12725,7 @@ function openInfoModal(){
     '<div class="feature"><h3><span class="fnum">1</span> 📊 Dashboard — learning and daily progress</h3><ul>' +
       '<li><b>Daily streak:</b> see your current and best practice streak, with achievement badges and milestones.</li>' +
       '<li><b>Read Arabic:</b> open the dedicated voice-powered Arabic trainer to practise Arabic letters and reading, and learn Tajweed through guided voice practice. This opens the separate <b>read.html</b> trainer.</li>' +
+      '<li><b>Salaah:</b> open the Learn Salaah guide (<b>salaah.html</b>) to learn how to pray, with wudu, positions, prayers and common mistakes. It opens in the same light or dark theme as Recite, and its Back button returns you to this Dashboard.</li>' +
       '<li><b>Hifz Test:</b> practise memorisation and test how well you remember Quran passages.</li>' +
       '<li><b>Tajweed Colors:</b> view Quran text with colour-coded Tajweed annotations to help identify recitation rules.</li>' +
       '<li><b>Daily share card:</b> view the selected city and date, daily prayer times, Duah of the Day with translation and reference, Tafsir of the Duah, Hadith of the Day with reference, and its explanation. Share the card as an image or as text.</li>' +
@@ -13650,7 +13662,9 @@ function showTextShareModal(text){
     const lastSurah = parseInt(localStorage.getItem('qc.hifz.lastSurah') || '1', 10);
     if(lastSurah) hifzSel.value = String(lastSurah);
   }
-  showScreen('home');
+  var _openDash = /^#dashboard$/i.test(location.hash || '');
+  showScreen(_openDash ? 'dashboard' : 'home');
+  if(_openDash){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(_){} }
 })();
 </script>
 <script>

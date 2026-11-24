@@ -656,6 +656,73 @@
         button.btn-start-test:focus-visible, button[onclick*="handleTestButton"]:focus-visible {
             outline: 3px solid rgba(201,162,39,.45); outline-offset: 3px;
         }
+
+        /* ===== MATCH INDEX.HTML: tabs, buttons, colours and effects =====
+           Values below are copied from index.html (.back-pill, .iconbtn,
+           .toggle.mode-pill, .gold-control-*, .panel). index.html uses a
+           12px root font size, so its rem sizes are written here in px. */
+        :root { --gold-light: #e3bd45; --gold-glow: rgba(201,162,39,.6); }
+
+        /* Back / Info pills = index .back-pill */
+        .back-pill {
+            height: 40px; min-height: 40px; padding: 0 14px; border-radius: 11px;
+            font-size: 10.08px; font-weight: 800; letter-spacing: .03em;
+            background: linear-gradient(180deg, var(--panel-2), var(--bg-card));
+            box-shadow: 0 4px 12px rgba(0,0,0,.22);
+            transition: transform .12s, border-color .2s, background .2s, box-shadow .2s;
+        }
+        body.light-mode .back-pill { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+        .back-pill:hover { filter: none; }
+        .back-pill:active { transform: scale(.94); }
+
+        /* Theme button = index .iconbtn */
+        .iconbtn {
+            width: 40px; height: 40px; border-radius: 11px; font-size: 12.6px;
+            background: #111827; color: var(--text-main); box-shadow: none;
+            transition: transform .12s, filter .12s, background .2s, border-color .2s, color .2s;
+        }
+        body.light-mode .iconbtn { background: #eef2f8; color: var(--text-main); }
+        .iconbtn:hover { filter: none; }
+        .iconbtn:active { transform: scale(.94); filter: brightness(1.2); }
+
+        /* Lesson tabs = index .toggle.mode-pill shape, size, colours and press effect;
+           active tab = index gold control (gold gradient, glow, inner highlight) */
+        .nav-tab {
+            background: #111827; color: var(--text-light);
+            border: 1px solid var(--gold) !important; border-radius: 11px;
+            font-weight: 700; letter-spacing: .01em; box-shadow: none;
+            font-size: 10.2px; padding: 11px 14px; min-height: 44px;
+            transition: transform .12s, background .2s, border-color .2s, color .2s, box-shadow .2s;
+        }
+        body.light-mode .nav-tab { background: #eef2f8; }
+        .nav-tab:hover { filter: none; }
+        .nav-tab:active { transform: scale(.96); }
+        .nav-tab.active {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold)) !important;
+            color: #111827 !important; border: 1px solid #ffeaa7 !important;
+            box-shadow: 0 0 15px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4) !important;
+        }
+
+        /* Panels = index .panel */
+        .top-bar, .screen, .content-card {
+            background: linear-gradient(180deg, var(--panel-2), var(--bg-card));
+            border-radius: 16px; box-shadow: 0 8px 22px rgba(0,0,0,.32);
+        }
+
+        /* Start Test buttons = index gold controls */
+        button.btn-start-test, button[onclick*="handleTestButton"] {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold)) !important;
+            color: #111827 !important; border: 1px solid #ffeaa7 !important;
+            box-shadow: 0 0 20px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,.4) !important;
+            transition: transform .12s, filter .12s;
+        }
+        button.btn-start-test:hover, button[onclick*="handleTestButton"]:hover {
+            background: linear-gradient(180deg, var(--gold-light), var(--gold)) !important;
+            transform: none;
+        }
+        button.btn-start-test:active, button[onclick*="handleTestButton"]:active {
+            transform: scale(.97); filter: brightness(1.05);
+        }
     </style>
 </head>
 <body data-theme="midnight">
@@ -663,7 +730,7 @@
 
     <div class="page-bar">
         <div class="page-bar-inner">
-            <button id="back-btn" class="back-pill" type="button" aria-label="Back to Recite home screen">Back</button>
+            <button id="back-btn" class="back-pill" type="button" aria-label="Back to Recite Dashboard">Back</button>
             <div class="page-bar-right">
                 <button id="info-btn" class="back-pill" type="button" aria-label="About Read Arabic">Info</button>
                 <button id="theme-btn" class="iconbtn" type="button" aria-label="Toggle dark / light theme">🌙</button>
@@ -2902,7 +2969,7 @@
                     '<li>Pick a lesson from the tabs at the top — <b>Lesson 1</b> to <b>Lesson 14</b> — and work through them in order.</li>' +
                     '<li><b>Tap any Arabic letter or word</b> to hear it read aloud.</li>' +
                     '<li>Use the <b>🌙 / ☀️</b> button to switch between dark and light mode (shared with Recite).</li>' +
-                    '<li>Tap <b>Back</b> (top left) to return to the Recite home screen.</li>' +
+                    '<li>Tap <b>Back</b> (top left) to return to the Recite Dashboard.</li>' +
                 '</ul></div>' +
                 '<div class="feature"><h3><span class="fnum">2</span> 🎧 Listening mode (practice vs test)</h3><ul>' +
                     '<li>When you tap a letter or word the app pronounces it aloud with the final Fat\'hah, Dhammah or Kasrah clearly audible. The microphone is <b>not</b> used on tap.</li>' +
@@ -2944,7 +3011,7 @@
         }
         function wireHeader() {
             const back = document.getElementById('back-btn');
-            if (back) back.addEventListener('click', function () { window.location.href = 'index.html'; });
+            if (back) back.addEventListener('click', function () { window.location.href = 'index.html#dashboard'; });
             const tb = document.getElementById('theme-btn');
             if (tb) tb.addEventListener('click', flipTheme);
             const ib = document.getElementById('info-btn');
