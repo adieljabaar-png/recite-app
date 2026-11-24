@@ -775,6 +775,10 @@
             font-size: 13.2px; border-radius: 10px; background: rgba(79,140,255,.12); border: 1px solid rgba(79,140,255,.28);
         }
     </style>
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/my-analytics/script.js"></script>
 </head>
 <body data-theme="midnight">
     <script>try{if(localStorage.getItem('qc.theme')==='light')document.body.classList.add('light-mode');}catch(e){}</script>
@@ -1110,19 +1114,6 @@
             </div>
         </div>
     </div>
-
-    <!-- ============================================================
-         VERCEL WEB ANALYTICS
-         Loaded from a disguised first-party path (/mt-demo/*) via
-         the vercel.json rewrite so ad-blockers do not recognise it.
-         ============================================================ -->
-    <script>
-        window.va = window.va || function () {
-            (window.vaq = window.vaq || []).push(arguments);
-        };
-    </script>
-    <script defer src="/mt-demo/script.js" data-endpoint="/mt-demo"
-            onerror="console.warn('Vercel Analytics script failed to load from /mt-demo/script.js — check vercel.json rewrite and that /mt-demo path is reachable.');"></script>
 
     <!-- ============================================================
          SERVICE WORKER REGISTRATION (fixes analytics + offline)
