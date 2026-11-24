@@ -723,6 +723,57 @@
         button.btn-start-test:active, button[onclick*="handleTestButton"]:active {
             transform: scale(.97); filter: brightness(1.05);
         }
+
+        /* ===== Header buttons: identical to index.html (Back, ☰ menu, 🌙/☀️) ===== */
+        .page-bar .back-pill {
+            height: 40px; min-height: 40px; padding: 0 14px; border-radius: 11px;
+            font-size: 10.08px; font-weight: 800; letter-spacing: .03em; line-height: normal;
+            background: linear-gradient(180deg, var(--panel-2), var(--bg-card));
+            border: 1px solid var(--gold) !important; color: var(--text-main);
+            box-shadow: 0 4px 12px rgba(0,0,0,.22);
+        }
+        body.light-mode .page-bar .back-pill { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+        .page-bar .back-pill:hover { filter: none; }
+        .page-bar #theme-btn {
+            width: 44px; height: 44px; border-radius: 11px; font-size: 13.8px; line-height: 1;
+            background: #111827; color: var(--text-main); border: 1px solid var(--border); box-shadow: none;
+        }
+        body.light-mode .page-bar #theme-btn { background: #eef2f8; }
+        .page-bar #theme-btn:active { transform: scale(.94); filter: brightness(1.2); }
+        .page-bar #homeMenuBtn {
+            width: 54px; height: 54px; border-radius: 15px; font-size: 21.6px; line-height: 1; font-weight: 800;
+            color: #8fbcff; background: linear-gradient(180deg, rgba(79,140,255,.22), rgba(79,140,255,.10));
+            border: 1px solid rgba(79,140,255,.65);
+            box-shadow: 0 6px 20px rgba(79,140,255,.28), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .page-bar #homeMenuBtn:hover { border-color: rgba(79,140,255,.9); color: #bfd7ff; filter: none; }
+        .page-bar #homeMenuBtn:active { transform: scale(.93); filter: brightness(1.1); }
+        body.light-mode .page-bar #homeMenuBtn {
+            color: #1f5fce; background: linear-gradient(180deg, rgba(42,111,224,.16), rgba(42,111,224,.08));
+            border: 1px solid rgba(42,111,224,.6);
+            box-shadow: 0 6px 18px rgba(42,111,224,.22), inset 0 1px 0 rgba(255,255,255,.5);
+        }
+        body.light-mode .page-bar #homeMenuBtn:hover { border-color: rgba(42,111,224,.85); color: #144ba6; }
+        .read-menu-wrap { position: relative; flex-shrink: 0; }
+        .read-menu {
+            position: absolute; top: calc(100% + 8px); right: 0; z-index: 120; min-width: 240px;
+            max-width: calc(100vw - 24px); padding: 4px; overflow: hidden;
+            background: linear-gradient(180deg, var(--panel-2), var(--bg-card));
+            border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 14px 36px rgba(0,0,0,.5);
+        }
+        body.light-mode .read-menu { background: linear-gradient(180deg, #ffffff, #eef2f8); box-shadow: 0 14px 36px rgba(0,0,0,.14); }
+        .read-menu[hidden] { display: none; }
+        .read-menu-item {
+            display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px; border: none;
+            background: transparent; color: var(--text-main); text-align: left; font-family: inherit;
+            font-weight: 600; font-size: 10.56px; cursor: pointer; border-radius: 10px; -webkit-appearance: none;
+        }
+        .read-menu-item:hover { background: rgba(79,140,255,.08); }
+        .read-menu-item:active { background: rgba(79,140,255,.14); }
+        .read-menu-item .rmi-ico {
+            width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 13.2px; border-radius: 10px; background: rgba(79,140,255,.12); border: 1px solid rgba(79,140,255,.28);
+        }
     </style>
 </head>
 <body data-theme="midnight">
@@ -732,7 +783,12 @@
         <div class="page-bar-inner">
             <button id="back-btn" class="back-pill" type="button" aria-label="Back to Recite Dashboard">Back</button>
             <div class="page-bar-right">
-                <button id="info-btn" class="back-pill" type="button" aria-label="About Read Arabic">Info</button>
+                <div class="read-menu-wrap">
+                    <button id="homeMenuBtn" class="iconbtn" type="button" aria-label="Open menu" aria-haspopup="menu" aria-expanded="false">☰</button>
+                    <div class="read-menu" id="readMenu" role="menu" hidden>
+                        <button class="read-menu-item" id="info-btn" type="button" role="menuitem"><span class="rmi-ico">ℹ️</span><span>About Read Arabic</span></button>
+                    </div>
+                </div>
                 <button id="theme-btn" class="iconbtn" type="button" aria-label="Toggle dark / light theme">🌙</button>
             </div>
         </div>
@@ -1078,6 +1134,8 @@
             const hadControllerAtStart = !!navigator.serviceWorker.controller;
             let refreshing = false;
 
+            navigator.serviceWorker.register('./pages-sw.js', { scope: './read.html' }).catch(function () {});
+            navigator.serviceWorker.register('./pages-sw.js', { scope: './salaah.html' }).catch(function () {});
             navigator.serviceWorker.register('./sw.js', { scope: './' })
                 .then(function (reg) {
                     if (reg.waiting) {
@@ -2956,6 +3014,15 @@
             try { localStorage.setItem('qc.theme', theme); } catch (e) {}
             applyTheme();
         }
+        function syncThemeFromStorage() {
+            try {
+                const t = localStorage.getItem('qc.theme') === 'light' ? 'light' : 'dark';
+                if (t !== theme) { theme = t; applyTheme(); }
+            } catch (e) {}
+        }
+        window.addEventListener('storage', function (e) { if (!e.key || e.key === 'qc.theme') syncThemeFromStorage(); });
+        window.addEventListener('pageshow', syncThemeFromStorage);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) syncThemeFromStorage(); });
         function openReadInfoModal() {
             if (document.getElementById('read-info-modal-bg')) return;
             const bg = document.createElement('div');
@@ -3014,8 +3081,20 @@
             if (back) back.addEventListener('click', function () { window.location.href = 'index.html#dashboard'; });
             const tb = document.getElementById('theme-btn');
             if (tb) tb.addEventListener('click', flipTheme);
+            const mb = document.getElementById('homeMenuBtn');
+            const menu = document.getElementById('readMenu');
+            function setMenu(open) {
+                if (!menu || !mb) return;
+                menu.hidden = !open;
+                mb.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            if (mb) mb.addEventListener('click', function (e) { e.stopPropagation(); setMenu(menu.hidden); });
+            document.addEventListener('click', function (e) {
+                if (menu && !menu.hidden && !menu.contains(e.target)) setMenu(false);
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
             const ib = document.getElementById('info-btn');
-            if (ib) ib.addEventListener('click', openReadInfoModal);
+            if (ib) ib.addEventListener('click', function () { setMenu(false); openReadInfoModal(); });
         }
         // apply saved theme immediately to avoid a flash
         document.body.setAttribute('data-theme', theme === 'light' ? 'emerald' : 'midnight');

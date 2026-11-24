@@ -12842,6 +12842,16 @@ function applyTheme(){
 function flipTheme(){ theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('qc.theme', theme); applyTheme(); }
 if(themeBtn) themeBtn.addEventListener('click', flipTheme);
 if(homeThemeBtn) homeThemeBtn.addEventListener('click', flipTheme);
+/* Keep Recite, Read Arabic and Learn Salaah on the same theme */
+function syncThemeFromStorage(){
+  try{
+    const t = localStorage.getItem('qc.theme') === 'light' ? 'light' : 'dark';
+    if(t !== theme){ theme = t; applyTheme(); }
+  }catch(_){}
+}
+window.addEventListener('storage', e => { if(!e.key || e.key === 'qc.theme') syncThemeFromStorage(); });
+window.addEventListener('pageshow', syncThemeFromStorage);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) syncThemeFromStorage(); });
 window.addEventListener('error', e => { console.error('[QuranCoach] runtime error:', e.error || e.message); });
 (function applySupportBanner(){
   if(!supportBox) return;
@@ -13712,6 +13722,18 @@ window.addEventListener('contextmenu', function(event) {
   }
   window.addEventListener('orientationchange', onRotate);
   window.addEventListener('resize', unlock);
+})();
+</script>
+
+<script>
+/* Offline: keeps Read Arabic and Learn Salaah available without a connection */
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', function(){
+    ['./read.html','./salaah.html'].forEach(function(sc){
+      try{ navigator.serviceWorker.register('./pages-sw.js',{scope:sc}).catch(function(){}); }catch(e){}
+    });
+  });
 })();
 </script>
 </body></html>
