@@ -1434,6 +1434,12 @@ body.listen-mode.hide-text-mode .w{color: var(--text) !important;background: tra
 .w.skipped{background:rgba(255,176,32,.16);color:#ffcf6b;text-decoration:line-through;text-decoration-color:var(--warn);}
 .w.model{background:rgba(255,176,32,.3);color:#fff}
 .w.warned{color:#ffd54a;text-decoration:underline solid #ffc107;text-decoration-thickness:2px;text-underline-offset:6px;background:rgba(255,193,7,.22);border-radius:4px;}
+.w.unchecked{color:#9aa3b2;text-decoration:underline dotted #8b94a5;text-decoration-thickness:2px;text-underline-offset:6px;background:rgba(139,148,165,.18);border-radius:4px;}
+body.light-mode .w.unchecked{color:#566070;background:rgba(110,120,135,.20);}
+.legend .legend-key{flex:1 1 100%;display:flex;flex-direction:column;gap:6px;margin-bottom:2px;}
+.legend .lk-row{display:flex;gap:8px;align-items:flex-start;line-height:1.35;}
+.legend .lk-row i{flex:0 0 auto;margin-top:3px;}
+.legend .lk-row b{color:var(--text);}
 .w-deco{display:inline-block;padding:0 3px;opacity:.9;pointer-events:none;cursor:default;}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @keyframes locatePulse{0%{background:rgba(79,140,255,.55);box-shadow:0 0 0 0 rgba(79,140,255,.6);color:#fff}100%{background:transparent;box-shadow:0 0 0 18px rgba(79,140,255,0);color:var(--text)}}
@@ -2220,6 +2226,7 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
 .w.error     [class^="tj-"], .w.error     [class*=" tj-"],
 .w.skipped   [class^="tj-"], .w.skipped   [class*=" tj-"],
 .w.model     [class^="tj-"], .w.model     [class*=" tj-"],
+.w.unchecked [class^="tj-"], .w.unchecked [class*=" tj-"],
 .w.warned    [class^="tj-"], .w.warned    [class*=" tj-"] {
   color: inherit !important;
   font-weight: inherit;
@@ -2252,6 +2259,13 @@ body.light-mode .toggle.mode-pill[data-mode="tajweed"].active{
 }
 .w.model [class^="tj-"], .w.model [class*=" tj-"] {
   background: rgba(255,176,32,.28);
+  border-radius: 4px;
+}
+.w.unchecked [class^="tj-"], .w.unchecked [class*=" tj-"] {
+  background: rgba(139,148,165,.22);
+  text-decoration: underline dotted #8b94a5;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
   border-radius: 4px;
 }
 .w.warned [class^="tj-"], .w.warned [class*=" tj-"] {
@@ -3196,8 +3210,12 @@ body.light-mode .share-arabic{color:#1a2233;}
     <div class="mushaf-inner"><div class="loading">Loading…</div></div>
   </section>
   <div class="legend hide-immersive">
-    <span><i style="background:#2fd07a"></i>correct</span>
-    <span><i style="background:#ff5a6a"></i>misread</span>
+    <div class="legend-key">
+      <div class="lk-row"><i style="background:#ff5a6a"></i><span><b>Red</b> — misread or Tajweed mistake. The word or a Tajweed rule on it was clearly wrong.</span></div>
+      <div class="lk-row"><i style="background:#ffc107"></i><span><b>Yellow</b> — Tajweed warning. The rule may be off or the result is uncertain; listen again or check with a teacher.</span></div>
+      <div class="lk-row"><i style="background:#8b94a5"></i><span><b>Grey</b> — unchecked. The word was read, but a Tajweed rule on it could not be verified on this device.</span></div>
+    </div>
+    <span><i style="background:#2fd07a"></i>green = correct</span>
     <span>· Scrolls automatically as you recite</span>
     <span>· Hold a word 3 s to start from there</span>
   </div>
@@ -6053,8 +6071,18 @@ function noteAcousticMode(available){
   if (_acousticMissStreak >= 3 && _acousticMode !== 'transcript'){
     _acousticMode = 'transcript';
     try{ updateTajweedStatusChip(); }catch(_){}
-    addFeedback('ℹ️ <b>No microphone audio is reaching the Tajweed engine</b> (the phone may have given the mic to speech recognition). Madd, Ghunnah, Qalqalah and the other timing/sound rules are <b>transcript estimates only — not verified</b>.', false, true);
+    addFeedback('ℹ️ <b>No microphone audio is reaching the Tajweed engine</b> (the phone may have given the mic to speech recognition). Limited rule checks available: Madd, Ghunnah, Qalqalah and the other timing/sound rules are <b>transcript estimates only — not verified</b>, and unverifiable words show <b>grey (unchecked)</b>.', false, true);
   }
+}
+function hasGetUserMedia(){
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+let _limitedChecksNoticeShown = false;
+function noteLimitedChecksNoGum(){
+  if (_limitedChecksNoticeShown) return;
+  _limitedChecksNoticeShown = true;
+  showToast('⚠️ Limited rule checks available on this device — it does not give the app microphone access (getUserMedia).', 7000);
+  addFeedback('ℹ️ <b>Limited rule checks available on this device.</b> It does not support microphone access (getUserMedia), so only transcript-based checks can run. Words whose Tajweed rules cannot be verified are shown <b>grey — unchecked</b>.', false, true);
 }
 function updateTajweedStatusChip(){
   const chip = document.getElementById('tajweedStatusChip');
@@ -6066,15 +6094,15 @@ function updateTajweedStatusChip(){
   const acousticReady = !!(liveTrack && rmsAnalyser.isRunning() && rmsAnalyser.sampleCount() > 3);
   if(coachTajweedMicFailed){
     chip.className = 'toggle tj-status-error';
-    chip.innerHTML = '<span class="tj-status-dot"></span>Mic unavailable';
-    chip.title = 'The 12 Tajweed categories are loaded, but microphone waveform access is unavailable. Acoustic checks cannot be performed on this device until microphone permission and getUserMedia work.';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Limited rule checks · mic unavailable';
+    chip.title = 'The 13 Tajweed rules are loaded, but microphone waveform access is unavailable. Acoustic checks cannot be performed on this device until microphone permission and getUserMedia work.';
     chip.setAttribute('aria-label', 'Tajweed acoustic checks unavailable — microphone access failed');
     return;
   }
   if(coachTajweedDegraded){
     chip.className = 'toggle tj-status-error';
     chip.innerHTML = '<span class="tj-status-dot"></span>Annotations incomplete';
-    chip.title = 'Quran Tajweed annotations could not be fully aligned. Some words may not have rule metadata, so all 12 categories cannot be guaranteed for this surah.';
+    chip.title = 'Quran Tajweed annotations could not be fully aligned. Some words may not have rule metadata, so all 13 rules cannot be guaranteed for this surah.';
     chip.setAttribute('aria-label', 'Tajweed annotations incomplete');
     return;
   }
@@ -6085,26 +6113,34 @@ function updateTajweedStatusChip(){
     chip.setAttribute('aria-label', 'Loading Tajweed rule checks');
     return;
   }
+  if(!hasGetUserMedia()){
+    chip.className = 'toggle tj-status-error';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Limited rule checks · no mic access';
+    chip.title = 'This device or browser does not support getUserMedia, so microphone-waveform checks cannot run. Only limited transcript-based rule checks are available. Words whose rules cannot be verified are shown grey (unchecked).';
+    chip.setAttribute('aria-label', 'Limited Tajweed rule checks available on this device; microphone access not supported');
+    noteLimitedChecksNoGum();
+    return;
+  }
   if(acousticReady && wantMic && _acousticMode === 'transcript'){
     chip.className = 'toggle tj-status-error';
-    chip.innerHTML = '<span class="tj-status-dot"></span>Transcript only · mic silent';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Limited rule checks · mic silent';
     chip.title = 'The microphone stream is open but no usable audio is reaching the waveform analyser (often because speech recognition holds the mic). Madd, Ghunnah, Qalqalah and other sound rules are transcript estimates and are NOT verified.';
     chip.setAttribute('aria-label', 'Tajweed running in transcript-only mode; acoustic rules not verified');
   } else if(acousticReady){
     chip.className = 'toggle tj-status-ready';
-    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · mic clues';
-    chip.title = 'All 12 annotated Tajweed categories are available. ASR aligns words with Quran text and the microphone supplies word-level RMS/spectral clues. Acoustic checks are provisional estimates, not phoneme-level Tajweed certification; uncertain findings are shown as yellow warnings for teacher/listener review.';
-    chip.setAttribute('aria-label', '12 annotated Tajweed categories available with provisional microphone evidence');
+    chip.innerHTML = '<span class="tj-status-dot"></span>13 rules · mic clues';
+    chip.title = 'All 13 annotated Tajweed rules are available. ASR aligns words with Quran text and the microphone supplies word-level RMS/spectral clues. Acoustic checks are provisional estimates, not phoneme-level Tajweed certification; uncertain findings are shown as yellow warnings for teacher/listener review.';
+    chip.setAttribute('aria-label', '13 annotated Tajweed rules available with provisional microphone evidence');
   } else if(wantMic){
     chip.className = 'toggle tj-status-error';
-    chip.innerHTML = '<span class="tj-status-dot"></span>ASR only · audio unavailable';
+    chip.innerHTML = '<span class="tj-status-dot"></span>Limited rule checks · audio unavailable';
     chip.title = 'ASR is listening, but a live getUserMedia/RMS stream is not available. Word alignment and limited transcript checks can continue; waveform-dependent Tajweed checks are not verified.';
     chip.setAttribute('aria-label', 'ASR active but microphone waveform analysis unavailable');
   } else {
     chip.className = 'toggle tj-status-loading';
-    chip.innerHTML = '<span class="tj-status-dot"></span>12 rules · start mic';
-    chip.title = 'The 12 Tajweed categories are available from Quran annotations where present. Start listening to activate microphone analysis. Acoustic findings remain provisional and may require a teacher/listener review.';
-    chip.setAttribute('aria-label', '12 Tajweed categories loaded; microphone analysis starts with recitation');
+    chip.innerHTML = '<span class="tj-status-dot"></span>13 rules · start mic';
+    chip.title = 'The 13 Tajweed rules are available from Quran annotations where present. Start listening to activate microphone analysis. Acoustic findings remain provisional and may require a teacher/listener review.';
+    chip.setAttribute('aria-label', '13 Tajweed rules loaded; microphone analysis starts with recitation');
   }
 }
 
@@ -6470,6 +6506,7 @@ function checkLaamShamsiyyah(w, heard, align){
     if (samples && samples.length >= 5){
       const onsetC = rmsAnalyser.onsetCentroid(w.audio.start, 75);
       const overallC = rmsAnalyser.meanCentroid(w.audio.start, w.audio.end);
+      if (onsetC > 0 && overallC > 0) tjVerified(w, 'laam_shamsiyah');
       /* Low onset centroid with much higher overall centroid suggests a voiced
          lateral onset rather than smooth solar assimilation (provisional). */
       if (onsetC > 0 && overallC > 0 && onsetC < 1450 && overallC > onsetC * 1.85){
@@ -6489,6 +6526,7 @@ function checkIkhfa(w, heard, align){
     (w.tjRules.allRules && w.tjRules.allRules.includes('ikhfa'))
   );
   if (!isIkhfa) return true;
+  if ((align && align.available && align.ctx.hasSignal) || heard) tjVerified(w, 'ikhfa');
 
   const hasAcoustic = !!(align && align.available && align.ctx.hasSignal && align.ctx.samples.length >= 4);
   if (hasAcoustic){
@@ -6515,6 +6553,7 @@ function checkExtraSyllable(w){
   if (!STRICT_FEATURES.silent()) return true;
   if (!w.audio) return true;
   const env = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
+  if (env && env.length >= 3) tjVerified(w, 'silent');
   const peaks = countPeaks(env, rmsAnalyser.minRms() * 0.5, 80);
   const expected = w.norm.length >= 4 ? 2 : 1;
   if (peaks > expected + 1){
@@ -6601,6 +6640,7 @@ function checkQalqalah(w, heard, align){
 
   const hasAcoustic = !!(align && align.available && align.ctx.hasSignal && align.ctx.samples.length >= 5);
   if (hasAcoustic && w.audio && w.audio.durationMs >= 90){
+    tjVerified(w, 'qalqalah');
     const samples = align.ctx.samples;
     const floor = rmsAnalyser.minRms();
     const burstThreshold = Math.max(floor * 1.75, 0.012);
@@ -6623,6 +6663,7 @@ function checkQalqalah(w, heard, align){
 
   /* Transcript fallback / supplement */
   if (heard && w.norm){
+    tjVerified(w, 'qalqalah');
     for (let i = 0; i < w.norm.length; i++){
       const ch = w.norm[i];
       if (QALQALAH_LETTERS.includes(ch) && !heard.includes(ch)){
@@ -6638,6 +6679,7 @@ function checkQalqalah(w, heard, align){
 function checkIdghaamNoGhunnah(w, heard, align){
   if (!w || !w.tjRules || !w.tjRules.hasIdghaamNoGhunnah) return true;
   if (align && align.available && align.ctx.hasSignal){
+    tjVerified(w, 'idghaam_no_ghunnah');
     const samples = align.ctx.samples;
     const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
     const T = getBaseMsPerLetter();
@@ -6692,6 +6734,7 @@ function checkAllNasalRules(w, heard, align){
     }
 
     const expectedMs = ghunnahRequiredMs(type);
+    if (hasAcoustic || heard) tjVerified(w, type);
 
     if (hasAcoustic){
       if (!nasal && !textOk){
@@ -6854,7 +6897,7 @@ function markTajweedIssue(w, kind, detail, severity){
     if (!w._tajweedWarns) w._tajweedWarns = new Set();
     w._tajweedWarns.add(kind);
     if (w.el.classList.contains('error')) return;
-    w.el.classList.remove('current', 'correct', 'corrected');
+    w.el.classList.remove('current', 'correct', 'corrected', 'unchecked');
     w.el.classList.add('warned');
   }
 
@@ -6891,6 +6934,53 @@ function markTajweedIssue(w, kind, detail, severity){
 
 
 
+
+/* ── Unchecked (grey) state ─────────────────────────────────────────────
+   Every rule on a word must be evaluated. Checks call tjVerified(w, group) when
+   they actually ran. A rule-bearing word whose rules were not all evaluated is
+   shown grey and labelled "unchecked" — never green. */
+const TJ_GROUP_LABEL = {
+  madd:'Madd', ham_wasl:'Hamzat al-Wasl', laam_shamsiyah:'Laam Shamsiyyah', qalqalah:'Qalqalah',
+  ghunnah:'Ghunnah', ikhfa:'Ikhfa', idghaam_ghunnah:'Idghaam (with ghunnah)',
+  idghaam_no_ghunnah:'Idghaam (no ghunnah)', iqlab:'Iqlab', silent:'Silent letter'
+};
+function tjVerified(w, group){
+  if (!w) return;
+  (w._tjVerified || (w._tjVerified = new Set())).add(group);
+}
+function tjUncheckedNames(w){
+  return (w && w._tjUnchecked && w._tjUnchecked.length)
+    ? w._tjUnchecked.map(g => TJ_GROUP_LABEL[g] || g).join(', ') : '';
+}
+let _lastUncheckedNoteAt = 0;
+function tjApplyUncheckedState(w){
+  if (!w || !w.el || followOnly || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
+  const need = new Set(w.tjRules.allRules.map(r => /^madda_/.test(r) ? 'madd' : r));
+  const done = w._tjVerified || new Set();
+  const missing = Array.from(need).filter(g => !done.has(g));
+  w._tjUnchecked = missing;
+  const el = w.el;
+  const base = buildRuleTooltip(w.tjRules.allRules, ' · ');
+  if (!missing.length){
+    if (el.classList.contains('unchecked')){
+      el.classList.remove('unchecked');
+      if (!el.classList.contains('warned') && !el.classList.contains('error')) el.classList.add('correct');
+    }
+    if (base) el.title = base;
+    return;
+  }
+  const names = tjUncheckedNames(w);
+  el.title = (base ? base + '\n' : '') + 'Unchecked: ' + names;
+  if (el.classList.contains('error') || el.classList.contains('warned')) return;   /* red / yellow outrank grey */
+  el.classList.remove('current', 'correct', 'corrected');
+  el.classList.add('unchecked');
+  const now = performance.now();
+  if (now - _lastUncheckedNoteAt > 2500){
+    _lastUncheckedNoteAt = now;
+    addFeedback('⬜ <b>Unchecked</b> · <span class="ar">' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</span> · ' +
+      escapeHtml(names) + ' could not be verified on this device', false, true);
+  }
+}
 
 function markStrict1Error(w, kind, detail){
   markTajweedIssue(w, kind, detail, 'red');
@@ -6945,12 +7035,13 @@ function detectAcousticGlottalAttack(prevAudio, curAudio){
 
 function checkHamzatWasl(w, idx, rawHeard){
   if (!STRICT_FEATURES.hamWasl() || !w || !w.tjRules || !w.tjRules.hamWasl) return;
-  if (idx <= 0) return;
+  if (idx <= 0){ tjVerified(w, 'ham_wasl'); return; }
   const prev = words[idx - 1];
-  if (!prev || prev.verse !== w.verse) return; // ayah start: wasl is pronounced
+  if (!prev || prev.verse !== w.verse){ tjVerified(w, 'ham_wasl'); return; } // ayah start: wasl is pronounced
 
   const acoustic = detectAcousticGlottalAttack(prevWordAudio, w.audio);
-  if (acoustic.paused) return; // reciter paused/restarted
+  if (acoustic.paused){ tjVerified(w, 'ham_wasl'); return; } // reciter paused/restarted
+  if (rawHeard || acoustic.gapMs !== null) tjVerified(w, 'ham_wasl');
 
   const lexical = detectGlottalOnset(rawHeard, w.raw);
 
@@ -6974,6 +7065,7 @@ function runStrict1Checks(idx, heard, opts){
   if (!coachTajweedReady) return;
   const w = words[idx];
   if (!w || w.isMuqattaat) return;
+  w._tjVerified = new Set();   /* rule groups actually evaluated for this word */
 
   /* 1. Emphatic letters (Tafkheem) on every commit path */
   if (STRICT_FEATURES.emphatics() && heard && w.norm && heard !== w.norm){
@@ -7007,6 +7099,7 @@ function runStrict1Checks(idx, heard, opts){
         : (T_mora !== null ? Math.round(T_mora * (MADD_MIN_HARAKAT[kind] || 1.7))
                             : (MADD_MIN_DELTA_MS[kind] || 0));
       const minSegMs = w.norm.length * (T_mora !== null ? T_mora : 100) * 0.55;
+      if (vowelMs > 0 && w.audio.durationMs >= minSegMs) tjVerified(w, 'madd');
       if (w.audio.durationMs >= minSegMs && vowelMs < required){
         const tag = 'madd-' + kind + (isEndOfAyah ? '-end' : '');
         const _maddMsg = 'estimated vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
@@ -7041,6 +7134,7 @@ function runStrict1Checks(idx, heard, opts){
       const asrMs = now - lastDirectCommitAt;
       if (w.tjRules && w.tjRules.madd && STRICT_FEATURES.madd()){
         const required = maddRequiredMs(w.tjRules.madd);
+        tjVerified(w, 'madd');
         if (asrMs < required){
           markStrict1Warning(w, 'madd-' + w.tjRules.madd + '-timing',
             'ASR timing estimate ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
@@ -7092,6 +7186,7 @@ function runStrict1Checks(idx, heard, opts){
   if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
   checkQalqalah(w, heard, align);
   checkIdghaamNoGhunnah(w, heard, align);
+  tjApplyUncheckedState(w);
 
   prevWordAudio = w.audio || prevWordAudio;
 
@@ -9289,18 +9384,21 @@ function commitCorrect(i, seg){
   const w = words[i]; if(!w) return;
   if (seg) w.audio = seg;
   const warned = w.el.classList.contains('warned');
-  const baseCls = (hideText && followOnly) ? 'w revealed' : 'w correct';
+  const needsTj = !followOnly && coachTajweedReady && !w.isMuqattaat && w.tjRules && w.tjRules.allRules && w.tjRules.allRules.length;
+  const baseCls = (hideText && followOnly) ? 'w revealed' : (needsTj ? 'w unchecked' : 'w correct');
   w.el.className = baseCls + (warned ? ' warned' : '');
   maybeExplainRules(w);
 }
 function commitManyCorrect(start, end, seg){
   const toReveal = hideText && followOnly;
   const stop = Math.min(end, words.length);
-  const baseCls = toReveal ? 'w revealed' : 'w correct';
   for(let i = start; i < stop; i++){
     if (seg) words[i].audio = seg;
-    const warned = words[i].el.classList.contains('warned');
-    words[i].el.className = baseCls + (warned ? ' warned' : '');
+    const wi = words[i];
+    const warned = wi.el.classList.contains('warned');
+    const needsTj = !followOnly && coachTajweedReady && !wi.isMuqattaat && wi.tjRules && wi.tjRules.allRules && wi.tjRules.allRules.length;
+    const baseCls = toReveal ? 'w revealed' : (needsTj ? 'w unchecked' : 'w correct');
+    wi.el.className = baseCls + (warned ? ' warned' : '');
   }
   if(stop > start) maybeExplainRules(words[stop - 1]);
 }
@@ -9410,7 +9508,8 @@ function installWordDelegates(){
     if(!w || !w.tjRules || !w.tjRules.allRules || !w.tjRules.allRules.length) return;
     const tip = buildRuleTooltip(w.tjRules.allRules, ' · ');
     if(!tip) return;
-    showToast('🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b><br>' + escapeHtml(tip), 5000);
+    const _unc = (target.classList.contains('unchecked') && tjUncheckedNames(w)) ? '<br><b>Unchecked:</b> ' + escapeHtml(tjUncheckedNames(w)) + ' could not be verified on this device' : '';
+    showToast('🎵 <b>' + escapeHtml(w.raw.replace(TASHKEEL, '')) + '</b><br>' + escapeHtml(tip) + _unc, 5000);
   });
   if(IS_TOUCH){
     pageEl.addEventListener('touchstart', e => { if(e.touches.length !== 1) return; const idx = wordIdxFromEvent(e); if(idx < 0) return; const span = e.target.closest('.w'); beginWordPress(span, idx, e.touches[0].clientX, e.touches[0].clientY); }, {passive: true});
@@ -13194,6 +13293,8 @@ function openCoachInfoModal(){
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation.</li>' +
       '<li>On a mispronounced word the coach <b>marks the word red</b>, then <b>keeps following</b> the reciter.</li>' +
       '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> — Haraka-based bounds: Tabee\'i [1.7–2.3], Wajib/Ja\'iz [3.6–5.4], Lazim [5.5–6.5] × Haraka.<br>• <b>Ghunnah</b> — nasal formant band 250–600 Hz verified in both transcript and spectrum.<br>• <b>Qalqalah</b> — plosive-burst detector catches missing bounce.<br>• <b>Laam Shamsiyyah</b> — onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> — glottal re-attack detection.<br>• <b>Idghaam (no ghunnah)</b> — nasalisation-overrun check.<br>• <b>Emphatic letters</b> (ص→س, ط→ت…) surfaced as warnings on every commit path.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
+      '<li><b>Colour key:</b> <b style="color:#ff6b7a">Red</b> = misread or Tajweed mistake · <b style="color:#ffd54a">Yellow</b> = Tajweed warning (uncertain) · <b style="color:#9aa3b2">Grey</b> = unchecked (a rule on that word could not be verified on this device).</li>' +
+      '<li>Tajweed detection on phones is approximate. Accuracy varies by device, microphone, browser and surroundings. Treat results as guidance, not a ruling.</li>' +
       '<li><b>Rule-ready chip:</b> shows whether rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules ready · transcript-only</b> · <b>● Rules unavailable</b> · <b>● Rules not ready</b> (microphone unreachable).</li>' +
     '</ul></div>' +
     '<div class="feature"><h3><span class="fnum">4</span> 🙈 Hide text &amp; Reveal text</h3><ul>' +
