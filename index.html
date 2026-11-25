@@ -5279,6 +5279,9 @@ const rmsAnalyser = (function(){
     if (ctxOwned && ctx){ try{ ctx.close(); }catch(_){} }
     ctx = null; ctxOwned = false;
     samples.length = 0;
+    timeBuf = null; freqBuf = null;
+    /* Fresh calibration for the next Tajweed recitation. */
+    _calibrated = false; _lastCalibrationAt = 0; bandNoiseFloor.fill(0);
   }
   function voiceDurationMs(t0, t1){
     if (!(t1 > t0)) return 0;
@@ -7697,6 +7700,7 @@ function createSpeechRecognition(forceNoPhrases, forceCloud){
     if(err === 'service-not-allowed'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
+      sweepMicAndRms(); try{ releaseAudioSessionSoon(); }catch(_){}
       setMicButton(); updateFsMicBtn(); syncFsButtons();
       notifySpeechServiceUnreachable();
       return;
@@ -7704,6 +7708,7 @@ function createSpeechRecognition(forceNoPhrases, forceCloud){
     if(err === 'not-allowed'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
+      sweepMicAndRms(); try{ releaseAudioSessionSoon(); }catch(_){}
       setMicButton();
       setStatus('Microphone blocked', 'error');
       addFeedback('⚠️ Microphone access denied. Enable it in your browser settings and try again.', true);
@@ -7716,6 +7721,7 @@ function createSpeechRecognition(forceNoPhrases, forceCloud){
     if(err === 'audio-capture'){
       releaseMicStream(); stopMicDiagnostic();
       speechFatalError = true; wantMic = false; disarmSpeechKeepalive();
+      sweepMicAndRms(); try{ releaseAudioSessionSoon(); }catch(_){}
       setMicButton(); setStatus('No microphone', 'error');
       addFeedback('⚠️ No microphone was found on this device.', true);
       updateFsMicBtn(); syncFsButtons();
@@ -8725,6 +8731,7 @@ function reportMicProblem(kind){
   if(reportMicProblem._shown) return;
   reportMicProblem._shown = true;
   stopMicDiagnostic();
+  try{ rmsAnalyser.stop(); }catch(_){}
   micDiagnosedWorking = false;   // so the user's next Start Reciting runs a fresh check
   if(!followOnly){
     coachTajweedMicFailed = true;
@@ -9030,6 +9037,7 @@ function setRecitationMode(modeName){
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
     releaseMicStream();
+    sweepMicAndRms();
     releaseWaveformStack();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -9610,7 +9618,7 @@ async function _startRecitingImpl(){
   resetSpeechPipeline();
   try{
     speechRecognition = createSpeechRecognition();
-    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); setMicButton(); return; }
+    if(!speechRecognition){ addFeedback('⚠️ Could not create speech recognizer.', true); wantMic = false; releaseMicStream(); sweepMicAndRms(); setMicButton(); return; }
     speechRecognition.maxAlternatives = followOnly ? 3 : 6;
     if(speechStarting){}
     else { try{ speechStarting = true; speechRecognition.start(); }catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') throw e; } }
@@ -9630,7 +9638,7 @@ async function _startRecitingImpl(){
   }catch(e){
     console.error('[Speech] start failed:', e);
     addFeedback('⚠️ Could not start listening: ' + (e.message || e), true);
-    wantMic = false; releaseMicStream(); stopMicDiagnostic(); setMicButton(); updateFsMicBtn(); syncFsButtons();
+    wantMic = false; releaseMicStream(); sweepMicAndRms(); stopMicDiagnostic(); setMicButton(); updateFsMicBtn(); syncFsButtons();
   }
 }
 
@@ -9672,6 +9680,7 @@ function stopReciting(silent){
 
   // Stop every track, not merely mute it, and disconnect the RMS graph.
   releaseMicStream();
+  sweepMicAndRms();
   releaseWakeLock();
   // Nothing is playing: release the Web Audio session too (iOS keeps the
   // audio session / Android keeps the audio route while a context runs).
@@ -9688,6 +9697,7 @@ function pauseMic(){
   disarmSpeechKeepalive(); stopMicDiagnostic();
   if(speechRecognition){ try{ speechRecognition.stop(); }catch(e){} }
   releaseMicStream();
+  sweepMicAndRms();
 }
 function resumeMic(){
   if(wantMic && !finished && !fsPaused){
@@ -9735,7 +9745,37 @@ function releaseAudioSession(){
 let _releaseVerifyTimer = null;
 let _releaseTimers = [];
 let _waveTimers = [];
+let _micSweepTimers = [];
+/* The microphone (getUserMedia) and the RMS/acoustic analyser may only be live
+   while a Tajweed recitation is actively listening. */
+function micShouldBeOff(){
+  try{
+    if(_startInFlight > 0) return false;                       // a start is opening the mic right now
+    if(wantMic && !micPaused && !followOnly) return false;     // Tajweed recitation is live
+    if(hifzState && hifzState.speechActive) return false;
+    if(_micTestClosers && _micTestClosers.size > 0) return false;
+  }catch(_){}
+  return true;
+}
+function forceMicAndRmsOff(){
+  try{ if(micStream || _allMicStreams.size > 0) releaseMicStream(); }catch(_){}
+  try{ if(rmsAnalyser.isRunning()) rmsAnalyser.stop(); }catch(_){}
+  try{ stopMicDiagnostic(); }catch(_){}
+}
+/* Whenever Tajweed stops, pauses, finishes or errors: stop getUserMedia + RMS
+   at 0 / 0.25 / 0.6 / 1.0 s. A new Start cancels any pending pass. */
+function sweepMicAndRms(){
+  _micSweepTimers.forEach(t => clearTimeout(t)); _micSweepTimers = [];
+  [0, 250, 600, 1000].forEach(ms => {
+    _micSweepTimers.push(setTimeout(() => { if(micShouldBeOff()) forceMicAndRmsOff(); }, ms));
+  });
+}
+/* Safety net (1 s): if nothing is recording, nothing may hold the mic or run RMS. */
+setInterval(() => {
+  if(micShouldBeOff() && (micStream || rmsAnalyser.isRunning() || _allMicStreams.size > 0)) forceMicAndRmsOff();
+}, 1000);
 function cancelAudioRelease(){
+  _micSweepTimers.forEach(t => clearTimeout(t)); _micSweepTimers = [];
   _releaseTimers.forEach(t => clearTimeout(t)); _releaseTimers = [];
   _waveTimers.forEach(t => clearTimeout(t)); _waveTimers = [];
   if(_releaseVerifyTimer){ clearTimeout(_releaseVerifyTimer); _releaseVerifyTimer = null; }
@@ -9825,12 +9865,14 @@ function stopEverything(silent){
   if(!silent) setStatus('Ready','idle');
 }
 function finish(){
+  micSession++; _acousticMode = null; _acousticMissStreak = 0;
   finished=true; wantMic=false; micPaused=false; speechFatalError=true;
   disarmSpeechKeepalive(); setMicButton(); recRunning = false; releaseWakeLock();
   clearSilenceTimer(); stopMicDiagnostic();
   cancelFollowPinTimer();
   abortCoachSpeechRecognition();
   releaseMicStream();
+  sweepMicAndRms();
   try{ releaseAudioSession(); releaseAudioSessionSoon(); }catch(_){}
   updateTajweedStatusChip();
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
