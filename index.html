@@ -5401,6 +5401,13 @@ function recReset(){
 }
 
 function showScreen(name){
+  // Leaving the recitation-coach screen is a hard acoustic shutdown.
+  // Only the Coach screen may retain its live-recitation session; screen
+  // changes invalidate pending getUserMedia opens via micEpoch and stop all
+  // registered tracks, RMS/MFA diagnostics, recognizers and audio contexts.
+  if(name !== 'coach' && name !== currentScreenName){
+    try{ hardShutdownAudio(); }catch(e){ console.warn('[AudioLifecycle] screen-change shutdown:', e); }
+  }
   currentScreenName = name;
   const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed, dashboard: screenDashboard };
   Object.entries(map).forEach(([k, el]) => { if(!el) return; el.hidden = (k !== name); });
@@ -8930,7 +8937,13 @@ function setRecitationMode(modeName){
   _phrasesRetryDone = false;
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
+    // Follow mode may continue ASR, but acoustic Tajweed evidence (getMedia,
+    // RMS, spectrum, MFA waveform diagnostics and Web Audio contexts) must
+    // immediately stop. Release tracks and invalidate late stream opens.
     releaseMicStream();
+    try{ rmsAnalyser.stop(); }catch(_){}
+    try{ stopMicDiagnostic(); }catch(_){}
+    try{ closeAudioContextsNow(); }catch(_){}
     releaseWaveformStack();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -13424,10 +13437,12 @@ document.addEventListener('visibilitychange',()=>{
     schedulePositionAudioOverlay();
     if(audioListRendered) refreshAudioRowStates();
   } else {
-    // Backgrounding is a hard microphone shutdown for Follow and Tajweed.
-    const _wasOn = wantMic;
-    if(_wasOn) saveProgressNow();
+    // Backgrounding is a hard microphone shutdown regardless of mode or
+    // whether wantMic has already become false (e.g. an in-flight prompt).
+    const _wasOn = wantMic || recRunning || !!micStream || rmsAnalyser.isRunning();
+    if(wantMic) saveProgressNow();
     hardShutdownAudio();
+    try{ if(navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; }catch(_){}
     if(_wasOn) setStatus('Paused (background)', 'idle', 'Tap Start to resume');
   }
 });
