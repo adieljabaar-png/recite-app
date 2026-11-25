@@ -3522,10 +3522,12 @@ function updateQuranEditionButton(){const b=document.getElementById('qvEdition')
 
 function setQuranScriptEditionFromIndex(value){
   if(!QURAN_SCRIPT_OPTIONS.some(x=>x.id===value)) return;
+  if(value===quranScriptEdition){syncIndexEditionSelectors();return;}
   quranScriptEdition=value;try{localStorage.setItem('qc.quranScriptEdition',value)}catch(e){};
-  readerState.pages.clear();updateQuranEditionButton();
+  readerState.token++; readerState.loading=false; readerState.pages.clear();
+  updateQuranEditionButton();syncIndexEditionSelectors();
   if(readerState.currentPage)loadReaderPage(readerState.currentPage);
-  showToast('Quran edition: '+currentQuranScript().label);
+  showToast('Downloading and displaying: '+currentQuranScript().label);
 }
 function syncIndexEditionSelectors(){
   ['surahIndexQuranEdition','juzIndexQuranEdition'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=quranScriptEdition;});
@@ -11116,14 +11118,19 @@ async function applyIndoPakText(data){
   return data;
 }
 async function fetchPageData(pageNumber){
+  const requestedEdition = quranScriptEdition;
   let data = null;
   try{ data = await fetchPageIndopak(pageNumber); }
   catch(e1){
+    // Only Indo-Pak may use the AlQuran.cloud fallback: it must never substitute
+    // another script for Uthmani or Tajweed when that edition fails to download.
+    if(requestedEdition !== 'indopak') throw new Error('Selected Quran edition could not be downloaded ('+currentQuranScript().label+').');
     try{
       const fb = await _fetchPageByEditionFallback(pageNumber);
       data = { pageNumber, ayahs: fb.ayahs.map(a => ({ text: a.text, numberInSurah: a.numberInSurah, surah: a.surah ? a.surah.number : 1, surahName: a.surah ? a.surah.name : '', surahEnglishName: a.surah ? a.surah.englishName : '', surahNumberOfAyahs: (a.surah && a.surah.numberOfAyahs) ? a.surah.numberOfAyahs : 0, juz: (typeof a.juz === 'number') ? a.juz : 1, manzil: (typeof a.manzil === 'number') ? a.manzil : 1, ruku: (typeof a.ruku === 'number') ? a.ruku : null, sajda: !!a.sajda, translation: null })) };
-    }catch(e2){ throw new Error('Could not load page'); }
+    }catch(e2){ throw new Error('Could not download the selected Quran edition.'); }
   }
+  if(requestedEdition !== quranScriptEdition) throw new Error('Edition changed while downloading');
   const hasTranslations = data.ayahs.some(a => a.translation && a.translation.length);
   if(!hasTranslations){
     try{
@@ -14305,5 +14312,18 @@ window.addEventListener('contextmenu', function(event) {
 })();
 
 try{const editionButton=document.getElementById('qvEdition');if(editionButton){editionButton.addEventListener('click',cycleQuranEdition);updateQuranEditionButton();}}catch(e){}
+
+(function enforceQuranEditionSelectors(){
+  function wire(){
+    ['surahIndexQuranEdition','juzIndexQuranEdition'].forEach(function(id){
+      const el=document.getElementById(id); if(!el || el.dataset.editionWired==='1') return;
+      el.dataset.editionWired='1'; el.value=quranScriptEdition;
+      el.addEventListener('change',function(){setQuranScriptEditionFromIndex(el.value); syncIndexEditionSelectors();});
+    });
+    syncIndexEditionSelectors(); updateQuranEditionButton();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
+})();
+
 </script>
 </body></html>
