@@ -9517,7 +9517,7 @@ function stopReciting(silent){
   releaseWakeLock();
   // Nothing is playing: release the Web Audio session too (iOS keeps the
   // audio session / Android keeps the audio route while a context runs).
-  try{ if(!playing && !(viewerAudio && viewerAudio.active)) suspendSharedAudio(); }catch(_){}
+  try{ if(!playing && !(viewerAudio && viewerAudio.active)){ suspendSharedAudio(); releaseAudioSession(); releaseAudioSessionSoon(); } }catch(_){}
 
   setMicButton();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
@@ -9544,6 +9544,41 @@ function resumeMic(){
     catch(e){ speechStarting = false; if(!e || e.name !== 'InvalidStateError') console.warn('[Speech] resume failed:', e); }
     setStatus('Listening', 'listening', contextLabel());
   }
+}
+/* FULL audio-session release (iOS fix). Suspending an AudioContext is not
+   enough: iOS keeps the mic / 'play-and-record' session and the Now-Playing
+   state alive while a context or the hidden <audio> element still exists.
+   When nothing is intentionally playing we CLOSE the contexts, empty the
+   shared <audio> element and hand the session back to the system.        */
+function releaseAudioSession(){
+  try{ if(playing || (viewerAudio && viewerAudio.active) || wantMic) return; }catch(_){}
+  const seen = [];
+  [audioCtx, window.__sharedAudioCtx].forEach(c => {
+    if(!c || seen.indexOf(c) !== -1) return;
+    seen.push(c);
+    try{ if(c.state !== 'closed') c.close().catch(() => {}); }catch(_){}
+  });
+  audioCtx = null; window.__sharedAudioCtx = null; audioUnlocked = false; _ctxSuspendedByUs = false;
+  try{
+    if(sharedAudio){
+      if(sharedAudio._finish){ try{ sharedAudio._finish(false, 'released'); }catch(_){} sharedAudio._finish = null; }
+      sharedAudio.pause();
+      sharedAudio.onended = null; sharedAudio.onerror = null;
+      if(sharedAudio._playingHandler){ sharedAudio.removeEventListener('playing', sharedAudio._playingHandler); sharedAudio._playingHandler = null; }
+      if(sharedAudio._safetyTimer){ clearTimeout(sharedAudio._safetyTimer); sharedAudio._safetyTimer = null; }
+      sharedAudio.removeAttribute('src');
+      try{ sharedAudio.load(); }catch(_){}
+    }
+  }catch(_){}
+  try{ if(athaanAudio){ athaanAudio.pause(); } }catch(_){}
+  try{ if(navigator.audioSession) navigator.audioSession.type = 'auto'; }catch(_){}
+  try{ if(navigator.mediaSession){ navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } }catch(_){}
+}
+let _releaseVerifyTimer = null;
+function releaseAudioSessionSoon(){
+  // iOS tears the session down asynchronously, so check again shortly after.
+  if(_releaseVerifyTimer) clearTimeout(_releaseVerifyTimer);
+  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(!wantMic){ try{ releaseMicStream(); }catch(_){} releaseAudioSession(); } }, 1200);
 }
 function suspendSharedAudio(){
   const seen = [];
@@ -9579,6 +9614,7 @@ function hardShutdownAudio(){
   try{ Array.from(_micTestClosers).forEach(f => { try{ f(); }catch(_){} }); }catch(_){}
   try{ releaseWakeLock(); }catch(_){}
   try{ suspendSharedAudio(); }catch(_){}
+  try{ releaseAudioSession(); releaseAudioSessionSoon(); }catch(_){}
 }
 function stopEverything(silent){
   // Master Stop: stop playback plus every speech/microphone mode.
@@ -9596,6 +9632,7 @@ function finish(){
   cancelFollowPinTimer();
   abortCoachSpeechRecognition();
   releaseMicStream();
+  try{ releaseAudioSession(); releaseAudioSessionSoon(); }catch(_){}
   updateTajweedStatusChip();
   const allVerses = new Set(words.map(w => w.verse)); allVerses.forEach(v => completeVerse(v));
   const total=words.length;
