@@ -3673,6 +3673,23 @@ const IS_SAMSUNG_BROWSER = /SamsungBrowser/i.test(UA);
 const IS_MAC_SAFARI = /Safari/i.test(UA) && !/Chrome|Chromium|CriOS|Android|Edg|OPR/i.test(UA);
 const IS_IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|WhatsApp|SnapChat|TikTok|BytedanceWebview|Musical_ly|Telegram|Twitter|LinkedInApp|Pinterest|Slack|Discord|GSA\/|KAKAOTALK|Naver|DaumApps|Everyfarm/i.test(UA);
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+/* Safari/WebKit ignores abort()/stop() while a recognizer is still *starting*,
+   so the mic stays open after Stop. killRecognizer() retries and also aborts the
+   instant a pending start completes. Every recognizer is tracked so none can leak. */
+const _liveRecs = new Set();
+function killRecognizer(rec){
+  if(!rec) return;
+  try{ rec.__dead = true; }catch(_){}
+  try{ rec.onresult = null; rec.onerror = null; rec.onend = null; rec.onaudiostart = null; rec.onspeechstart = null; }catch(_){}
+  const hit = () => { try{ rec.abort(); }catch(_){} try{ rec.stop(); }catch(_){} };
+  try{ rec.onstart = hit; }catch(_){}
+  hit();
+  [150, 600, 1500, 3500].forEach(ms => setTimeout(hit, ms));
+  setTimeout(() => { try{ rec.onstart = null; }catch(_){} _liveRecs.delete(rec); }, 4000);
+}
+function killAllRecognizers(except){
+  Array.from(_liveRecs).forEach(r => { if(r !== except) killRecognizer(r); });
+}
 const SPEECH_SUPPORTED = !!SpeechRecognitionCtor;
 const SPEECH_LANG = 'ar-SA';
 /* ── On-device Arabic voice pack (Chrome 139+) ─────────────────────────
@@ -3744,7 +3761,7 @@ function fallbackFromOnDevice(){
   if(_localFallbackDone || !speechRecognition || !speechRecognition.__local) return false;
   _localFallbackDone = true;
   onDeviceState = 'unsupported'; renderOnDeviceChip();
-  try{ const o = speechRecognition; o.onstart = null; o.onresult = null; o.onerror = null; o.onend = null; o.abort(); }catch(_){}
+  try{ killRecognizer(speechRecognition); }catch(_){}
   speechRecognition = null;
   try{
     speechRecognition = createSpeechRecognition(false, true);
@@ -5571,6 +5588,7 @@ function startHifzSpeech(){
   stopHifzSpeech();
   try{
     const rec = new SpeechRecognitionCtor();
+    _liveRecs.add(rec);
     rec.lang = 'ar-SA'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 3;
     rec.onresult = (event) => {
       if(!hifzState.active) return;
@@ -5611,11 +5629,7 @@ function stopHifzSpeech(){
   hifzState.speechActive = false;
   const rec = hifzState.recognizer;
   hifzState.recognizer = null;
-  if(rec){
-    try{ rec.onstart = null; rec.onresult = null; rec.onerror = null; rec.onend = null; }catch(_){}
-    try{ rec.abort(); }catch(_){}
-    try{ rec.stop(); }catch(_){}
-  }
+  if(rec) killRecognizer(rec);
 }
 function checkAyahComplete(aIdx){
   const words = hifzState.words.filter(w => w.aIdx === aIdx);
@@ -7548,11 +7562,12 @@ function createSpeechRecognition(forceNoPhrases, forceCloud){
   if(speechRecognition && !speechRecognition.__dead &&
      !!speechRecognition.__local === desiredLocal && speechRecognition.__followMode === followOnly) return speechRecognition;
   if(speechRecognition){
-    try{ const o = speechRecognition; o.onstart = null; o.onresult = null; o.onerror = null; o.onend = null; o.abort(); }catch(_){}
+    try{ killRecognizer(speechRecognition); }catch(_){}
     speechRecognition = null;
   }
 
   const rec = new SpeechRecognitionCtor();
+  _liveRecs.add(rec);
   rec.lang             = SPEECH_LANG;
   rec.continuous       = true;
   rec.interimResults   = true;
@@ -8742,6 +8757,7 @@ async function openMicTestModal(){
     if(SPEECH_SUPPORTED){
       try{
         testRecog = new SpeechRecognitionCtor();
+        _liveRecs.add(testRecog);
         testRecog.lang = 'ar-SA';
         testRecog.continuous = true;
         testRecog.interimResults = true;
@@ -8789,7 +8805,7 @@ async function openMicTestModal(){
         try{ testRms.src.disconnect(); testRms.an.disconnect(); if(testRms.owns) testRms.ctx.close(); }catch(_){}
         testRms = null;
       }
-      if(testRecog){ try{ testRecog.abort(); }catch(_){} testRecog = null; }
+      if(testRecog){ killRecognizer(testRecog); testRecog = null; }
       if(stream){ try{ stream.getTracks().forEach(tr => tr.stop()); }catch(_){} stream = null; }
     };
   }catch(e){
@@ -9477,11 +9493,7 @@ function abortCoachSpeechRecognition(){
   // Detach callbacks before aborting so Safari cannot trigger a late onend
   // callback that attempts to restart the microphone after Stop was pressed.
   speechRecognition = null;
-  if(rec){
-    try{ rec.onstart = null; rec.onresult = null; rec.onerror = null; rec.onend = null; }catch(_){}
-    try{ rec.abort(); }catch(_){}
-    try{ rec.stop(); }catch(_){}
-  }
+  if(rec) killRecognizer(rec);
   speechStarting = false;
   recRunning = false;
 }
@@ -9578,7 +9590,7 @@ let _releaseVerifyTimer = null;
 function releaseAudioSessionSoon(){
   // iOS tears the session down asynchronously, so check again shortly after.
   if(_releaseVerifyTimer) clearTimeout(_releaseVerifyTimer);
-  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(!wantMic){ try{ releaseMicStream(); }catch(_){} releaseAudioSession(); } }, 1200);
+  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(!wantMic){ try{ releaseMicStream(); }catch(_){} try{ if(!(hifzState && hifzState.speechActive)) killAllRecognizers(); }catch(_){} releaseAudioSession(); } }, 1200);
 }
 function suspendSharedAudio(){
   const seen = [];
@@ -9614,6 +9626,7 @@ function hardShutdownAudio(){
   try{ Array.from(_micTestClosers).forEach(f => { try{ f(); }catch(_){} }); }catch(_){}
   try{ releaseWakeLock(); }catch(_){}
   try{ suspendSharedAudio(); }catch(_){}
+  try{ killAllRecognizers(); }catch(_){}
   try{ releaseAudioSession(); releaseAudioSessionSoon(); }catch(_){}
 }
 function stopEverything(silent){
@@ -13356,7 +13369,7 @@ window.addEventListener('pagehide', () => {
   try{ hardShutdownAudio(); }catch(_){}
   try{ if(wantMic) stopReciting(true); }catch(_){}
   try{ if(hifzState && hifzState.speechActive) stopHifzSpeech(); }catch(_){}
-  try{ if(speechRecognition){ speechRecognition.onend=null; speechRecognition.onerror=null; speechRecognition.onresult=null; speechRecognition.abort(); } }catch(_){}
+  try{ killAllRecognizers(); }catch(_){}
   try{ releaseMicStream(); }catch(_){}
 });
 document.addEventListener('keydown', e => {
