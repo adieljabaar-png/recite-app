@@ -1,4 +1,6 @@
-<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }
+.qv-edition{font-size:12px!important;font-weight:800!important;min-width:34px;padding:5px 7px!important;border:1px solid var(--gold,#b58b00)!important;border-radius:9px!important;}
+</style><head><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -1064,6 +1066,11 @@ body.page-dark  .qv-slot .juz-first-row{color:#000 !important;background:#fff !i
 body.page-light .qv-slot .juz-first-row *{color:#fff !important;background:transparent !important;border-color:#fff !important;}
 body.page-dark  .qv-slot .juz-first-row *{color:#000 !important;background:transparent !important;border-color:#000 !important;}
 .juz-first-row{-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+/* Juz opening ayah: ensure its measured first visual line is visibly inverted in both themes. */
+body.page-light .qv-slot .juz-first-row{display:inline;background:#000 !important;color:#fff !important;-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+body.page-dark .qv-slot .juz-first-row{display:inline;background:#fff !important;color:#000 !important;-webkit-box-decoration-break:clone;box-decoration-break:clone;}
+body.page-light .qv-slot .juz-first-row .mushaf-ayah-mark{color:#fff !important;border-color:#fff !important;}
+body.page-dark .qv-slot .juz-first-row .mushaf-ayah-mark{color:#000 !important;border-color:#000 !important;}
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start::before{content:none !important;}
 body.viewer-read-mode .qv-slot .mushaf.mushaf-book .mushaf-book-content .ayah.juz-start .mushaf-ayah-mark{border-color:currentColor !important;}
 /* The non-Mushaf reading/index view uses block ayah rows too. */
@@ -3303,7 +3310,7 @@ body.light-mode .share-arabic{color:#1a2233;}
   <div class="qv-chrome" id="qvChrome">
     <div class="qv-top">
       <button class="qv-btn qv-back" id="qvBack" aria-label="Back">Back</button>
-      <span class="qv-title" id="qvTitle">Quran</span>
+      <span class="qv-title" id="qvTitle">Quran</span><button class="qv-btn qv-edition" id="qvEdition" type="button" aria-label="Change Quran edition" title="Change Quran edition">IP</button>
       <button class="qv-btn qv-bookmark" id="qvBookmark" type="button" aria-label="Bookmark this page" title="Bookmark this page">🔖</button>
       <button class="qv-btn" id="qvDark" aria-label="Toggle theme">🌙</button>
     </div>
@@ -3490,6 +3497,11 @@ const AYAH_AUDIO_BASE = 'https://everyayah.com/data/';
 const FALLBACK_RECITER = 'Alafasy_128kbps';
 const FETCH_TIMEOUT_MS = 15000;
 const READER_EDITION = 'text_indopak';
+const QURAN_SCRIPT_OPTIONS = [{id:'indopak',label:'Indo-Pak',field:'text_indopak',button:'IP'},{id:'uthmani',label:'Madinah Black & White',field:'text_uthmani',button:'BW'},{id:'tajweed',label:'Madinah Tajweed',field:'text_uthmani_tajweed',button:'TJ'}];
+let quranScriptEdition = (()=>{try{return localStorage.getItem('qc.quranScriptEdition')||'indopak'}catch(e){return 'indopak'}})();
+function currentQuranScript(){return QURAN_SCRIPT_OPTIONS.find(x=>x.id===quranScriptEdition)||QURAN_SCRIPT_OPTIONS[0]}
+function updateQuranEditionButton(){const b=document.getElementById('qvEdition');if(b){const x=currentQuranScript();b.textContent=x.button;b.title='Quran edition: '+x.label+' (tap to change)';b.setAttribute('aria-label','Quran edition: '+x.label+'; tap to change')}}
+function cycleQuranEdition(){const i=QURAN_SCRIPT_OPTIONS.findIndex(x=>x.id===quranScriptEdition);quranScriptEdition=QURAN_SCRIPT_OPTIONS[(i+1)%QURAN_SCRIPT_OPTIONS.length].id;try{localStorage.setItem('qc.quranScriptEdition',quranScriptEdition)}catch(e){};readerState.pages.clear();updateQuranEditionButton();if(readerState.currentPage)loadReaderPage(readerState.currentPage);showToast('Quran edition: '+currentQuranScript().label)}
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
 const TEXT_TRANSLATION_OPTIONS = [
@@ -3602,7 +3614,7 @@ function splitBismillah(rawText){
   return { bismillah: toks.slice(0, cut), rest: toks.slice(cut).join(' ') };
 }
 const JUZ_START_VERSE = {
-  '1:1':1,   '2:142':2,  '2:253':3,  '3:92':4,   '4:24':5,
+  '1:1':1,   '2:142':2,  '2:253':3,  '3:93':4,   '4:24':5,
   '4:148':6, '5:82':7,   '6:111':8,  '7:88':9,   '8:41':10,
   '9:93':11, '11:6':12,  '12:53':13, '15:1':14,  '17:1':15,
   '18:75':16,'21:1':17,  '23:1':18,  '25:21':19, '27:56':20,
@@ -5401,6 +5413,13 @@ function recReset(){
 }
 
 function showScreen(name){
+  // Leaving the recitation-coach screen is a hard acoustic shutdown.
+  // Only the Coach screen may retain its live-recitation session; screen
+  // changes invalidate pending getUserMedia opens via micEpoch and stop all
+  // registered tracks, RMS/MFA diagnostics, recognizers and audio contexts.
+  if(name !== 'coach' && name !== currentScreenName){
+    try{ hardShutdownAudio(); }catch(e){ console.warn('[AudioLifecycle] screen-change shutdown:', e); }
+  }
   currentScreenName = name;
   const map = { home: screenHome, index: screenSurahIndex, juz: screenJuzIndex, bookmarks: screenBookmarks, audio: screenAudio, coach: screenCoach, prayer: screenPrayer, hifz: screenHifz, tajweed: screenTajweed, dashboard: screenDashboard };
   Object.entries(map).forEach(([k, el]) => { if(!el) return; el.hidden = (k !== name); });
@@ -8930,7 +8949,13 @@ function setRecitationMode(modeName){
   _phrasesRetryDone = false;
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
+    // Follow mode may continue ASR, but acoustic Tajweed evidence (getMedia,
+    // RMS, spectrum, MFA waveform diagnostics and Web Audio contexts) must
+    // immediately stop. Release tracks and invalidate late stream opens.
     releaseMicStream();
+    try{ rmsAnalyser.stop(); }catch(_){}
+    try{ stopMicDiagnostic(); }catch(_){}
+    try{ closeAudioContextsNow(); }catch(_){}
     releaseWaveformStack();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
@@ -10203,6 +10228,12 @@ const JUZ_NAMES = ['Alif Lam Meem','Sayaqul','Tilkal Rusul','Lan Tanaloo','Wal M
 const SURAH_NAMES_AR = ['الفاتحة','البقرة','آل عمران','النساء','المائدة','الأنعام','الأعراف','الأنفال','التوبة','يونس','هود','يوسف','الرعد','إبراهيم','الحجر','النحل','الإسراء','الكهف','مريم','طه','الأنبياء','الحج','المؤمنون','النور','الفرقان','الشعراء','النمل','القصص','العنكبوت','الروم','لقمان','السجدة','الأحزاب','سبأ','فاطر','يس','الصافات','ص','الزمر','غافر','فصلت','الشورى','الزخرف','الدخان','الجاثية','الأحقاف','محمد','الفتح','الحجرات','ق','الذاريات','الطور','النجم','القمر','الرحمن','الواقعة','الحديد','المجادلة','الحشر','الممتحنة','الصف','الجمعة','المنافقون','التغابن','الطلاق','التحريم','الملك','القلم','الحاقة','المعارج','نوح','الجن','المزمل','المدثر','القيامة','الإنسان','المرسلات','النبأ','النازعات','عبس','التكوير','الانفطار','المطففين','الانشقاق','البروج','الطارق','الأعلى','الغاشية','الفجر','البلد','الشمس','الليل','الضحى','الشرح','التين','العلق','القدر','البينة','الزلزلة','العاديات','القارعة','التكاثر','العصر','الهمزة','الفيل','قريش','الماعون','الكوثر','الكافرون','النصر','المسد','الإخلاص','الفلق','الناس'];
 const JUZ_NAMES_AR = ['الٓمٓ','سيقول','تلك الرسل','لن تنالوا','والمحصنات','لا يحب الله','وإذا سمعوا','ولو أننا','قال الملأ','واعلموا','يعتذرون','وما من دابة','وما أبرئ','ربما','سبحان الذي','قال ألم','اقترب','قد أفلح','وقال الذين','أمن خلق','اتل ما أوحي','ومن يقنت','وما لي','فمن أظلم','إليه يرد','حٓمٓ','قال فما خطبكم','قد سمع الله','تبارك الذي','عم يتساءلون'];
 const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
+/* Canonical Madinah Mushaf Juz entry points: each index page and its first ayah are kept together. */
+const JUZ_ENTRY_POINTS = [
+  [1,1,1],[2,2,142],[3,2,253],[4,3,93],[5,4,24],[6,4,148],[7,5,82],[8,6,111],[9,7,88],[10,8,41],
+  [11,9,93],[12,11,6],[13,12,53],[14,15,1],[15,17,1],[16,18,75],[17,21,1],[18,23,1],[19,25,21],[20,27,56],
+  [21,29,46],[22,33,31],[23,36,28],[24,39,32],[25,41,47],[26,46,1],[27,51,31],[28,58,1],[29,67,1],[30,78,1]
+];
 function renderJuzIndex(){
   juzIndexList.innerHTML = '';
   const label = { en: 'Juz', tr: 'Cüz' }[surahIndexLang] || 'Juz';
@@ -10977,18 +11008,19 @@ async function getJuzStartPage(juzNumber){
   return fallback;
 }
 async function fetchPageIndopak(pageNumber){
-  const url = QURAN_API_V4 + '/verses/by_page/' + pageNumber + '?fields=' + READER_EDITION + '&per_page=300&word_fields=text_indopak&translations=' + currentTextTranslationQuranComId();
-  const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  if(!json || !Array.isArray(json.verses)) throw new Error('Bad response');
-  return { pageNumber, ayahs: json.verses.map(v => {
-    const key = v.verse_key || '';
-    const [sStr, aStr] = key.split(':');
-    const s = parseInt(sStr, 10) || 1; const a = parseInt(aStr, 10) || 1;
-    let translation = '';
-    if(Array.isArray(v.translations) && v.translations.length){ translation = cleanTranslation(v.translations.map(t => t.text || '').join(' ')); }
-    return { text: v.text_indopak || '', numberInSurah: a, surah: s, surahName: '', surahEnglishName: '', surahNumberOfAyahs: 0, juz: v.juz_number || 1, manzil: v.manzil_number || 1, ruku: (typeof v.ruku_number === 'number') ? v.ruku_number : null, sajda: !!v.sajdah, pageNumber: v.page_number || pageNumber, translation: translation || null };
+  const edition=currentQuranScript();
+  const field=edition.field;
+  const url=QURAN_API_V4 + '/verses/by_page/' + pageNumber + '?fields=' + field + '&per_page=300&translations=' + currentTextTranslationQuranComId();
+  const res=await fetchWithTimeout(url,FETCH_TIMEOUT_MS);
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const json=await res.json();
+  if(!json||!Array.isArray(json.verses))throw new Error('Bad response');
+  return {pageNumber,ayahs:json.verses.map(v=>{
+    const key=v.verse_key||'';const [sStr,aStr]=key.split(':');const s=parseInt(sStr,10)||1;const a=parseInt(aStr,10)||1;
+    let translation='';if(Array.isArray(v.translations)&&v.translations.length)translation=cleanTranslation(v.translations.map(t=>t.text||'').join(' '));
+    let text=v[field]||v.text_indopak||v.text_uthmani||'';
+    if(edition.id==='tajweed') text=String(text);
+    return {text,numberInSurah:a,surah:s,surahName:'',surahEnglishName:'',surahNumberOfAyahs:0,juz:v.juz_number||1,manzil:v.manzil_number||1,ruku:(typeof v.ruku_number==='number')?v.ruku_number:null,sajda:!!v.sajdah,pageNumber:v.page_number||pageNumber,translation:translation||null};
   })};
 }
 async function _fetchPageByEditionFallback(pageNumber){
@@ -11070,7 +11102,7 @@ async function fetchPageData(pageNumber){
       if(enRes && enRes.ok){ const enJson = await enRes.json(); if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){ const trans = enJson.data.ayahs.map(a => cleanTranslation(a.text)); data.ayahs.forEach((a, i) => { a.translation = trans[i] || null; }); } }
     }catch(_){}
   }
-  return await applyIndoPakText(data);
+  return quranScriptEdition==='indopak' ? await applyIndoPakText(data) : data;
 }
 function prefetchAdjacentPages(n){
   [n + 1, n - 1].forEach(p => {
@@ -11252,6 +11284,10 @@ if(!window.__juzLineObserver){
   window.addEventListener('resize',()=>{ resetJuzFirstRows(); scheduleJuzFirstVisualLines(); });
   document.addEventListener('DOMContentLoaded',scheduleJuzFirstVisualLines);
 }
+function sanitizeTajweedMarkup(raw){
+  const allowed=new Set(['ham_wasl','laam_shamsiyah','madda_normal','madda_permissible','madda_necessary','madda_obligatory','qalqalah','ghunnah','ikhfa','idghaam_ghunnah','idghaam_no_ghunnah','iqlab','silent']);
+  return String(raw||'').replace(/<tajweed\s+class=['\"]([^'\"]+)['\"]\s*>/gi,(m,c)=>{const rule=c.trim().replace(/^tj-/,'').replace(/-/g,'_');return allowed.has(rule)?'<span class=\"tj-'+rule+'\">':'';}).replace(/<\/tajweed>/gi,'</span>').replace(/<(?!\/?span\b)[^>]*>/gi,'');
+}
 function renderReaderPage(pageNumber, token){
   const page = readerState.pages.get(pageNumber);
   if(!page) return;
@@ -11324,7 +11360,7 @@ function renderReaderPage(pageNumber, token){
     if(typeof a.ruku === 'number') span.dataset.ruku = String(a.ruku);
     if(a.surahNumberOfAyahs) span.dataset.surahAyahs = String(a.surahNumberOfAyahs);
     if(Number(a.surah) !== 1 && JUZ_START_VERSE[verseKey]) span.classList.add('juz-start');
-    span.appendChild(document.createTextNode(text + ' '));
+    if(quranScriptEdition==='tajweed' && /<tajweed\b/i.test(text)){span.insertAdjacentHTML('beforeend',sanitizeTajweedMarkup(text)+' ');}else{span.appendChild(document.createTextNode(text+' '));}
     const mark = document.createElement('span'); mark.className = 'mushaf-ayah-mark'; mark.textContent = toAr(displayAyah);
     span.appendChild(mark);
     if(isSajdah){ const sj = document.createElement('span'); sj.className = 'mushaf-sajdah-mark'; sj.textContent = '۩'; sj.title = 'Sajidah verse'; span.appendChild(sj); sajdahRefs.push(verseKey); }
@@ -11362,8 +11398,11 @@ async function openSurahInReader(surahNumber){
 async function openJuzInReader(juzNumber){
   if(!navigator.onLine){ const ok = await askForInternet('Juz ' + juzNumber); if(!ok) return; }
   openViewer('read', { hideFullscreen: true });
-  qvTitle.textContent = 'Loading…';
-  const pg = await getJuzStartPage(juzNumber);
+  qvTitle.textContent = 'Loading Juz ' + juzNumber + '…';
+  const entry = JUZ_ENTRY_POINTS[juzNumber - 1];
+  const pg = JUZ_START_PAGES_FALLBACK[juzNumber - 1] || (entry ? entry[0] : 1);
+  /* Target the actual first ayah as well as its Mushaf page, so the list and reader agree. */
+  readerState.highlightVerse = entry ? (entry[1] + ':' + entry[2]) : null;
   loadReaderPage(pg);
 }
 
@@ -13424,10 +13463,12 @@ document.addEventListener('visibilitychange',()=>{
     schedulePositionAudioOverlay();
     if(audioListRendered) refreshAudioRowStates();
   } else {
-    // Backgrounding is a hard microphone shutdown for Follow and Tajweed.
-    const _wasOn = wantMic;
-    if(_wasOn) saveProgressNow();
+    // Backgrounding is a hard microphone shutdown regardless of mode or
+    // whether wantMic has already become false (e.g. an in-flight prompt).
+    const _wasOn = wantMic || recRunning || !!micStream || rmsAnalyser.isRunning();
+    if(wantMic) saveProgressNow();
     hardShutdownAudio();
+    try{ if(navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; }catch(_){}
     if(_wasOn) setStatus('Paused (background)', 'idle', 'Tap Start to resume');
   }
 });
@@ -14233,5 +14274,7 @@ window.addEventListener('contextmenu', function(event) {
     });
   });
 })();
+
+try{const editionButton=document.getElementById('qvEdition');if(editionButton){editionButton.addEventListener('click',cycleQuranEdition);updateQuranEditionButton();}}catch(e){}
 </script>
 </body></html>
