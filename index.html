@@ -8353,9 +8353,20 @@ async function _ensureMicStreamImpl(){
   try{
     lastMicError = null;
     const _epoch = micEpoch;
-    const s = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    });
+    let s = null;
+    for(let attempt = 0; attempt < 3; attempt++){
+      try{
+        s = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+        break;
+      }catch(err){
+        const transient = err && (err.name === 'NotReadableError' || err.name === 'AbortError' || err.name === 'TrackStartError');
+        if(!transient || attempt === 2) throw err;
+        await new Promise(r => setTimeout(r, 250));     // device still being released: wait and retry
+        if(_epoch !== micEpoch) return null;
+      }
+    }
     if(_epoch !== micEpoch){
       // Stop / background / mode change happened while the permission
       // prompt or device was opening — never leave this stream live.
@@ -8920,11 +8931,14 @@ function setRecitationMode(modeName){
   applyMutexUI(); applyFollowOnlyUI();
   if(followOnly){
     releaseMicStream();
+    releaseWaveformStack();
     coachTajweedMicFailed = false;
     addFeedback('👂 <b>Follow</b> mode — memorisation aid. The highlight moves with you.', false, true);
     removeTajweedColorsFromCoach();
     updateTajweedStatusChip();
   } else {
+    _waveTimers.forEach(t => clearTimeout(t)); _waveTimers = [];   // quick flip back: cancel pending Follow teardown
+    if(wantMic){ try{ unlockAudio(); }catch(_){} }   // recreate the audio context inside this tap (iOS gesture rule)
     addFeedback('🎵 <b>Tajweed</b> mode — strict, rule-aware. Tajweed colours are shown; mispronunciations and rule violations are marked red.', false, true);
     applyTajweedColorsToCoach();
     if(wantMic && !rmsAnalyser.isRunning()){
@@ -9418,7 +9432,6 @@ function setMicButton(){
 }
 
 let _startInFlight = 0;
-function cancelAudioRelease(){ if(_releaseVerifyTimer){ clearTimeout(_releaseVerifyTimer); _releaseVerifyTimer = null; } }
 function micBusyForCleanup(){
   try{
     if(_startInFlight > 0 || wantMic) return true;
@@ -9617,10 +9630,50 @@ function releaseAudioSession(){
   try{ if(navigator.mediaSession){ navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } }catch(_){}
 }
 let _releaseVerifyTimer = null;
+let _releaseTimers = [];
+let _waveTimers = [];
+function cancelAudioRelease(){
+  _releaseTimers.forEach(t => clearTimeout(t)); _releaseTimers = [];
+  _waveTimers.forEach(t => clearTimeout(t)); _waveTimers = [];
+  if(_releaseVerifyTimer){ clearTimeout(_releaseVerifyTimer); _releaseVerifyTimer = null; }
+}
 function releaseAudioSessionSoon(){
-  // iOS tears the session down asynchronously, so check again shortly after.
-  if(_releaseVerifyTimer) clearTimeout(_releaseVerifyTimer);
-  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(micBusyForCleanup()) return; try{ releaseMicStream(); }catch(_){} try{ killAllRecognizers(); }catch(_){} releaseAudioSession(); }, 1200);
+  // iOS tears the session down asynchronously: sweep ASR, stream, RMS analyser
+  // and audio contexts at 0 / 0.25 / 0.6 / 1.0 s so nothing outlives 1 second.
+  _releaseTimers.forEach(t => clearTimeout(t)); _releaseTimers = [];
+  [0, 250, 600, 1000].forEach(ms => {
+    _releaseTimers.push(setTimeout(() => {
+      if(micBusyForCleanup()) return;     // a new start / Hifz / mic test owns the mic
+      try{ releaseMicStream(); }catch(_){}
+      try{ killAllRecognizers(); }catch(_){}
+      try{ rmsAnalyser.stop(); }catch(_){}
+      releaseAudioSession();
+    }, ms));
+  });
+}
+/* Tajweed → Follow switch: Follow needs only ASR, so close the getUserMedia
+   stream, RMS/acoustic analyser and Web Audio contexts within 1 s. ASR keeps
+   running. Every pass aborts if the user flips back to Tajweed meanwhile. */
+function closeAudioContextsNow(){
+  const seen = [];
+  [audioCtx, window.__sharedAudioCtx].forEach(c => {
+    if(!c || seen.indexOf(c) !== -1) return;
+    seen.push(c);
+    try{ if(c.state !== 'closed') c.close().catch(() => {}); }catch(_){}
+  });
+  audioCtx = null; window.__sharedAudioCtx = null; audioUnlocked = false; _ctxSuspendedByUs = false;
+}
+function releaseWaveformStack(){
+  _waveTimers.forEach(t => clearTimeout(t)); _waveTimers = [];
+  const run = () => {
+    if(!followOnly || _startInFlight > 0) return;
+    try{ releaseMicStream(); }catch(_){}
+    try{ rmsAnalyser.stop(); }catch(_){}
+    try{ stopMicDiagnostic(); }catch(_){}
+    try{ if(!playing && !(viewerAudio && viewerAudio.active)) closeAudioContextsNow(); }catch(_){}
+  };
+  run();
+  [250, 600, 1000].forEach(ms => _waveTimers.push(setTimeout(run, ms)));
 }
 function suspendSharedAudio(){
   const seen = [];
