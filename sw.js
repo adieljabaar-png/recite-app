@@ -1,7 +1,21 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.4.23
+   Quran Recitation Coach — Service Worker  v2.6.0
 
-   What changed in 2.4.25:
+   What changed in 2.6.0 — SMART CORE MANAGEMENT SYSTEM (SW side):
+     • Prayer-alarm engine. The page posts the next ~3 days of enabled
+       prayer alarms (PRAYER_SCHEDULE); they are stored in IndexedDB
+       ('qc-core') so they survive the worker being stopped.
+     • Whenever the worker is woken (page HEARTBEAT, periodic background
+       sync, push, message) it 'arms': if an alarm is due, or due within
+       ~4.5 min, it stays alive (waitUntil) until that moment and shows the
+       notification itself. A missed alarm is still shown for up to 5 min.
+     • Uses Notification Triggers (TimestampTrigger) when the browser
+       supports them, as an extra OS-level safety net.
+     • Skips the SW notification if the app window is visible (the page
+       already rings the alarm) so there are no double alerts.
+     • CPU: trimCache() is throttled instead of running after every put.
+
+   What changed in 2.4.23:
      • salaah.html (Learn Salaah) is now pre-cached with the app
        shell, so it opens offline from the Dashboard 'Salaah' tab
        (including /salaah.html?theme=dark|light) and so its Back
@@ -35,7 +49,7 @@
 
 'use strict';
 
-const VERSION = '2.4.23';
+const VERSION = '2.6.0';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
@@ -166,6 +180,21 @@ self.addEventListener('message', event => {
   const data = event.data || {};
   if(data.type === 'SKIP_WAITING'){
     event.waitUntil(self.skipWaiting());
+    return;
+  }
+  if(data.type === 'PRAYER_SCHEDULE'){
+    event.waitUntil((async () => {
+      try{
+        const alarms = Array.isArray(data.alarms) ? data.alarms.filter(validAlarm) : [];
+        await kvSet('schedule', { alarms: alarms, updated: Date.now() });
+        await scheduleTriggers(alarms);
+      }catch(_){}
+      await armAlarms();
+    })());
+    return;
+  }
+  if(data.type === 'HEARTBEAT'){
+    event.waitUntil(armAlarms());
     return;
   }
   if(data.type === 'CLEAR_CACHES'){
@@ -573,7 +602,13 @@ async function shellNavigation(req){
   }
 }
 
+const _lastTrim = {};
 async function trimCache(cacheName, maxEntries){
+  // CPU guard: listing + trimming a 600-entry cache after every single
+  // put is wasteful. Run at most once every 5 s per cache.
+  const nowT = Date.now();
+  if(_lastTrim[cacheName] && nowT - _lastTrim[cacheName] < 5000) return;
+  _lastTrim[cacheName] = nowT;
   try{
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
@@ -637,3 +672,134 @@ async function prefetchFonts(){
     }catch(_){}
   }));
 }
+
+/* ============================================================
+   SMART CORE — prayer-alarm engine (runs inside the worker)
+
+   Browsers may stop a service worker at any time; nothing can
+   keep it alive forever. So the strategy is layered:
+     1. Page HEARTBEAT (every 25 s visible / 55 s hidden) wakes the
+        worker and arms it when an alarm is near.
+     2. periodicsync wakes it even if the page is gone (installed
+        Chromium PWAs only; browser decides how often).
+     3. Notification Triggers, where the browser still supports them.
+     4. Web Push from the server (/api/subscribe) is the only fully
+        reliable path when the app is closed.
+   ============================================================ */
+const CORE_DB = 'qc-core';
+const CORE_STORE = 'kv';
+const ALARM_GRACE_MS = 5 * 60 * 1000;   // still show an alarm up to 5 min late
+const ARM_WINDOW_MS  = 4.5 * 60 * 1000; // stay alive this long to hit an alarm on time
+
+function coreDb(){
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open(CORE_DB, 1);
+    r.onupgradeneeded = () => { try{ r.result.createObjectStore(CORE_STORE); }catch(_){} };
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+async function kvGet(key){
+  const db = await coreDb();
+  return new Promise((resolve, reject) => {
+    const q = db.transaction(CORE_STORE, 'readonly').objectStore(CORE_STORE).get(key);
+    q.onsuccess = () => { db.close(); resolve(q.result); };
+    q.onerror = () => { db.close(); reject(q.error); };
+  });
+}
+async function kvSet(key, val){
+  const db = await coreDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CORE_STORE, 'readwrite');
+    tx.objectStore(CORE_STORE).put(val, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+  });
+}
+
+function validAlarm(a){
+  return a && typeof a.key === 'string' && typeof a.label === 'string' && typeof a.ts === 'number' && isFinite(a.ts);
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, Math.max(0, ms))); }
+
+async function appWindowVisible(){
+  try{
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    return list.some(c => c.visibilityState === 'visible');
+  }catch(_){ return false; }
+}
+
+async function showPrayerNotification(a){
+  await self.registration.showNotification('Prayer time — ' + a.label, {
+    body: 'It is time for ' + a.label + ' prayer.',
+    icon: NOTIFICATION_ICON,
+    badge: NOTIFICATION_ICON,
+    tag: 'prayer-' + a.key,        // same tag as the page → never doubles up
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 200],
+    data: { url: './' }
+  });
+}
+
+/* Optional OS-level scheduling (Notification Triggers). Not supported
+   in current Chrome builds, so this is feature-detected and silent. */
+async function scheduleTriggers(alarms){
+  try{
+    if(typeof TimestampTrigger === 'undefined') return;
+    if(!('showTrigger' in Notification.prototype)) return;
+    const now = Date.now();
+    const nextPerKey = {};
+    alarms.slice().sort((x, y) => x.ts - y.ts).forEach(a => {
+      if(a.ts > now && !nextPerKey[a.key]) nextPerKey[a.key] = a;
+    });
+    for(const k of Object.keys(nextPerKey)){
+      const a = nextPerKey[k];
+      await self.registration.showNotification('Prayer time — ' + a.label, {
+        body: 'It is time for ' + a.label + ' prayer.',
+        icon: NOTIFICATION_ICON, badge: NOTIFICATION_ICON,
+        tag: 'prayer-' + a.key, renotify: true, requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 200], data: { url: './' },
+        showTrigger: new TimestampTrigger(a.ts)
+      });
+    }
+  }catch(_){}
+}
+
+let _armedRun = null;
+function armAlarms(){
+  if(_armedRun) return _armedRun;     // one arming loop at a time
+  _armedRun = (async () => {
+    try{
+      const sched = await kvGet('schedule');
+      if(!sched || !Array.isArray(sched.alarms)) return;
+      let fired = (await kvGet('fired')) || {};
+      const list = sched.alarms.filter(validAlarm).sort((a, b) => a.ts - b.ts);
+      for(const a of list){
+        const id = a.key + '|' + a.ts;
+        if(fired[id]) continue;
+        const late = Date.now() - a.ts;
+        if(late > ALARM_GRACE_MS) continue;               // too old, skip
+        if(late < 0){
+          if(-late > ARM_WINDOW_MS) break;                // list is sorted: nothing nearer
+          await sleep(-late);                             // hold the worker open until the moment
+        }
+        fired[id] = true;
+        const keep = Object.keys(fired).sort().slice(-40);
+        const pruned = {}; keep.forEach(k => { pruned[k] = true; });
+        fired = pruned;
+        try{ await kvSet('fired', fired); }catch(_){}
+        if(await appWindowVisible()) continue;            // page rings it itself
+        try{ await showPrayerNotification(a); }catch(_){}
+      }
+    }catch(_){}
+    finally{ _armedRun = null; }
+  })();
+  return _armedRun;
+}
+
+self.addEventListener('periodicsync', event => {
+  if(event.tag === 'qc-prayer-check') event.waitUntil(armAlarms());
+});
+/* A push wake-up is also a free chance to arm any nearby alarm. */
+self.addEventListener('push', event => { event.waitUntil(armAlarms()); });
