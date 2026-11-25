@@ -6211,9 +6211,14 @@ function showTajweedMicFailedModal(){
 
 
 
-const MADD_MIN_DELTA_MS = { normal: 180, permissible: 380, obligatory: 380, necessary: 600 };
-const MADD_MIN_HARAKAT  = { normal: 1.7, permissible: 3.6, obligatory: 3.6, necessary: 5.5 };
-const MADD_MAX_HARAKAT  = { normal: 2.3, permissible: 5.4, obligatory: 5.4, necessary: 6.5 };
+/* Minimum accepted length. Permissible madd (munfasil / 'arid / leen) allows 2, 4, 5 or 6
+   counts, so a correct 2-count must NOT be flagged: its minimum equals the normal 2-count.
+   Obligatory (muttasil) needs at least 4; necessary (lazim) needs 6. */
+const MADD_MIN_DELTA_MS = { normal: 180, permissible: 180, obligatory: 380, necessary: 600 };
+const MADD_MIN_HARAKAT  = { normal: 1.7, permissible: 1.7, obligatory: 3.6, necessary: 5.5 };
+/* Over-long limits are generous (warning only): reciters differ in tempo and 6 counts is valid
+   for permissible and obligatory madd. */
+const MADD_MAX_HARAKAT  = { normal: 3.0, permissible: 7.0, obligatory: 7.0, necessary: 7.5 };
 const END_OF_AYAH_MADD_MIN_MS = 250;
 const MADD_COUNTS                = { normal: 2, permissible: 4, obligatory: 4, necessary: 6 };
 const PACE_WINDOW_MS             = 90000;
@@ -6257,19 +6262,22 @@ function maddRequiredMs(kind){
   const base = MADD_MIN_DELTA_MS[kind] || 0;
   return Math.round(base * paceScale());
 }
-function maddMaxMs(kind){
+function maddMaxMs(kind, letters){
   const T_mora = getBaseMsPerLetter();
   if (T_mora === null) return Infinity;
   const mult = MADD_MAX_HARAKAT[kind] || MADD_MAX_HARAKAT.normal;
-  return Math.round(T_mora * mult);
+  const extra = Math.max(0, (letters || 1) - 1);   /* the longest voiced run can cover the whole word */
+  return Math.round(T_mora * (mult + extra));
 }
 
+/* Lowered: the measured hold is 0.65 x the longest voiced run, so a correct 2-count
+   ghunnah measures well under 350 ms. These only catch a clearly clipped (about 1 count) nasal. */
 const GHUNNAH_MIN_MS = {
-  ghunnah:          350,
-  ikhfa:            550,
-  idghaam_ghunnah:  500,
-  iqlab:            450,
-  default:          350
+  ghunnah:          150,
+  ikhfa:            150,
+  idghaam_ghunnah:  150,
+  iqlab:            150,
+  default:          150
 };
 function paceScale(){
   if (!currentPaceWPS || currentPaceWPS <= 0) return 1.0;
@@ -6449,15 +6457,15 @@ function emphaticViolation(heardNorm, targetNorm){
   return viol;
 }
 
-function nasalPresent(samples){
+function nasalPresent(samples, strict){
   if (!samples || samples.length < 4) return false;
-  let count = 0, total = 0;
+  let count = 0, total = 0, run = 0, maxRun = 0;
   const floor      = rmsAnalyser.minRms();
   const noiseBands = rmsAnalyser.bandNoiseFloor();
   const hasCal     = rmsAnalyser.isCalibrated();
   for (let i = 0; i < samples.length; i++){
     const s = samples[i];
-    if (s.rms < floor * 1.2) continue;
+    if (s.rms < floor * 1.2){ run = 0; continue; }
     total++;
     const nasalBand = s.bands[1] + (s.bands[2] || 0) * 0.33;
     const oralF1    = (s.bands[2] || 0) * 0.67;
@@ -6467,9 +6475,13 @@ function nasalPresent(samples){
     const noiseFloorLow  = hasCal ? (noiseBands[1] || 0) * 3 : 0;
     if (nasalDominance > 0.40 &&
         oralF1 / (nasalBand + 1e-9) < 1.5 &&
-        nasalBand > noiseFloorLow) count++;
+        nasalBand > noiseFloorLow){ count++; run++; if (run > maxRun) maxRun = run; }
+    else run = 0;
   }
-  return total > 3 && count / total > 0.55;
+  if (strict) return total > 3 && count / total > 0.55;
+  /* The nasal is only one part of the word, so look for a sustained nasal stretch
+     (3+ consecutive samples) instead of requiring most of the word to be nasal. */
+  return total > 3 && (maxRun >= 3 || count / total > 0.30);
 }
 
 function countPeaks(samples, threshold, minSepMs){
@@ -6506,10 +6518,13 @@ function checkLaamShamsiyyah(w, heard, align){
     if (samples && samples.length >= 5){
       const onsetC = rmsAnalyser.onsetCentroid(w.audio.start, 75);
       const overallC = rmsAnalyser.meanCentroid(w.audio.start, w.audio.end);
-      if (onsetC > 0 && overallC > 0) tjVerified(w, 'laam_shamsiyah');
-      /* Low onset centroid with much higher overall centroid suggests a voiced
+      const _sun = (/ال(.)/.exec(w.norm || '') || [])[1] || '';
+      const _fricativeSun = 'سشصزثذظ'.indexOf(_sun) !== -1 && _sun !== '';
+      /* Fricative sun letters have a naturally high centroid, so the test cannot judge them (left unchecked). */
+      if (onsetC > 0 && overallC > 0 && !_fricativeSun) tjVerified(w, 'laam_shamsiyah');
+      /* Clearly low onset centroid with much higher overall centroid suggests a voiced
          lateral onset rather than smooth solar assimilation (provisional). */
-      if (onsetC > 0 && overallC > 0 && onsetC < 1450 && overallC > onsetC * 1.85){
+      if (onsetC > 0 && overallC > 0 && !_fricativeSun && onsetC < 1000 && overallC > onsetC * 2.4){
         markStrict1Warning(w, 'silent-laam-shamsiyyah',
           'possible voiced/unassimilated onset (onset centroid ' + Math.round(onsetC) +
           ' Hz vs ' + Math.round(overallC) + ' Hz); spectral centroid is provisional evidence');
@@ -6555,8 +6570,8 @@ function checkExtraSyllable(w){
   const env = rmsAnalyser.samplesIn(w.audio.start, w.audio.end);
   if (env && env.length >= 3) tjVerified(w, 'silent');
   const peaks = countPeaks(env, rmsAnalyser.minRms() * 0.5, 80);
-  const expected = w.norm.length >= 4 ? 2 : 1;
-  if (peaks > expected + 1){
+  const expected = Math.max(1, Math.ceil(w.norm.length / 2));   /* about one energy peak per syllable (2 letters) */
+  if (peaks > expected + 2){
     markStrict1Warning(w, 'silent-extra-syllable', peaks + ' energy peaks vs expected ' + expected);
   }
   return true;
@@ -6639,6 +6654,7 @@ function checkQalqalah(w, heard, align){
   if (!w.tjRules.allRules.includes('qalqalah')) return true;
 
   const hasAcoustic = !!(align && align.available && align.ctx.hasSignal && align.ctx.samples.length >= 5);
+  let noBounce = false;
   if (hasAcoustic && w.audio && w.audio.durationMs >= 90){
     tjVerified(w, 'qalqalah');
     const samples = align.ctx.samples;
@@ -6647,17 +6663,17 @@ function checkQalqalah(w, heard, align){
     let bounceCount = 0, lastBounceT = -Infinity, sawDipOrStop = false;
     for (let i = 1; i < samples.length; i++){
       const prev = samples[i - 1], cur = samples[i];
-      if (prev.rms <= burstThreshold * 1.15 || (prev.harmonicity != null && prev.harmonicity < 0.65)){
+      if (prev.rms <= burstThreshold * 1.3 || (prev.harmonicity != null && prev.harmonicity < 0.65)){
         sawDipOrStop = true;
       }
-      if (sawDipOrStop && cur.rms > burstThreshold && cur.rms > prev.rms * 1.25){
+      if (sawDipOrStop && cur.rms > burstThreshold && cur.rms > prev.rms * 1.15){
         if (cur.t - lastBounceT >= 75){ bounceCount++; lastBounceT = cur.t; sawDipOrStop = false; }
       }
     }
     if (bounceCount === 0){
+      noBounce = true;
       markStrict1Warning(w, 'qalqalah-missing',
         'no plosive bounce/release detected on Qalqalah letter');
-      return true;
     }
   }
 
@@ -6667,7 +6683,11 @@ function checkQalqalah(w, heard, align){
     for (let i = 0; i < w.norm.length; i++){
       const ch = w.norm[i];
       if (QALQALAH_LETTERS.includes(ch) && !heard.includes(ch)){
-        markStrict1Error(w, 'qalqalah-letter-dropped',
+        /* ASR can drop a letter on its own, so a missing letter is red only when the audio
+           also shows no bounce; on its own it is a yellow warning. */
+        if (noBounce) markStrict1Error(w, 'qalqalah-letter-dropped',
+          'Qalqalah letter (' + ch + ') missing from transcript and no bounce heard');
+        else markStrict1Warning(w, 'qalqalah-letter-dropped',
           'Qalqalah letter (' + ch + ') missing from transcript');
         break;
       }
@@ -6683,14 +6703,11 @@ function checkIdghaamNoGhunnah(w, heard, align){
     const samples = align.ctx.samples;
     const vr = rmsAnalyser.vowelRun(w.audio.start, w.audio.end);
     const T = getBaseMsPerLetter();
-    const limit = T !== null ? Math.round(T * 2.8) : 600;
-    const nasal = samples.length >= 4 ? nasalPresent(samples) : false;
+    const limit = T !== null ? Math.round(T * (w.norm.length + 1.8)) : Math.max(600, w.norm.length * 110 + 250);
+    const nasal = samples.length >= 4 ? nasalPresent(samples, true) : false;
     if (nasal && vr.durationMs > limit){
       markStrict1Error(w, 'idghaam-no-ghunnah-nasalised',
         'nasalised and held ' + Math.round(vr.durationMs) + ' ms > ' + limit + ' ms on a no-ghunnah merge');
-    } else if (nasal){
-      markStrict1Warning(w, 'idghaam-no-ghunnah-nasalised',
-        'nasal-band energy detected during a no-ghunnah merge (ل / ر)');
     } else if (vr.durationMs > limit){
       markStrict1Warning(w, 'idghaam-no-ghunnah-nasalised',
         'vowel-run ' + Math.round(vr.durationMs) + ' ms > ' + limit + ' ms (excessive hold on no-ghunnah merge)');
@@ -6720,7 +6737,7 @@ function checkAllNasalRules(w, heard, align){
   nasalRules.forEach(type => {
     let textOk = true;
     if (type === 'iqlab'){
-      textOk = !heard || heard.indexOf(M) !== -1;
+      textOk = true;   /* ASR spells the written ن; it can never show the م sound */
     } else if (w.tjRules.ghunnahLetters && w.tjRules.ghunnahLetters.length){
       const req = w.tjRules.ghunnahLetters.join('');
       for (let i = 0; i < req.length; i++){
@@ -6734,7 +6751,7 @@ function checkAllNasalRules(w, heard, align){
     }
 
     const expectedMs = ghunnahRequiredMs(type);
-    if (hasAcoustic || heard) tjVerified(w, type);
+    if (hasAcoustic || (heard && type !== 'iqlab')) tjVerified(w, type);
 
     if (hasAcoustic){
       if (!nasal && !textOk){
@@ -6747,14 +6764,8 @@ function checkAllNasalRules(w, heard, align){
         markStrict1Warning(w, 'ghunnah-length-' + type,
           'estimated nasal hold ' + measuredMs + ' ms < target ' + Math.round(expectedMs) + ' ms (provisional phone-mic estimate)');
       }
-      if (type === 'iqlab' && heard && heard.indexOf(M) === -1 && nasal){
-        markStrict1Warning(w, 'ghunnah-asr',
-          'nasal resonance detected, but ASR did not transcribe م for Iqlab');
-      }
     } else if (!textOk){
-      if (type === 'iqlab') markStrict1Error(w, 'ghunnah-iqlab',
-        'expected م (Iqlab) missing in transcript (transcript-only mode)');
-      else markStrict1Warning(w, 'nasal-dropped',
+      if (type !== 'iqlab') markStrict1Warning(w, 'nasal-dropped',
         'expected nasal consonant missing in transcript (transcript-only mode)');
     }
   });
@@ -7002,9 +7013,6 @@ function detectGlottalOnset(raw, targetRaw){
   if (/^[أإآءؤئ]/.test(h)){
     return { detected: true, reason: 'explicit hamza onset (' + h[0] + ')' };
   }
-  if (/^[اٱ]/.test(h) && /^[اٱ]/.test(t)){
-    return { detected: true, reason: 'audible Alif (ا) onset where Hamzat al-Wasl should be silent' };
-  }
   return { detected: false, reason: '' };
 }
 
@@ -7050,12 +7058,10 @@ function checkHamzatWasl(w, idx, rawHeard){
     if (acoustic.spike) evidence.push('glottal attack spike in RMS');
     if (acoustic.gapMs !== null) evidence.push('boundary ' + Math.round(acoustic.gapMs) + ' ms');
     const _hwMsg = 'Hamzat al-Wasl sounded instead of silent join — ' + evidence.join(', ');
+    /* red only when the transcript hamza AND the audio attack agree; otherwise a yellow warning.
+       A bare audio spike is not flagged: an ordinary short pause also produces one. */
     if (acoustic.spike) markStrict1Error(w, 'hamzat-al-wasl', _hwMsg);
     else markStrict1Warning(w, 'hamzat-al-wasl', _hwMsg);
-  } else if (acoustic.spike && acoustic.gapMs !== null && acoustic.gapMs >= 45 && acoustic.gapMs <= 380){
-    markStrict1Warning(w, 'hamzat-al-wasl',
-      'glottal attack detected on Hamzat al-Wasl during connected recitation (boundary ' +
-      Math.round(acoustic.gapMs) + ' ms)');
   }
 }
 
@@ -7110,7 +7116,7 @@ function runStrict1Checks(idx, heard, opts){
         /* Over-long madd (warning only). Skipped at ayah end (waqf may be longer)
            and when the segment is much longer than one word, because the segment
            can then span several words and the longest vowel may belong elsewhere. */
-        const maxMs = maddMaxMs(kind);
+        const maxMs = maddMaxMs(kind, w.norm.length);
         const wordSized = w.audio.durationMs <= (w.norm.length * T_mora + maxMs) * 1.3;
         if (isFinite(maxMs) && wordSized && vowelMs > maxMs){
           markStrict1Warning(w, 'madd-' + kind + '-long',
@@ -7179,10 +7185,8 @@ function runStrict1Checks(idx, heard, opts){
   checkIkhfa(w, heard, align);
   if (STRICT_FEATURES.laam()) checkLaamShamsiyyah(w, heard, align);
   checkHamzatWasl(w, idx, opts.rawHeard || heard);
-  if (!strict1SilentOk(w, heard)){
-    markStrict1Warning(w, 'silent',
-      'ASR spelling differs from the annotated silent-letter form; transcript alone cannot prove that the silent letter was voiced');
-  }
+  /* Silent letters: no transcript-based warning (ASR spells the silent letter, so spelling proves nothing).
+     Only the acoustic extra-syllable check below can flag a voiced silent letter. */
   if (STRICT_FEATURES.silent()) checkExtraSyllable(w);
   checkQalqalah(w, heard, align);
   checkIdghaamNoGhunnah(w, heard, align);
@@ -8125,7 +8129,7 @@ async function gradeFull(tokens, startIdx){
             if(w && !w.el.classList.contains('error')){
               const tag = (c.rule === 'madd') ? 'madd-' + ((w.tjRules && w.tjRules.madd) || 'normal') + '-batch'
                                               : 'ghunnah-length-' + ((w.tjRules && w.tjRules.ghunnahType) || 'ghunnah') + '-batch';
-              markStrict1Error(w, tag, 'batch voice ' + Math.round(voiceMs) + ' ms < ' + Math.round(cumulative) + ' ms cumulative');
+              markStrict1Warning(w, tag, 'batch voice ' + Math.round(voiceMs) + ' ms < ' + Math.round(cumulative) + ' ms cumulative');
             }
             break;
           }
@@ -13292,7 +13296,7 @@ function openCoachInfoModal(){
     '<div class="feature"><h3><span class="fnum">3</span> 🎵 Tajweed mode (error feedback)</h3><ul>' +
       '<li><b>Tajweed</b> is designed to highlight every mispronunciation.</li>' +
       '<li>On a mispronounced word the coach <b>marks the word red</b>, then <b>keeps following</b> the reciter.</li>' +
-      '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> — Haraka-based bounds: Tabee\'i [1.7–2.3], Wajib/Ja\'iz [3.6–5.4], Lazim [5.5–6.5] × Haraka.<br>• <b>Ghunnah</b> — nasal formant band 250–600 Hz verified in both transcript and spectrum.<br>• <b>Qalqalah</b> — plosive-burst detector catches missing bounce.<br>• <b>Laam Shamsiyyah</b> — onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> — glottal re-attack detection.<br>• <b>Idghaam (no ghunnah)</b> — nasalisation-overrun check.<br>• <b>Emphatic letters</b> (ص→س, ط→ت…) surfaced as warnings on every commit path.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
+      '<li><b>Acoustic rule checks</b> are enabled by default:<br>• <b>Madd duration</b> — Haraka-based bounds: Tabee\'i [1.7–3.0], Ja\'iz/permissible [1.7–7.0] (2, 4 or 6 all accepted), Wajib/Muttasil [3.6–7.0], Lazim [5.5–7.5] × Haraka.<br>• <b>Ghunnah</b> — nasal formant band 250–600 Hz verified in both transcript and spectrum.<br>• <b>Qalqalah</b> — plosive-burst detector catches missing bounce.<br>• <b>Laam Shamsiyyah</b> — onset spectral centroid.<br>• <b>Hamzat al-Wasl</b> — glottal re-attack detection.<br>• <b>Idghaam (no ghunnah)</b> — nasalisation-overrun check.<br>• <b>Emphatic letters</b> (ص→س, ط→ت…) surfaced as warnings on every commit path.<br>• <b>Silent letters</b> cross-checked against the annotation-stripped form.</li>' +
       '<li><b>Colour key:</b> <b style="color:#ff6b7a">Red</b> = misread or Tajweed mistake · <b style="color:#ffd54a">Yellow</b> = Tajweed warning (uncertain) · <b style="color:#9aa3b2">Grey</b> = unchecked (a rule on that word could not be verified on this device).</li>' +
       '<li>Tajweed detection on phones is approximate. Accuracy varies by device, microphone, browser and surroundings. Treat results as guidance, not a ruling.</li>' +
       '<li><b>Rule-ready chip:</b> shows whether rule checks are armed — <b>● Loading rules…</b> · <b>● Rules ready</b> · <b>● Rules ready · transcript-only</b> · <b>● Rules unavailable</b> · <b>● Rules not ready</b> (microphone unreachable).</li>' +
