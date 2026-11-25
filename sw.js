@@ -1,5 +1,10 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.6.0
+   Quran Recitation Coach — Service Worker  v2.7.2
+
+   What changed in 2.7.2:
+     • Cache version bumped so installed apps fetch the updated index.html
+       (Tajweed engine: strict1 checks on plausible words, shortened-word
+       Madd check at full length, Ghunnah letters protected).
 
    What changed in 2.7.1 — SMART CORE MANAGEMENT SYSTEM (SW side):
      • Prayer-alarm engine. The page posts the next ~3 days of enabled
@@ -49,7 +54,7 @@
 
 'use strict';
 
-const VERSION = '2.6.0';
+const VERSION = '2.7.2';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
