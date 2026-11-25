@@ -7998,10 +7998,19 @@ async function gradeFull(tokens, startIdx){
       }
 
       if(plausibleAttempt && w){
+        /* Tajweed grading must also run on an incorrect-but-plausible attempt.
+           Previously this branch marked only a generic misread and skipped the
+           rule engine, so Madd/Ghunnah/Ikhfa/Qalqalah/etc. were never checked
+           for many wrong pronunciations. Attach the captured segment first and
+           invoke independent rule checks before advancing the pointer. */
+        if(seg) w.audio = seg;
+        if(!followOnly && coachTajweedReady){
+          try{ runStrict1Checks(ptr, heard, { timingReliable:false, skipTiming:true, rawHeard:rawTok }); }
+          catch(e){ console.warn('[Tajweed] checks on plausible incorrect attempt failed:', e); }
+        }
         /* Mark red (once) but NEVER hold the pointer on a marked word:
            advance straight away so the next word is listened for. */
         if(!w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
-          if(seg) w.audio = seg;
           w.el.classList.add('error');
           w.el.classList.remove('current','correct','corrected','model','located','warned');
           errors++;
