@@ -1,4 +1,10 @@
 <html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }
+
+.index-quran-edition-wrap{margin:10px 12px 14px;padding:12px;border:1px solid var(--gold,#b58b00);border-radius:14px;background:var(--card-bg,rgba(128,128,128,.08));display:flex;flex-direction:column;gap:7px}
+.index-quran-edition-wrap label{font-size:13px;font-weight:800;letter-spacing:.02em}
+.index-quran-edition-select{width:100%;padding:12px 14px;border-radius:11px;border:1px solid var(--gold,#b58b00);background:var(--input-bg,var(--card-bg,#fff));color:var(--text,var(--text-color,inherit));font-size:15px;font-weight:700}
+.index-quran-edition-wrap .edition-hint{font-size:11px;opacity:.75}
+
 .qv-edition{font-size:12px!important;font-weight:800!important;min-width:34px;padding:5px 7px!important;border:1px solid var(--gold,#b58b00)!important;border-radius:9px!important;}
 </style><head><style>
 @font-face {
@@ -2985,6 +2991,12 @@ body.light-mode .share-arabic{color:#1a2233;}
     <label class="lang-label" for="surahIndexLang">🌐 Translation</label>
     <select class="lang-select" id="surahIndexLang" aria-label="Select translation language"><option value="en" selected="">English</option><option value="tr">Türkçe</option></select>
   </div>
+  <div class="index-quran-edition-wrap">
+    <label for="surahIndexQuranEdition">📖 Quran Edition</label>
+    <select class="index-quran-edition-select" id="surahIndexQuranEdition" aria-label="Choose Quran edition">
+      <option value="indopak">Indo-Pak</option><option value="uthmani">Madinah Black &amp; White</option><option value="tajweed">Madinah Tajweed</option>
+    </select><div class="edition-hint">Changes the Quran text edition in the reader.</div>
+  </div>
   <div class="index-tabs" role="tablist" aria-label="Jump or continue">
     <button class="index-tab" type="button" id="surahIdxJumpTab" role="tab" aria-selected="false" aria-controls="surahIdxJumpPanel">Jump to</button>
     <button class="index-tab" type="button" id="surahIdxContinueTab" role="tab" aria-selected="false" aria-controls="surahIdxContinuePanel">Continue</button>
@@ -3019,6 +3031,12 @@ body.light-mode .share-arabic{color:#1a2233;}
   <div class="lang-selector-wrap">
     <label class="lang-label" for="juzIndexLang">🌐 Translation</label>
     <select class="lang-select" id="juzIndexLang" aria-label="Select translation language"><option value="en" selected="">English</option><option value="tr">Türkçe</option></select>
+  </div>
+  <div class="index-quran-edition-wrap">
+    <label for="juzIndexQuranEdition">📖 Quran Edition</label>
+    <select class="index-quran-edition-select" id="juzIndexQuranEdition" aria-label="Choose Quran edition">
+      <option value="indopak">Indo-Pak</option><option value="uthmani">Madinah Black &amp; White</option><option value="tajweed">Madinah Tajweed</option>
+    </select><div class="edition-hint">Changes the Quran text edition in the reader.</div>
   </div>
   <div class="index-tabs" role="tablist" aria-label="Jump or continue">
     <button class="index-tab" type="button" id="juzIdxJumpTab" role="tab" aria-selected="false" aria-controls="juzIdxJumpPanel">Jump to</button>
@@ -3501,6 +3519,17 @@ const QURAN_SCRIPT_OPTIONS = [{id:'indopak',label:'Indo-Pak',field:'text_indopak
 let quranScriptEdition = (()=>{try{return localStorage.getItem('qc.quranScriptEdition')||'indopak'}catch(e){return 'indopak'}})();
 function currentQuranScript(){return QURAN_SCRIPT_OPTIONS.find(x=>x.id===quranScriptEdition)||QURAN_SCRIPT_OPTIONS[0]}
 function updateQuranEditionButton(){const b=document.getElementById('qvEdition');if(b){const x=currentQuranScript();b.textContent=x.button;b.title='Quran edition: '+x.label+' (tap to change)';b.setAttribute('aria-label','Quran edition: '+x.label+'; tap to change')}}
+
+function setQuranScriptEditionFromIndex(value){
+  if(!QURAN_SCRIPT_OPTIONS.some(x=>x.id===value)) return;
+  quranScriptEdition=value;try{localStorage.setItem('qc.quranScriptEdition',value)}catch(e){};
+  readerState.pages.clear();updateQuranEditionButton();
+  if(readerState.currentPage)loadReaderPage(readerState.currentPage);
+  showToast('Quran edition: '+currentQuranScript().label);
+}
+function syncIndexEditionSelectors(){
+  ['surahIndexQuranEdition','juzIndexQuranEdition'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=quranScriptEdition;});
+}
 function cycleQuranEdition(){const i=QURAN_SCRIPT_OPTIONS.findIndex(x=>x.id===quranScriptEdition);quranScriptEdition=QURAN_SCRIPT_OPTIONS[(i+1)%QURAN_SCRIPT_OPTIONS.length].id;try{localStorage.setItem('qc.quranScriptEdition',quranScriptEdition)}catch(e){};readerState.pages.clear();updateQuranEditionButton();if(readerState.currentPage)loadReaderPage(readerState.currentPage);showToast('Quran edition: '+currentQuranScript().label)}
 const EDITION_FALLBACK = 'quran-uthmani';
 const EDITION_COACH = 'quran-uthmani';
