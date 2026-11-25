@@ -8325,7 +8325,16 @@ let micSession = 0;
 const _micTestClosers = new Set();
 let _ctxSuspendedByUs = false;
 
-async function ensureMicStream(){
+/* Single-flight + registry: two overlapping getUserMedia() calls used to leave
+   the first stream orphaned (never stopped) so Safari kept the mic open. */
+const _allMicStreams = new Set();
+let _micOpening = null;
+function ensureMicStream(){
+  if(_micOpening) return _micOpening;
+  _micOpening = _ensureMicStreamImpl().finally(() => { _micOpening = null; });
+  return _micOpening;
+}
+async function _ensureMicStreamImpl(){
   if(micStream){
     const live = micStream.getAudioTracks().some(t => t.readyState === 'live');
     if(live){
@@ -8353,6 +8362,8 @@ async function ensureMicStream(){
       try{ s.getTracks().forEach(t => t.stop()); }catch(_){}
       return null;
     }
+    _allMicStreams.add(s);
+    if(micStream && micStream !== s){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(_){} _allMicStreams.delete(micStream); }
     micStream = s;
     attachMicTrackListeners(s);
     const rmsOk = rmsAnalyser.start(s);
@@ -8369,7 +8380,10 @@ function releaseMicStream(){
   detachMicTrackListeners();
   if(micTrackMutedTimer){ clearTimeout(micTrackMutedTimer); micTrackMutedTimer = null; }
   rmsAnalyser.stop();
-  if(micStream){ try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} micStream = null; }
+  if(micStream){ try{ micStream.getTracks().forEach(t => { try{ t.enabled = false; }catch(_){} t.stop(); }); }catch(e){} micStream = null; }
+  // Catch-all: stop every stream this page ever opened, even orphaned ones.
+  _allMicStreams.forEach(st => { try{ st.getTracks().forEach(t => { try{ t.enabled = false; }catch(_){} t.stop(); }); }catch(_){} });
+  _allMicStreams.clear();
 }
 function resetMicDiagState(){
   MIC_DIAG.startedAt = 0;
