@@ -1,7 +1,7 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.7.2
+   Quran Recitation Coach — Service Worker  v2.7.5
 
-   What changed in 2.7.2:
+   What changed in 2.7.5:
      • Cache version bumped so installed apps fetch the updated index.html
        (Tajweed engine: strict1 checks on plausible words, shortened-word
        Madd check at full length, Ghunnah letters protected).
