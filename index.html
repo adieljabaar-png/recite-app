@@ -4200,68 +4200,6 @@ function isPlausiblePronunciationAttempt(heard, hPhon, w){
      lev(hPhon, w.phon) <= tol + (followOnly ? 1 : 2)) return true;
   return false;
 }
-
-/* ── TAJWEED MODE: nasal (Ghunnah) letter protection + shortened-word ASR check ──
-   In Tajweed mode the nasal letters (ن / م) of a word that carries a Ghunnah /
-   Ikhfa / Iqlab / Idghaam-with-ghunnah rule may NEVER be dropped by any loose
-   (hPhonLoose / Levenshtein-tolerance) comparison. */
-const NASAL_N = 'ن', NASAL_M = 'م';
-function protectedNasalLetters(w){
-  if(followOnly || !w || !w.tjRules || !w.tjRules.hasGhunnahContext) return '';
-  let req = '';
-  const gl = w.tjRules.ghunnahLetters;
-  if(gl && gl.length){
-    const j = gl.join('');
-    for(let i = 0; i < j.length; i++) if(j[i] === NASAL_N || j[i] === NASAL_M) req += j[i];
-  }
-  if(!req){
-    const n = w.norm || '';
-    for(let i = 0; i < n.length; i++) if(n[i] === NASAL_N || n[i] === NASAL_M) req += n[i];
-  }
-  return req;
-}
-function nasalLettersKept(w, heard){
-  const req = protectedNasalLetters(w);
-  if(!req) return true;
-  for(let i = 0; i < req.length; i++) if(heard.indexOf(req[i]) === -1) return false;
-  return true;
-}
-/* The reciter's token is 2–3 letters SHORTER than the target word. Look for a
-   reduced form of the target (2–3 letters removed, never a protected nasal
-   letter) that the heard token matches, i.e. the word passes the ASR check as
-   a shorter word. Returns { dropped, reduced } or null. */
-function shortenedWordMatch(heard, w){
-  if(followOnly || !w || !w.norm || !heard) return null;
-  const T = w.norm, tl = T.length, hl = heard.length;
-  const drop = tl - hl;
-  if(drop < 2 || drop > 3 || hl < 3) return null;
-  if(!nasalLettersKept(w, heard)) return null;
-  const prot = protectedNasalLetters(w);
-  const lockedIdx = new Set();
-  if(prot){
-    for(let i = 0; i < tl; i++) if(T[i] === NASAL_N || T[i] === NASAL_M) lockedIdx.add(i);
-  }
-  const tol = toleranceFor(hl);
-  const hLoose = phonLooseArCached(heard);
-  let found = null;
-  const picks = [];
-  (function rec(start, left){
-    if(found) return;
-    if(left === 0){
-      let red = '';
-      for(let i = 0; i < tl; i++) if(picks.indexOf(i) === -1) red += T[i];
-      if(lev(heard, red) <= tol){ found = red; return; }
-      if(lev(hLoose, phonLooseArCached(red)) <= tol){ found = red; }
-      return;
-    }
-    for(let i = start; i <= tl - left; i++){
-      if(lockedIdx.has(i)) continue;
-      picks.push(i); rec(i + 1, left - 1); picks.pop();
-      if(found) return;
-    }
-  })(0, drop);
-  return found ? { dropped: drop, reduced: found } : null;
-}
 const FOLLOW_MAX_MERGE_WORDS = 3;
 const FOLLOW_MAX_SPLIT_TOKENS = 4;
 function _combinedWordAt(start, n){
@@ -7076,17 +7014,11 @@ function runStrict1Checks(idx, heard, opts){
         : (T_mora !== null ? Math.round(T_mora * (MADD_MIN_HARAKAT[kind] || 1.7))
                             : (MADD_MIN_DELTA_MS[kind] || 0));
       const minSegMs = w.norm.length * (T_mora !== null ? T_mora : 100) * 0.55;
-      /* strictMadd: the heard token was 2–3 letters shorter than the word. Madd is
-         then judged against the FULL word: a too-short segment or vowel run is a
-         hard error (no warning tier). */
-      const strictM = !!opts.strictMadd;
-      const segTooShort = strictM && w.audio.durationMs < minSegMs;
-      if ((w.audio.durationMs >= minSegMs || strictM) && (vowelMs < required || segTooShort)){
+      if (w.audio.durationMs >= minSegMs && vowelMs < required){
         const tag = 'madd-' + kind + (isEndOfAyah ? '-end' : '');
         const _maddMsg = 'estimated vowel-run ' + Math.round(vowelMs) + ' ms < ' + Math.round(required) + ' ms' +
-          (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : '') +
-          (strictM ? ' — word heard ' + (opts.shortenedBy || 2) + '+ letters short; Madd checked at full word length' : '');
-        if (strictM || vowelMs < required * 0.65) markStrict1Error(w, tag, _maddMsg);
+          (T_mora !== null ? ' (T=' + Math.round(T_mora) + 'ms/mora)' : '');
+        if (vowelMs < required * 0.65) markStrict1Error(w, tag, _maddMsg);
         else markStrict1Warning(w, tag, _maddMsg);
       } else if (!isEndOfAyah && T_mora !== null){
         /* Over-long madd (warning only). Skipped at ayah end (waqf may be longer)
@@ -7117,9 +7049,8 @@ function runStrict1Checks(idx, heard, opts){
       if (w.tjRules && w.tjRules.madd && STRICT_FEATURES.madd()){
         const required = maddRequiredMs(w.tjRules.madd);
         if (asrMs < required){
-          const _tm = 'ASR timing estimate ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms';
-          if (opts.strictMadd) markStrict1Error(w, 'madd-' + w.tjRules.madd + '-timing', _tm + ' (word heard shortened; full-length Madd required)');
-          else markStrict1Warning(w, 'madd-' + w.tjRules.madd + '-timing', _tm);
+          markStrict1Warning(w, 'madd-' + w.tjRules.madd + '-timing',
+            'ASR timing estimate ' + Math.round(asrMs) + ' ms < ' + Math.round(required) + ' ms');
         }
       }
       if (w.tjRules && w.tjRules.hasGhunnahContext && STRICT_FEATURES.ghunnah()){
@@ -8018,27 +7949,11 @@ async function gradeFull(tokens, startIdx){
 
       {
         const curW = words[ptr];
-        /* Tajweed mode: a heard token 2–3 letters shorter than the target can pass
-           the ASR check as a shorter word (reduced form). Ghunnah letters (ن/م)
-           are never droppable. */
-        const sh = (curW && !followOnly) ? shortenedWordMatch(heard, curW) : null;
-        if(curW && (sh || isPlausiblePronunciationAttempt(heard, hPhon, curW)) && (followOnly || nasalLettersKept(curW, heard))){
-          const voicedStrict = seg && seg.durationMs > 40 && rmsAnalyser.voiceDurationMs(seg.start, seg.end) > 20;
-          /* Follow keeps the original voiced requirement. Tajweed mode accepts the
-             ASR pass unless the mic positively shows silence for this segment. */
-          const confirmedSilent = rmsAnalyser.isRunning() && seg && !voicedStrict;
-          const voiced = followOnly ? voicedStrict : !confirmedSilent;
+        if(curW && isPlausiblePronunciationAttempt(heard, hPhon, curW)){
+          const voiced = seg && seg.durationMs > 40 && rmsAnalyser.voiceDurationMs(seg.start, seg.end) > 20;
           if(voiced){
             commitCorrect(ptr, seg);
-            if(!followOnly){
-              runStrict1Checks(ptr, heard, {
-                timingReliable: false,
-                skipTiming: !sh,              /* shortened word: Madd timing IS checked */
-                strictMadd: !!sh,             /* ...against the FULL (longer) word      */
-                shortenedBy: sh ? sh.dropped : 0,
-                rawHeard: rawTok
-              });
-            }
+            if(!followOnly){ runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true, rawHeard: rawTok }); }
             lastDirectCommitIdx = -1; lastDirectCommitAt = 0; lastCommitBatchId = -1; prevWordAudio = null;
             advancePast(1);
             pendingHeard.length = 0;
@@ -8084,13 +7999,7 @@ async function gradeFull(tokens, startIdx){
 
       if(plausibleAttempt && w){
         /* Mark red (once) but NEVER hold the pointer on a marked word:
-           advance straight away so the next word is listened for.
-           Tajweed mode: strict1 checks run on these plausible words first so
-           the Ghunnah / Madd / other Tajweed findings are recorded. */
-        if(!followOnly){
-          if(seg) w.audio = seg;
-          runStrict1Checks(ptr, heard, { timingReliable: false, skipTiming: true, rawHeard: rawTok });
-        }
+           advance straight away so the next word is listened for. */
         if(!w.el.classList.contains('error') && !w.el.classList.contains('skipped')){
           if(seg) w.audio = seg;
           w.el.classList.add('error');
