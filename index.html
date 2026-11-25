@@ -9403,7 +9403,23 @@ function setMicButton(){
   syncFsButtons();
 }
 
+let _startInFlight = 0;
+function cancelAudioRelease(){ if(_releaseVerifyTimer){ clearTimeout(_releaseVerifyTimer); _releaseVerifyTimer = null; } }
+function micBusyForCleanup(){
+  try{
+    if(_startInFlight > 0 || wantMic) return true;
+    if(hifzState && (hifzState.speechActive || hifzState.active && hifzState.speechActive)) return true;
+    if(_micTestClosers && _micTestClosers.size > 0) return true;
+  }catch(_){}
+  return false;
+}
 async function startReciting(){
+  cancelAudioRelease();
+  _startInFlight++;
+  try{ return await _startRecitingImpl(); }
+  finally{ _startInFlight--; if(_startInFlight === 0 && !wantMic){ try{ releaseAudioSessionSoon(); }catch(_){} } }
+}
+async function _startRecitingImpl(){
   unlockAudio();
   const _myTok = micSession;
   if(!words.length){
@@ -9529,7 +9545,7 @@ function stopReciting(silent){
   releaseWakeLock();
   // Nothing is playing: release the Web Audio session too (iOS keeps the
   // audio session / Android keeps the audio route while a context runs).
-  try{ if(!playing && !(viewerAudio && viewerAudio.active)){ suspendSharedAudio(); releaseAudioSession(); releaseAudioSessionSoon(); } }catch(_){}
+  try{ if(!playing && !(viewerAudio && viewerAudio.active)){ suspendSharedAudio(); if(_startInFlight === 0){ releaseAudioSession(); releaseAudioSessionSoon(); } } }catch(_){}
 
   setMicButton();
   if(!silent) setStatus('Ready','idle', micPermission==='granted'?'Mic ready':'Tap Start reciting to allow mic');
@@ -9563,7 +9579,7 @@ function resumeMic(){
    When nothing is intentionally playing we CLOSE the contexts, empty the
    shared <audio> element and hand the session back to the system.        */
 function releaseAudioSession(){
-  try{ if(playing || (viewerAudio && viewerAudio.active) || wantMic) return; }catch(_){}
+  try{ if(playing || (viewerAudio && viewerAudio.active) || micBusyForCleanup()) return; }catch(_){}
   const seen = [];
   [audioCtx, window.__sharedAudioCtx].forEach(c => {
     if(!c || seen.indexOf(c) !== -1) return;
@@ -9590,7 +9606,7 @@ let _releaseVerifyTimer = null;
 function releaseAudioSessionSoon(){
   // iOS tears the session down asynchronously, so check again shortly after.
   if(_releaseVerifyTimer) clearTimeout(_releaseVerifyTimer);
-  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(!wantMic){ try{ releaseMicStream(); }catch(_){} try{ if(!(hifzState && hifzState.speechActive)) killAllRecognizers(); }catch(_){} releaseAudioSession(); } }, 1200);
+  _releaseVerifyTimer = setTimeout(() => { _releaseVerifyTimer = null; if(micBusyForCleanup()) return; try{ releaseMicStream(); }catch(_){} try{ killAllRecognizers(); }catch(_){} releaseAudioSession(); }, 1200);
 }
 function suspendSharedAudio(){
   const seen = [];
