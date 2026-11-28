@@ -7115,9 +7115,10 @@ function syncFollowSkipBudget(verseKey){
 }
 function markFollowSkippedWord(i){
   const w = words[i]; if(!w || !followOnly) return;
-  w.el.classList.remove("current","correct","corrected","model","located","pressing");
-  w.el.classList.add("skipped");
-  if(hideText) w.el.classList.add("revealed");
+  /* Skipped words are treated exactly like correctly recited words:
+     green (correct) normally, revealed in hide-text mode. */
+  const warned = w.el.classList.contains('warned');
+  w.el.className = (hideText ? 'w revealed' : 'w correct') + (warned ? ' warned' : '');
 }
 
 function followSimilarity(heard, hPhon, hPhonLoose, w){
@@ -7749,8 +7750,8 @@ function gradeFollowFast(tokens, startIdx){
     }
 
     /* 4. Same-ayah look-ahead: at most two skipped target words per ayah.
-       The future word must be a strong match; skipped words are marked skipped,
-       never falsely marked correct. The budget is enforced cumulatively. */
+       The future word must be a strong match; skipped words are marked correct
+       (same as recited words). The budget is enforced cumulatively. */
     syncFollowSkipBudget(w.verse);
     let jumped = false;
     const skipBudget = Math.max(0, FOLLOW_MAX_SKIPS_PER_AYAH - followSkippedInAyah);
