@@ -1,7 +1,7 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.6.0
+   Quran Recitation Coach — Service Worker  v2.7.3
 
-   What changed in 2.7.2 — SMART CORE MANAGEMENT SYSTEM (SW side):
+   What changed in 2.7.3 — SMART CORE MANAGEMENT SYSTEM (SW side):
      • Prayer-alarm engine. The page posts the next ~3 days of enabled
        prayer alarms (PRAYER_SCHEDULE); they are stored in IndexedDB
        ('qc-core') so they survive the worker being stopped.
