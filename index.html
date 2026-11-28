@@ -1,5 +1,46 @@
-<!-- Tajweed engine integration: verified shared RMS/audio analysis core from reference; preserved target-compatible advanced rule checks, audio alignment, and app wiring. -->
-<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>
+<html lang="en"><style>* { -webkit-text-size-adjust: 132% !important; }</style><head><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>* { -webkit-text-size-adjust: 132% !important; }</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -2816,8 +2857,8 @@ body.light-mode .share-arabic{color:#1a2233;}
     </div>
     <button class="hijri-card" id="hijriCard" type="button" aria-label="Open Hijri and Gregorian calendar">
       <span class="hijri-sub">Today · Hijri</span>
-      <span class="hijri-main" id="hijriEn"><span class="hijri-day-month">11 Jumada al-Akhirah</span><span class="hijri-year">1448 AH</span></span>
-      <span class="hijri-alt" id="hijriAr">11 جمادى الثانية 1448 هـ</span>
+      <span class="hijri-main" id="hijriEn"><span class="hijri-day-month">17 Jumada al-Akhirah</span><span class="hijri-year">1448 AH</span></span>
+      <span class="hijri-alt" id="hijriAr">17 جمادى الثانية 1448 هـ</span>
     </button>
     <button id="homeThemeBtn" class="iconbtn" aria-label="Toggle dark / light theme">🌙</button>
   </div>
@@ -2872,7 +2913,7 @@ body.light-mode .share-arabic{color:#1a2233;}
       <span class="ico">🕌</span>
       <span>Important Islamic Dates</span>
     </div>
-    <ul class="islamic-dates-list" id="islamicDatesList"><li><span class="ico">✨</span><span class="info"><span class="name">Isra and Mi'raj</span><span class="hijri">27 Raj 1448</span></span><span class="greg">Jan 6, 2027<small>in 45d</small></span></li><li><span class="ico">🌟</span><span class="info"><span class="name">Mid-Sha'ban</span><span class="hijri">15 Sha 1448</span></span><span class="greg">Jan 24, 2027<small>in 63d</small></span></li><li><span class="ico">📿</span><span class="info"><span class="name">Ramadan begins</span><span class="hijri">1 Ram 1448</span></span><span class="greg">Feb 8, 2027<small>in 78d</small></span></li><li><span class="ico">🌌</span><span class="info"><span class="name">Laylat al-Qadr</span><span class="hijri">27 Ram 1448</span></span><span class="greg">Mar 6, 2027<small>in 104d</small></span></li><li><span class="ico">🎉</span><span class="info"><span class="name">Eid al-Fitr</span><span class="hijri">1 Shaw 1448</span></span><span class="greg">Mar 10, 2027<small>in 108d</small></span></li><li><span class="ico">🏔️</span><span class="info"><span class="name">Day of Arafah</span><span class="hijri">9 Dhul H 1448</span></span><span class="greg">May 16, 2027<small>in 175d</small></span></li><li><span class="ico">🐏</span><span class="info"><span class="name">Eid al-Adha</span><span class="hijri">10 Dhul H 1448</span></span><span class="greg">May 17, 2027<small>in 176d</small></span></li><li><span class="ico">🌙</span><span class="info"><span class="name">Islamic New Year</span><span class="hijri">1 Muh 1449</span></span><span class="greg">Jun 6, 2027<small>in 196d</small></span></li><li><span class="ico">🕯️</span><span class="info"><span class="name">Day of Ashura</span><span class="hijri">10 Muh 1449</span></span><span class="greg">Jun 15, 2027<small>in 205d</small></span></li><li><span class="ico">🕌</span><span class="info"><span class="name">Mawlid al-Nabi</span><span class="hijri">12 Rab I 1449</span></span><span class="greg">Aug 15, 2027<small>in 266d</small></span></li></ul>
+    <ul class="islamic-dates-list" id="islamicDatesList"><li><span class="ico">✨</span><span class="info"><span class="name">Isra and Mi'raj</span><span class="hijri">27 Raj 1448</span></span><span class="greg">Jan 6, 2027<small>in 39d</small></span></li><li><span class="ico">🌟</span><span class="info"><span class="name">Mid-Sha'ban</span><span class="hijri">15 Sha 1448</span></span><span class="greg">Jan 24, 2027<small>in 57d</small></span></li><li><span class="ico">📿</span><span class="info"><span class="name">Ramadan begins</span><span class="hijri">1 Ram 1448</span></span><span class="greg">Feb 8, 2027<small>in 72d</small></span></li><li><span class="ico">🌌</span><span class="info"><span class="name">Laylat al-Qadr</span><span class="hijri">27 Ram 1448</span></span><span class="greg">Mar 6, 2027<small>in 98d</small></span></li><li><span class="ico">🎉</span><span class="info"><span class="name">Eid al-Fitr</span><span class="hijri">1 Shaw 1448</span></span><span class="greg">Mar 10, 2027<small>in 102d</small></span></li><li><span class="ico">🏔️</span><span class="info"><span class="name">Day of Arafah</span><span class="hijri">9 Dhul H 1448</span></span><span class="greg">May 16, 2027<small>in 169d</small></span></li><li><span class="ico">🐏</span><span class="info"><span class="name">Eid al-Adha</span><span class="hijri">10 Dhul H 1448</span></span><span class="greg">May 17, 2027<small>in 170d</small></span></li><li><span class="ico">🌙</span><span class="info"><span class="name">Islamic New Year</span><span class="hijri">1 Muh 1449</span></span><span class="greg">Jun 6, 2027<small>in 190d</small></span></li><li><span class="ico">🕯️</span><span class="info"><span class="name">Day of Ashura</span><span class="hijri">10 Muh 1449</span></span><span class="greg">Jun 15, 2027<small>in 199d</small></span></li><li><span class="ico">🕌</span><span class="info"><span class="name">Mawlid al-Nabi</span><span class="hijri">12 Rab I 1449</span></span><span class="greg">Aug 15, 2027<small>in 260d</small></span></li></ul>
   </section>
 </div>
 <div class="app screen" id="screenDashboard" hidden="">
@@ -2931,32 +2972,32 @@ body.light-mode .share-arabic{color:#1a2233;}
       </div>
       <div class="share-header">
         <div class="share-city" id="shareCityName">Makkah, SA</div>
-        <div class="share-dates" id="shareDates">11 Jumada al-Akhirah 1448 AH  ·  22 November 2026</div>
+        <div class="share-dates" id="shareDates">17 Jumada al-Akhirah 1448 AH  ·  28 November 2026</div>
       </div>
-      <div class="share-prayers" id="sharePrayers"><div class="share-prayer"><span class="sp-name">Fajr</span><span class="sp-time">04:16</span></div><div class="share-prayer is-sunrise"><span class="sp-name">Sunrise</span><span class="sp-time">05:36</span></div><div class="share-prayer"><span class="sp-name">Zohr</span><span class="sp-time">11:07</span></div><div class="share-prayer"><span class="sp-name">Asr</span><span class="sp-time">14:15</span></div><div class="share-prayer"><span class="sp-name">Maghrib</span><span class="sp-time">16:37</span></div><div class="share-prayer"><span class="sp-name">Isha</span><span class="sp-time">18:07</span></div></div>
+      <div class="share-prayers" id="sharePrayers"><div class="share-prayer"><span class="sp-name">Fajr</span><span class="sp-time">04:19</span></div><div class="share-prayer is-sunrise"><span class="sp-name">Sunrise</span><span class="sp-time">05:40</span></div><div class="share-prayer"><span class="sp-name">Zohr</span><span class="sp-time">11:09</span></div><div class="share-prayer"><span class="sp-name">Asr</span><span class="sp-time">14:16</span></div><div class="share-prayer"><span class="sp-name">Maghrib</span><span class="sp-time">16:37</span></div><div class="share-prayer"><span class="sp-name">Isha</span><span class="sp-time">18:07</span></div></div>
       <div class="share-divider" role="separator"></div>
       <div class="share-block">
         <div class="share-block-title">🤲 Duah of the Day</div>
-        <p class="share-arabic" id="shareDuahArabic" dir="rtl">رَبَّنَا إِنَّنَا آمَنَّا فَاغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ النَّارِ</p>
-        <p class="share-translation" id="shareDuahTranslation">Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire.</p>
-        <p class="share-reference" id="shareDuahRef">Surah Ali 'Imran 3:16</p>
+        <p class="share-arabic" id="shareDuahArabic" dir="rtl">رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي ۚ رَبَّنَا وَتَقَبَّلْ دُعَاءِ</p>
+        <p class="share-translation" id="shareDuahTranslation">My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication.</p>
+        <p class="share-reference" id="shareDuahRef">Surah Ibrahim 14:40 (Dua of Ibrahim)</p>
       </div>
       <div class="share-divider" role="separator"></div>
       <div class="share-block">
         <div class="share-block-title">📚 Tafsir of the Duah</div>
-        <p class="share-tafsir" id="shareTafsirText">The declaration of the people of understanding who affirm their faith and ask for forgiveness of sins.</p>
+        <p class="share-tafsir" id="shareTafsirText">Ibrahim's dua for himself and his descendants to establish prayer — a dua for continuity of worship across generations.</p>
       </div>
       <div class="share-divider" role="separator"></div>
       <div class="share-block">
         <div class="share-block-title">📜 Hadith of the Day</div>
-        <p class="share-arabic" id="shareHadithArabic" dir="rtl">لاَ يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ</p>
-        <p class="share-translation" id="shareHadithTranslation">None of you truly believes until he loves for his brother what he loves for himself.</p>
-        <p class="share-reference" id="shareHadithRef">Sahih al-Bukhari 13 · Sahih Muslim 45</p>
+        <p class="share-arabic" id="shareHadithArabic" dir="rtl">لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ</p>
+        <p class="share-translation" id="shareHadithTranslation">The strong man is not the one who can overpower others, but the one who controls himself when angry.</p>
+        <p class="share-reference" id="shareHadithRef">Sahih al-Bukhari 6114 · Sahih Muslim 2609</p>
       </div>
       <div class="share-divider" role="separator"></div>
       <div class="share-block">
         <div class="share-block-title">💡 Explanation of the Hadith</div>
-        <p class="share-tafsir" id="shareHadithExplanationText">This hadith defines the social dimension of faith. It is not enough to worship Allah in isolation; true belief requires wanting good for others as you want for yourself. Envy, greed and selfishness are diseases of the heart that contradict faith. When a believer truly loves for their brother what they love for themselves, they will not cheat, oppress or wish harm — they will instead help, support and celebrate others' success. The Prophet ﷺ made this a measure of sincerity: whoever does not wish good for others has not yet tasted the sweetness of faith.</p>
+        <p class="share-tafsir" id="shareHadithExplanationText">The Prophet ﷺ redefines strength. Most people think a strong person is one who can overpower others, but true strength is self-mastery — especially controlling one's anger. Anger is natural, but unchecked anger leads to harm, regret and broken ties. This hadith teaches that a believer should pause, breathe, seek refuge in Allah, and respond with patience rather than lashing out. The Prophet ﷺ advised: 'If you get angry, sit down; if you are standing, sit; if you are sitting, lie down.'</p>
       </div>
       <div class="share-footer">
         <span>from <b>Recite</b>,</span>
@@ -3037,7 +3078,7 @@ body.light-mode .share-arabic{color:#1a2233;}
       <button type="button" class="continue-btn" disabled="">Resume</button>
     </div>
   </div>
-  <div class="surah-list" id="juzIndexList"><button type="button" class="surah-row"><span class="num">1</span><span class="meta"><span class="en">Alif Lam Meem</span><span class="sub">Page 1 · Juz 1 / 30</span></span><span class="ar">الجزء ١</span></button><button type="button" class="surah-row"><span class="num">2</span><span class="meta"><span class="en">Sayaqul</span><span class="sub">Page 22 · Juz 2 / 30</span></span><span class="ar">الجزء ٢</span></button><button type="button" class="surah-row"><span class="num">3</span><span class="meta"><span class="en">Tilkal Rusul</span><span class="sub">Page 42 · Juz 3 / 30</span></span><span class="ar">الجزء ٣</span></button><button type="button" class="surah-row"><span class="num">4</span><span class="meta"><span class="en">Lan Tanaloo</span><span class="sub">Page 62 · Juz 4 / 30</span></span><span class="ar">الجزء ٤</span></button><button type="button" class="surah-row"><span class="num">5</span><span class="meta"><span class="en">Wal Muhsanat</span><span class="sub">Page 82 · Juz 5 / 30</span></span><span class="ar">الجزء ٥</span></button><button type="button" class="surah-row"><span class="num">6</span><span class="meta"><span class="en">La Yuhibbullah</span><span class="sub">Page 102 · Juz 6 / 30</span></span><span class="ar">الجزء ٦</span></button><button type="button" class="surah-row"><span class="num">7</span><span class="meta"><span class="en">Wa Iza Samiu</span><span class="sub">Page 121 · Juz 7 / 30</span></span><span class="ar">الجزء ٧</span></button><button type="button" class="surah-row"><span class="num">8</span><span class="meta"><span class="en">Wa Lau Annana</span><span class="sub">Page 142 · Juz 8 / 30</span></span><span class="ar">الجزء ٨</span></button><button type="button" class="surah-row"><span class="num">9</span><span class="meta"><span class="en">Qalal Malaou</span><span class="sub">Page 162 · Juz 9 / 30</span></span><span class="ar">الجزء ٩</span></button><button type="button" class="surah-row"><span class="num">10</span><span class="meta"><span class="en">Wa A'lamu</span><span class="sub">Page 182 · Juz 10 / 30</span></span><span class="ar">الجزء ١٠</span></button><button type="button" class="surah-row"><span class="num">11</span><span class="meta"><span class="en">Yatazeroon</span><span class="sub">Page 201 · Juz 11 / 30</span></span><span class="ar">الجزء ١١</span></button><button type="button" class="surah-row"><span class="num">12</span><span class="meta"><span class="en">Wa Mamin Da'abat</span><span class="sub">Page 222 · Juz 12 / 30</span></span><span class="ar">الجزء ١٢</span></button><button type="button" class="surah-row"><span class="num">13</span><span class="meta"><span class="en">Wa Ma Ubarri'u</span><span class="sub">Page 242 · Juz 13 / 30</span></span><span class="ar">الجزء ١٣</span></button><button type="button" class="surah-row"><span class="num">14</span><span class="meta"><span class="en">Rubama</span><span class="sub">Page 262 · Juz 14 / 30</span></span><span class="ar">الجزء ١٤</span></button><button type="button" class="surah-row"><span class="num">15</span><span class="meta"><span class="en">Subhanallazi</span><span class="sub">Page 282 · Juz 15 / 30</span></span><span class="ar">الجزء ١٥</span></button><button type="button" class="surah-row"><span class="num">16</span><span class="meta"><span class="en">Qal Alam</span><span class="sub">Page 302 · Juz 16 / 30</span></span><span class="ar">الجزء ١٦</span></button><button type="button" class="surah-row"><span class="num">17</span><span class="meta"><span class="en">Aqtarabo</span><span class="sub">Page 322 · Juz 17 / 30</span></span><span class="ar">الجزء ١٧</span></button><button type="button" class="surah-row"><span class="num">18</span><span class="meta"><span class="en">Qad Aflaha</span><span class="sub">Page 342 · Juz 18 / 30</span></span><span class="ar">الجزء ١٨</span></button><button type="button" class="surah-row"><span class="num">19</span><span class="meta"><span class="en">Wa Qalallazina</span><span class="sub">Page 362 · Juz 19 / 30</span></span><span class="ar">الجزء ١٩</span></button><button type="button" class="surah-row"><span class="num">20</span><span class="meta"><span class="en">A'man Khalaq</span><span class="sub">Page 382 · Juz 20 / 30</span></span><span class="ar">الجزء ٢٠</span></button><button type="button" class="surah-row"><span class="num">21</span><span class="meta"><span class="en">Utlu Ma Oohiya</span><span class="sub">Page 402 · Juz 21 / 30</span></span><span class="ar">الجزء ٢١</span></button><button type="button" class="surah-row"><span class="num">22</span><span class="meta"><span class="en">Wa Manyaqnut</span><span class="sub">Page 422 · Juz 22 / 30</span></span><span class="ar">الجزء ٢٢</span></button><button type="button" class="surah-row"><span class="num">23</span><span class="meta"><span class="en">Wa Mali</span><span class="sub">Page 442 · Juz 23 / 30</span></span><span class="ar">الجزء ٢٣</span></button><button type="button" class="surah-row"><span class="num">24</span><span class="meta"><span class="en">Faman Azlam</span><span class="sub">Page 462 · Juz 24 / 30</span></span><span class="ar">الجزء ٢٤</span></button><button type="button" class="surah-row"><span class="num">25</span><span class="meta"><span class="en">Elahe Yuraddo</span><span class="sub">Page 482 · Juz 25 / 30</span></span><span class="ar">الجزء ٢٥</span></button><button type="button" class="surah-row"><span class="num">26</span><span class="meta"><span class="en">Ha Meem</span><span class="sub">Page 502 · Juz 26 / 30</span></span><span class="ar">الجزء ٢٦</span></button><button type="button" class="surah-row"><span class="num">27</span><span class="meta"><span class="en">Qala Fama Khatbukum</span><span class="sub">Page 522 · Juz 27 / 30</span></span><span class="ar">الجزء ٢٧</span></button><button type="button" class="surah-row"><span class="num">28</span><span class="meta"><span class="en">Qad Sami Allah</span><span class="sub">Page 542 · Juz 28 / 30</span></span><span class="ar">الجزء ٢٨</span></button><button type="button" class="surah-row"><span class="num">29</span><span class="meta"><span class="en">Tabarakallazi</span><span class="sub">Page 562 · Juz 29 / 30</span></span><span class="ar">الجزء ٢٩</span></button><button type="button" class="surah-row"><span class="num">30</span><span class="meta"><span class="en">Amma Yatasa'aloon</span><span class="sub">Page 582 · Juz 30 / 30</span></span><span class="ar">الجزء ٣٠</span></button></div>
+  <div class="surah-list" id="juzIndexList"><button type="button" class="surah-row"><span class="num">1</span><span class="meta"><span class="en">Alif Lam Meem</span><span class="sub">Page 1 · Juz 1 / 30</span></span><span class="ar">الجزء ١</span></button><button type="button" class="surah-row"><span class="num">2</span><span class="meta"><span class="en">Sayaqul</span><span class="sub">Page 22 · Juz 2 / 30</span></span><span class="ar">الجزء ٢</span></button><button type="button" class="surah-row"><span class="num">3</span><span class="meta"><span class="en">Tilkal Rusul</span><span class="sub">Page 42 · Juz 3 / 30</span></span><span class="ar">الجزء ٣</span></button><button type="button" class="surah-row"><span class="num">4</span><span class="meta"><span class="en">Lan Tanaloo</span><span class="sub">Page 62 · Juz 4 / 30</span></span><span class="ar">الجزء ٤</span></button><button type="button" class="surah-row"><span class="num">5</span><span class="meta"><span class="en">Wal Muhsanat</span><span class="sub">Page 82 · Juz 5 / 30</span></span><span class="ar">الجزء ٥</span></button><button type="button" class="surah-row"><span class="num">6</span><span class="meta"><span class="en">La Yuhibbullah</span><span class="sub">Page 102 · Juz 6 / 30</span></span><span class="ar">الجزء ٦</span></button><button type="button" class="surah-row"><span class="num">7</span><span class="meta"><span class="en">Wa Iza Samiu</span><span class="sub">Page 122 · Juz 7 / 30</span></span><span class="ar">الجزء ٧</span></button><button type="button" class="surah-row"><span class="num">8</span><span class="meta"><span class="en">Wa Lau Annana</span><span class="sub">Page 142 · Juz 8 / 30</span></span><span class="ar">الجزء ٨</span></button><button type="button" class="surah-row"><span class="num">9</span><span class="meta"><span class="en">Qalal Malaou</span><span class="sub">Page 162 · Juz 9 / 30</span></span><span class="ar">الجزء ٩</span></button><button type="button" class="surah-row"><span class="num">10</span><span class="meta"><span class="en">Wa A'lamu</span><span class="sub">Page 182 · Juz 10 / 30</span></span><span class="ar">الجزء ١٠</span></button><button type="button" class="surah-row"><span class="num">11</span><span class="meta"><span class="en">Yatazeroon</span><span class="sub">Page 202 · Juz 11 / 30</span></span><span class="ar">الجزء ١١</span></button><button type="button" class="surah-row"><span class="num">12</span><span class="meta"><span class="en">Wa Mamin Da'abat</span><span class="sub">Page 222 · Juz 12 / 30</span></span><span class="ar">الجزء ١٢</span></button><button type="button" class="surah-row"><span class="num">13</span><span class="meta"><span class="en">Wa Ma Ubarri'u</span><span class="sub">Page 242 · Juz 13 / 30</span></span><span class="ar">الجزء ١٣</span></button><button type="button" class="surah-row"><span class="num">14</span><span class="meta"><span class="en">Rubama</span><span class="sub">Page 262 · Juz 14 / 30</span></span><span class="ar">الجزء ١٤</span></button><button type="button" class="surah-row"><span class="num">15</span><span class="meta"><span class="en">Subhanallazi</span><span class="sub">Page 282 · Juz 15 / 30</span></span><span class="ar">الجزء ١٥</span></button><button type="button" class="surah-row"><span class="num">16</span><span class="meta"><span class="en">Qal Alam</span><span class="sub">Page 302 · Juz 16 / 30</span></span><span class="ar">الجزء ١٦</span></button><button type="button" class="surah-row"><span class="num">17</span><span class="meta"><span class="en">Aqtarabo</span><span class="sub">Page 322 · Juz 17 / 30</span></span><span class="ar">الجزء ١٧</span></button><button type="button" class="surah-row"><span class="num">18</span><span class="meta"><span class="en">Qad Aflaha</span><span class="sub">Page 342 · Juz 18 / 30</span></span><span class="ar">الجزء ١٨</span></button><button type="button" class="surah-row"><span class="num">19</span><span class="meta"><span class="en">Wa Qalallazina</span><span class="sub">Page 362 · Juz 19 / 30</span></span><span class="ar">الجزء ١٩</span></button><button type="button" class="surah-row"><span class="num">20</span><span class="meta"><span class="en">A'man Khalaq</span><span class="sub">Page 382 · Juz 20 / 30</span></span><span class="ar">الجزء ٢٠</span></button><button type="button" class="surah-row"><span class="num">21</span><span class="meta"><span class="en">Utlu Ma Oohiya</span><span class="sub">Page 402 · Juz 21 / 30</span></span><span class="ar">الجزء ٢١</span></button><button type="button" class="surah-row"><span class="num">22</span><span class="meta"><span class="en">Wa Manyaqnut</span><span class="sub">Page 422 · Juz 22 / 30</span></span><span class="ar">الجزء ٢٢</span></button><button type="button" class="surah-row"><span class="num">23</span><span class="meta"><span class="en">Wa Mali</span><span class="sub">Page 442 · Juz 23 / 30</span></span><span class="ar">الجزء ٢٣</span></button><button type="button" class="surah-row"><span class="num">24</span><span class="meta"><span class="en">Faman Azlam</span><span class="sub">Page 462 · Juz 24 / 30</span></span><span class="ar">الجزء ٢٤</span></button><button type="button" class="surah-row"><span class="num">25</span><span class="meta"><span class="en">Elahe Yuraddo</span><span class="sub">Page 482 · Juz 25 / 30</span></span><span class="ar">الجزء ٢٥</span></button><button type="button" class="surah-row"><span class="num">26</span><span class="meta"><span class="en">Ha Meem</span><span class="sub">Page 502 · Juz 26 / 30</span></span><span class="ar">الجزء ٢٦</span></button><button type="button" class="surah-row"><span class="num">27</span><span class="meta"><span class="en">Qala Fama Khatbukum</span><span class="sub">Page 522 · Juz 27 / 30</span></span><span class="ar">الجزء ٢٧</span></button><button type="button" class="surah-row"><span class="num">28</span><span class="meta"><span class="en">Qad Sami Allah</span><span class="sub">Page 542 · Juz 28 / 30</span></span><span class="ar">الجزء ٢٨</span></button><button type="button" class="surah-row"><span class="num">29</span><span class="meta"><span class="en">Tabarakallazi</span><span class="sub">Page 562 · Juz 29 / 30</span></span><span class="ar">الجزء ٢٩</span></button><button type="button" class="surah-row"><span class="num">30</span><span class="meta"><span class="en">Amma Yatasa'aloon</span><span class="sub">Page 582 · Juz 30 / 30</span></span><span class="ar">الجزء ٣٠</span></button></div>
 </div>
 <div class="app screen" id="screenBookmarks" hidden="">
   <div class="sub-header">
@@ -3098,11 +3139,11 @@ body.light-mode .share-arabic{color:#1a2233;}
     <button class="prayer-settings-btn" id="prayerQiblaBtn" type="button" aria-label="Qibla direction">🧭</button>
   </div>
   <div class="prayer-date-row">
-    <span class="pdr-item pdr-hijri" id="pdrHijri">11 Jumada al-Akhirah 1448 AH</span>
+    <span class="pdr-item pdr-hijri" id="pdrHijri">17 Jumada al-Akhirah 1448 AH</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-greg" id="pdrGreg">22 November 2026</span>
+    <span class="pdr-item pdr-greg" id="pdrGreg">28 November 2026</span>
     <span class="pdr-dot">·</span>
-    <span class="pdr-item pdr-time" id="pdrTime">12:00</span>
+    <span class="pdr-item pdr-time" id="pdrTime">17:33</span>
   </div>
   <ul class="prayer-list" id="prayerList"><li class="prayer-row"><span class="pr-name">Set your location to see prayer times</span><span class="pr-time">--:--</span></li></ul>
   <div class="prayer-note" id="prayerNote">
@@ -10238,7 +10279,7 @@ async function renderSurahIndex(){
 const JUZ_NAMES = ['Alif Lam Meem','Sayaqul','Tilkal Rusul','Lan Tanaloo','Wal Muhsanat','La Yuhibbullah','Wa Iza Samiu','Wa Lau Annana','Qalal Malaou','Wa A\'lamu','Yatazeroon','Wa Mamin Da\'abat','Wa Ma Ubarri\'u','Rubama','Subhanallazi','Qal Alam','Aqtarabo','Qad Aflaha','Wa Qalallazina','A\'man Khalaq','Utlu Ma Oohiya','Wa Manyaqnut','Wa Mali','Faman Azlam','Elahe Yuraddo','Ha Meem','Qala Fama Khatbukum','Qad Sami Allah','Tabarakallazi','Amma Yatasa\'aloon'];
 const SURAH_NAMES_AR = ['الفاتحة','البقرة','آل عمران','النساء','المائدة','الأنعام','الأعراف','الأنفال','التوبة','يونس','هود','يوسف','الرعد','إبراهيم','الحجر','النحل','الإسراء','الكهف','مريم','طه','الأنبياء','الحج','المؤمنون','النور','الفرقان','الشعراء','النمل','القصص','العنكبوت','الروم','لقمان','السجدة','الأحزاب','سبأ','فاطر','يس','الصافات','ص','الزمر','غافر','فصلت','الشورى','الزخرف','الدخان','الجاثية','الأحقاف','محمد','الفتح','الحجرات','ق','الذاريات','الطور','النجم','القمر','الرحمن','الواقعة','الحديد','المجادلة','الحشر','الممتحنة','الصف','الجمعة','المنافقون','التغابن','الطلاق','التحريم','الملك','القلم','الحاقة','المعارج','نوح','الجن','المزمل','المدثر','القيامة','الإنسان','المرسلات','النبأ','النازعات','عبس','التكوير','الانفطار','المطففين','الانشقاق','البروج','الطارق','الأعلى','الغاشية','الفجر','البلد','الشمس','الليل','الضحى','الشرح','التين','العلق','القدر','البينة','الزلزلة','العاديات','القارعة','التكاثر','العصر','الهمزة','الفيل','قريش','الماعون','الكوثر','الكافرون','النصر','المسد','الإخلاص','الفلق','الناس'];
 const JUZ_NAMES_AR = ['الٓمٓ','سيقول','تلك الرسل','لن تنالوا','والمحصنات','لا يحب الله','وإذا سمعوا','ولو أننا','قال الملأ','واعلموا','يعتذرون','وما من دابة','وما أبرئ','ربما','سبحان الذي','قال ألم','اقترب','قد أفلح','وقال الذين','أمن خلق','اتل ما أوحي','ومن يقنت','وما لي','فمن أظلم','إليه يرد','حٓمٓ','قال فما خطبكم','قد سمع الله','تبارك الذي','عم يتساءلون'];
-const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
+const JUZ_START_PAGES_FALLBACK = [1,22,42,62,82,102,122,142,162,182,202,222,242,262,282,302,322,342,362,382,402,422,442,462,482,502,522,542,562,582];
 function renderJuzIndex(){
   juzIndexList.innerHTML = '';
   const label = { en: 'Juz', tr: 'Cüz' }[surahIndexLang] || 'Juz';
@@ -11005,6 +11046,8 @@ async function getSurahStartPage(surahNumber){
 }
 const _juzStartPageCache = new Map();
 async function getJuzStartPage(juzNumber){
+  if(Number(juzNumber)===7){ _juzStartPageCache.set(7,122); return 122; }
+  if(Number(juzNumber)===11){ _juzStartPageCache.set(11,202); return 202; }
   if(_juzStartPageCache.has(juzNumber)) return _juzStartPageCache.get(juzNumber);
   const fallback = JUZ_START_PAGES_FALLBACK[juzNumber - 1] || 1;
   try{ const res = await fetchWithTimeout(QURAN_API_V4 + '/verses/by_juz/' + juzNumber + '?fields=' + READER_EDITION + '&per_page=1', FETCH_TIMEOUT_MS); if(res.ok){ const j = await res.json(); if(j.verses && j.verses.length && typeof j.verses[0].page_number === 'number'){ _juzStartPageCache.set(juzNumber, j.verses[0].page_number); return j.verses[0].page_number; } } }catch(e){}
@@ -11089,6 +11132,211 @@ async function applyIndoPakText(data){
   }catch(_){}
   return data;
 }
+let _juz14MovedAyah = null;
+/* Juz 13/14 boundary (real move, NOT the Juz 7/11 inversion trick):
+   The ayah the API puts first on page 262 (15:1) is moved to the end of
+   page 261, where it becomes the LAST ayah of Juz 13. Page 262 then
+   starts with the next ayah, which becomes the FIRST ayah of Juz 14
+   and gets the juz-start / inverted first row. */
+async function applyJuz13_14Shift(data){
+  if(!data || !Array.isArray(data.ayahs)) return data;
+  if(data.pageNumber === 262 && data.ayahs.length){
+    const moved = data.ayahs.shift();
+    _juz14MovedAyah = JSON.parse(JSON.stringify(moved));
+    if(data.ayahs.length){ data.ayahs[0].juz = 14; data.ayahs[0]._juz14Start = true; }
+  } else if(data.pageNumber === 261 && data.ayahs.length){
+    let moved = _juz14MovedAyah;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(262); if(n && n.ayahs && n.ayahs.length){ moved = n.ayahs[0]; _juz14MovedAyah = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved){
+      const copy = JSON.parse(JSON.stringify(moved));
+      copy.juz = 13; copy.pageNumber = 261; copy._juz14Moved = true;
+      const last = data.ayahs[data.ayahs.length - 1];
+      if(!(last && last.surah === copy.surah && last.numberInSurah === copy.numberInSurah)) data.ayahs.push(copy);
+    }
+  }
+  return data;
+}
+
+let _juz20MovedFrom381 = null;
+let _juz20MovedFrom382 = null;
+/* Juz 19/20 boundary (real move, same pattern as Juz 13/14):
+   - First 2 ayahs of page 381 move to end of page 380 (still Juz 19).
+   - First 4 ayahs of page 382 move to end of page 381 (still Juz 19).
+   - The new first ayah on page 382 becomes the FIRST ayah of Juz 20
+     and gets juz-start / inverted first row. Any original Juz-start
+     ayah inside the moved groups loses juz-start (it is now Juz 19). */
+async function _rawFirstAyahs(pageNumber, count){
+  try{ const n = await fetchPageIndopak(pageNumber); if(n && Array.isArray(n.ayahs)) return n.ayahs.slice(0, count); }catch(_){}
+  return [];
+}
+async function applyJuz19_20Shift(data){
+  if(!data || !Array.isArray(data.ayahs)) return data;
+  if(data.pageNumber === 382 && data.ayahs.length){
+    _juz20MovedFrom382 = JSON.parse(JSON.stringify(data.ayahs.slice(0, 4)));
+    data.ayahs = data.ayahs.slice(4);
+    if(data.ayahs.length){ data.ayahs[0].juz = 20; data.ayahs[0]._juz20Start = true; }
+  } else if(data.pageNumber === 381 && data.ayahs.length){
+    _juz20MovedFrom381 = JSON.parse(JSON.stringify(data.ayahs.slice(0, 2)));
+    data.ayahs = data.ayahs.slice(2);
+    let moved = _juz20MovedFrom382;
+    if(!moved) moved = await _rawFirstAyahs(382, 4);
+    if(moved && moved.length){
+      _juz20MovedFrom382 = JSON.parse(JSON.stringify(moved));
+      moved.forEach(m => {
+        const copy = JSON.parse(JSON.stringify(m));
+        copy.juz = 19; copy.pageNumber = 381; copy._juz20Moved = true;
+        const last = data.ayahs[data.ayahs.length - 1];
+        if(!(last && last.surah === copy.surah && last.numberInSurah === copy.numberInSurah)) data.ayahs.push(copy);
+      });
+    }
+  } else if(data.pageNumber === 380 && data.ayahs.length){
+    let moved = _juz20MovedFrom381;
+    if(!moved) moved = await _rawFirstAyahs(381, 2);
+    if(moved && moved.length){
+      _juz20MovedFrom381 = JSON.parse(JSON.stringify(moved));
+      moved.forEach(m => {
+        const copy = JSON.parse(JSON.stringify(m));
+        copy.juz = 19; copy.pageNumber = 380; copy._juz20Moved = true;
+        const last = data.ayahs[data.ayahs.length - 1];
+        if(!(last && last.surah === copy.surah && last.numberInSurah === copy.numberInSurah)) data.ayahs.push(copy);
+      });
+    }
+  }
+  return data;
+}
+
+let _juz21MovedAyah = null;
+/* Juz 20/21 boundary (real move):
+   - Last ayah of page 401 moves to the top of page 402.
+   - That moved ayah becomes the FIRST ayah of Juz 21 and gets
+     juz-start / inverted first row on page 402.
+   - The ayah that was first on page 402 (old Juz 21 start, 29:46)
+     becomes the second ayah and loses juz-start. */
+async function applyJuz20_21Shift(data){
+  if(!data || !Array.isArray(data.ayahs)) return data;
+  if(data.pageNumber === 401 && data.ayahs.length){
+    const moved = data.ayahs[data.ayahs.length - 1];
+    _juz21MovedAyah = JSON.parse(JSON.stringify(moved));
+    data.ayahs = data.ayahs.slice(0, -1);
+  } else if(data.pageNumber === 402 && data.ayahs.length){
+    let moved = _juz21MovedAyah;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(401); if(n && Array.isArray(n.ayahs) && n.ayahs.length){ moved = n.ayahs[n.ayahs.length - 1]; _juz21MovedAyah = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved){
+      const first = data.ayahs[0];
+      if(!(first && first.surah === moved.surah && first.numberInSurah === moved.numberInSurah)){
+        const copy = JSON.parse(JSON.stringify(moved));
+        copy.juz = 21; copy.pageNumber = 402; copy._juz21Moved = true; copy._juz21Start = true;
+        data.ayahs.unshift(copy);
+      }
+    }
+  }
+  return data;
+}
+
+let _juz23MovedFrom441 = null;
+let _juz23MovedFrom442 = null;
+/* Juz 22/23 boundary (real move):
+   - Last 6 ayahs of page 441 move to the top of page 442.
+   - Last 4 ayahs of page 442 move to the top of page 443.
+   - The new first ayah on page 442 (first of the 6 moved from 441)
+     becomes the FIRST ayah of Juz 23 and gets juz-start /
+     inverted first row. The other moved ayahs are Juz 23
+     continuation (442) / Juz 23 continuation on 443 (no start).
+   - Any original Juz 23 start ayah (36:28) inside a moved group
+     or later on page 442 loses juz-start. */
+async function applyJuz22_23Shift(data){
+  if(!data || !Array.isArray(data.ayahs)) return data;
+  if(data.pageNumber === 441 && data.ayahs.length){
+    _juz23MovedFrom441 = JSON.parse(JSON.stringify(data.ayahs.slice(-6)));
+    data.ayahs = data.ayahs.slice(0, -6);
+  } else if(data.pageNumber === 442 && data.ayahs.length){
+    _juz23MovedFrom442 = JSON.parse(JSON.stringify(data.ayahs.slice(-4)));
+    data.ayahs = data.ayahs.slice(0, -4);
+    let moved = _juz23MovedFrom441;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(441); if(n && Array.isArray(n.ayahs) && n.ayahs.length){ moved = n.ayahs.slice(-6); _juz23MovedFrom441 = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved && moved.length){
+      const first = data.ayahs[0];
+      if(!(first && first.surah === moved[0].surah && first.numberInSurah === moved[0].numberInSurah)){
+        const copies = moved.map((m, i) => {
+          const c = JSON.parse(JSON.stringify(m));
+          c.juz = 23; c.pageNumber = 442; c._juz23Moved = true;
+          if(i === 0) c._juz23Start = true;
+          return c;
+        });
+        data.ayahs = copies.concat(data.ayahs);
+      }
+    }
+  } else if(data.pageNumber === 443 && data.ayahs.length){
+    let moved = _juz23MovedFrom442;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(442); if(n && Array.isArray(n.ayahs) && n.ayahs.length){ moved = n.ayahs.slice(-4); _juz23MovedFrom442 = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved && moved.length){
+      const first = data.ayahs[0];
+      if(!(first && first.surah === moved[0].surah && first.numberInSurah === moved[0].numberInSurah)){
+        const copies = moved.map(m => {
+          const c = JSON.parse(JSON.stringify(m));
+          c.juz = 23; c.pageNumber = 443; c._juz23Moved = true;
+          return c;
+        });
+        data.ayahs = copies.concat(data.ayahs);
+      }
+    }
+  }
+  return data;
+}
+
+let _juz26MovedFrom501 = null;
+let _juz26MovedFrom502 = null;
+/* Juz 25/26 boundary (real move):
+   - First 2 ayahs of page 501 move to end of page 500 (still Juz 25).
+   - First 5 ayahs of page 502 move to end of page 501 (still Juz 25).
+   - The new first ayah on page 502 becomes the FIRST ayah of Juz 26
+     and gets juz-start / inverted first row. Any original Juz 26
+     start ayah (46:1) inside a moved group loses juz-start. */
+async function applyJuz25_26Shift(data){
+  if(!data || !Array.isArray(data.ayahs)) return data;
+  if(data.pageNumber === 502 && data.ayahs.length){
+    _juz26MovedFrom502 = JSON.parse(JSON.stringify(data.ayahs.slice(0, 5)));
+    data.ayahs = data.ayahs.slice(5);
+    if(data.ayahs.length){ data.ayahs[0].juz = 26; data.ayahs[0]._juz26Start = true; }
+  } else if(data.pageNumber === 501 && data.ayahs.length){
+    _juz26MovedFrom501 = JSON.parse(JSON.stringify(data.ayahs.slice(0, 2)));
+    data.ayahs = data.ayahs.slice(2);
+    let moved = _juz26MovedFrom502;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(502); if(n && Array.isArray(n.ayahs)) { moved = n.ayahs.slice(0, 5); _juz26MovedFrom502 = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved && moved.length){
+      moved.forEach(m => {
+        const copy = JSON.parse(JSON.stringify(m));
+        copy.juz = 25; copy.pageNumber = 501; copy._juz26Moved = true;
+        const last = data.ayahs[data.ayahs.length - 1];
+        if(!(last && last.surah === copy.surah && last.numberInSurah === copy.numberInSurah)) data.ayahs.push(copy);
+      });
+    }
+  } else if(data.pageNumber === 500 && data.ayahs.length){
+    let moved = _juz26MovedFrom501;
+    if(!moved){
+      try{ const n = await fetchPageIndopak(501); if(n && Array.isArray(n.ayahs)) { moved = n.ayahs.slice(0, 2); _juz26MovedFrom501 = JSON.parse(JSON.stringify(moved)); } }catch(_){}
+    }
+    if(moved && moved.length){
+      moved.forEach(m => {
+        const copy = JSON.parse(JSON.stringify(m));
+        copy.juz = 25; copy.pageNumber = 500; copy._juz26Moved = true;
+        const last = data.ayahs[data.ayahs.length - 1];
+        if(!(last && last.surah === copy.surah && last.numberInSurah === copy.numberInSurah)) data.ayahs.push(copy);
+      });
+    }
+  }
+  return data;
+}
 async function fetchPageData(pageNumber){
   let data = null;
   try{ data = await fetchPageIndopak(pageNumber); }
@@ -11105,6 +11353,11 @@ async function fetchPageData(pageNumber){
       if(enRes && enRes.ok){ const enJson = await enRes.json(); if(enJson.code === 200 && enJson.data && Array.isArray(enJson.data.ayahs)){ const trans = enJson.data.ayahs.map(a => cleanTranslation(a.text)); data.ayahs.forEach((a, i) => { a.translation = trans[i] || null; }); } }
     }catch(_){}
   }
+  data = await applyJuz13_14Shift(data);
+  data = await applyJuz19_20Shift(data);
+  data = await applyJuz20_21Shift(data);
+  data = await applyJuz22_23Shift(data);
+  data = await applyJuz25_26Shift(data);
   return await applyIndoPakText(data);
 }
 function prefetchAdjacentPages(n){
@@ -11247,6 +11500,35 @@ function applyJuzFirstVisualLines(root){
         el.insertBefore(wrap,selected[0]);selected.forEach(n=>wrap.appendChild(n));
       }
     }
+    /* Page 502 special case: the first ayah is short, so the second ayah
+       starts on the same visual row. Invert that piece of the second
+       ayah too, so the whole top row is inverted. */
+    if(el.dataset.page === '502'){
+      const wrapEl = el.querySelector('.juz-first-row');
+      const next = el.nextElementSibling;
+      if(wrapEl && next && next.classList && next.classList.contains('ayah') && !next.querySelector('.juz-first-row')){
+        const tn = Array.from(next.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+        if(tn){
+          const rowRect = wrapEl.getBoundingClientRect();
+          const rowCy = (rowRect.top + rowRect.bottom) / 2;
+          const value = tn.textContent; const range = document.createRange();
+          let end = 0;
+          for(let i = 0; i < value.length; i++){
+            range.setStart(tn, i); range.setEnd(tn, i + 1);
+            const r = range.getBoundingClientRect();
+            if(!r.width || !r.height) continue;
+            const cy = (r.top + r.bottom) / 2;
+            if(Math.abs(cy - rowCy) > r.height * 0.6) break;
+            end = i + 1;
+          }
+          if(end > 0){
+            if(end < value.length) tn.splitText(end);
+            const w2 = document.createElement('span'); w2.className = 'juz-first-row';
+            tn.parentNode.insertBefore(w2, tn); w2.appendChild(tn);
+          }
+        }
+      }
+    }
     el.dataset.juzRowDone='1';
   });
 }
@@ -11359,6 +11641,33 @@ function renderReaderPage(pageNumber, token){
     if(typeof a.ruku === 'number') span.dataset.ruku = String(a.ruku);
     if(a.surahNumberOfAyahs) span.dataset.surahAyahs = String(a.surahNumberOfAyahs);
     if(Number(a.surah) !== 1 && JUZ_START_VERSE[verseKey]) span.classList.add('juz-start');
+    /* Juz 13/14 real move: moved ayah on 261 is Juz 13's last ayah (no start);
+       new first ayah on 262 is Juz 14's first ayah (start + inverted row). */
+    if(a._juz14Moved) span.classList.remove('juz-start');
+    if(pageNumber === 262 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    /* Juz 19/20 real move: moved ayahs are Juz 19 (no start);
+       new first ayah on 382 is Juz 20's first ayah (start + inverted row). */
+    if(a._juz20Moved) span.classList.remove('juz-start');
+    if(pageNumber === 382 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    /* Juz 20/21 real move: moved ayah on top of 402 IS Juz 21's start;
+       any later ayah on 402 (old 29:46 start) loses juz-start. */
+    if(pageNumber === 402 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    if(pageNumber === 402 && content.querySelector('.ayah')) span.classList.remove('juz-start');
+    /* Juz 22/23 real move: new first ayah on 442 IS Juz 23's start;
+       any later ayah on 442, and any moved ayah on 443, loses juz-start. */
+    if(pageNumber === 442 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    if(pageNumber === 442 && content.querySelector('.ayah')) span.classList.remove('juz-start');
+    if(pageNumber === 443 && a._juz23Moved) span.classList.remove('juz-start');
+    /* Juz 25/26 real move: moved ayahs are Juz 25 (no start);
+       new first ayah on 502 is Juz 26's first ayah (start + inverted row). */
+    if(a._juz26Moved) span.classList.remove('juz-start');
+    if(pageNumber === 502 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    if(pageNumber === 502 && content.querySelector('.ayah')) span.classList.remove('juz-start');
+    /* Juz 7 override: no inversion mid-page 121; invert first row of page 122 instead. */
+    if(pageNumber===121) span.classList.remove('juz-start');
+    if(pageNumber===122 && !content.querySelector('.ayah')) span.classList.add('juz-start');
+    if(pageNumber===201) span.classList.remove('juz-start');
+    if(pageNumber===202 && !content.querySelector('.ayah')) span.classList.add('juz-start');
     span.appendChild(document.createTextNode(text + ' '));
     const mark = document.createElement('span'); mark.className = 'mushaf-ayah-mark'; mark.textContent = toAr(displayAyah);
     span.appendChild(mark);
@@ -14056,7 +14365,7 @@ function showTextShareModal(text){
   showScreen(_openDash ? 'dashboard' : 'home');
   if(_openDash){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(_){} }
 })();
-</script>
+</script><audio playsinline="" webkit-playsinline="" preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display: none;"></audio><audio playsinline="" webkit-playsinline="" preload="auto" style="display: none;"></audio>
 <script>
 (function () {
   var hasASR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -14116,4 +14425,4 @@ window.addEventListener('contextmenu', function(event) {
   });
 })();
 </script>
-</body></html>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
