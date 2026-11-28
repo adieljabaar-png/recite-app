@@ -1,5 +1,12 @@
 /* ============================================================
-   Quran Recitation Coach — Service Worker  v2.7.4
+   Quran Recitation Coach — Service Worker  v2.7.5
+
+   What changed in 2.7.5 — FLUID SCALING UPDATE:
+     • Cache version bumped (VERSION now matches this header) so installed
+       apps fetch the updated index.html: fluid root font size, layout
+       sizes in rem, dvh heights, text-size-adjust 100%. Old versioned
+       caches are dropped on activation; the persistent 'qc-audio' cache
+       and all user data are untouched.
 
    What changed in 2.7.4 — SMART CORE MANAGEMENT SYSTEM (SW side):
      • Prayer-alarm engine. The page posts the next ~3 days of enabled
@@ -49,7 +56,7 @@
 
 'use strict';
 
-const VERSION = '2.6.0';
+const VERSION = '2.7.5';
 
 const SHELL_CACHE   = `qc-shell-${VERSION}`;
 const TEXT_CACHE    = `qc-text-${VERSION}`;
